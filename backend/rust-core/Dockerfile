@@ -1,10 +1,10 @@
 # ==============================================================================
 # 🦀 Rust Core (Ingestor, Fast PDF Triage & Image Pre-processor)
-# Debian-based build for maximum compatibility and ultra-fast compilation
+# Multi-stage build with latest stable Rust
 # ==============================================================================
 
 # Build Stage
-FROM rust:1.80-slim-bookworm AS builder
+FROM rust:1-slim-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
@@ -14,13 +14,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /usr/src/kono-rust-core
 
-# Build actual application
-COPY Cargo.toml ./
+COPY Cargo.toml Cargo.lock* ./
 COPY src ./src
 
 RUN cargo build --release
 
-# Final Stage (Slim Debian runtime < 40MB)
+# Final Stage (Slim Debian runtime)
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
