@@ -25,3 +25,4 @@
 - [Tuesday]-[18/08/2026]-[11:51] : Added step-by-step installation, Docker Compose hot-reload execution guide, URL table, and testing commands to README.md.
 - [Tuesday]-[18/08/2026]-[11:51] : Created Dockerfile.allinone and docker-compose.monodocker.yml enabling a single monolithic container managed by Supervisord (Redis, Rust, Python, Nginx/React on port 80).
 - [Tuesday]-[18/08/2026]-[11:54] : Documented Rust Core daemon communication pattern (Event-Driven / Queue-based without exposed HTTP port, communicating directly via Redis Stream on port 6379).
+- [Tuesday]-[18/08/2026]-[12:16] : Added mandatory Skills & Code Best Practices rules to AGENTS.md and CLAUDE.md (backend-architect + code-reviewer, SOLID/DRY, security, API, performance, maintainability and test standards).
