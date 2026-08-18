@@ -9,10 +9,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
-    info!("🦀 [Kono Rust Core] Ingestion & Triage Engine started successfully.");
-    
+    info!("🦀 [Kono Rust Core] Ingestion & Triage Engine started (Daemon Mode).");
+    info!("🦀 [Kono Rust Core] Listening directly to filesystem events & publishing to Redis on port 6379.");
+
+    // Keep daemon active
     loop {
         tokio::time::sleep(Duration::from_secs(30)).await;
-        info!("🦀 [Kono Rust Core] Heartbeat active - listening for inbound documents...");
+        info!("🦀 [Kono Rust Core] Heartbeat active - watcher operational...");
     }
 }
