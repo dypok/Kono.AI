@@ -22,3 +22,4 @@
 - [Tuesday]-[18/08/2026]-[10:46] : Configured live hot-reloading in docker-compose.yml: mounted ./backend/python-api/app into FastAPI with `--reload` and mounted ./frontend with Vite HMR dev server.
 - [Tuesday]-[18/08/2026]-[10:48] : Updated backend/rust-core/Dockerfile to use `rust:1.80-slim-bookworm` avoiding musl/openssl-dev compilation bottlenecks in Alpine.
 - [Tuesday]-[18/08/2026]-[11:11] : Fixed Rust Cargo.toml and Dockerfile by pinning `cpufeatures = "=0.2.12"` to avoid edition2024 incompatibility and switched base image to `rust:1-slim-bookworm`.
+- [Tuesday]-[18/08/2026]-[11:51] : Added step-by-step installation, Docker Compose hot-reload execution guide, URL table, and testing commands to README.md.

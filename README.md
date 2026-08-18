@@ -9,9 +9,71 @@
 
 ---
 
-## 🏗️ Arquitectura del Sistema
+## 💻 Guía de Instalación y Ejecución Rápida
 
-El proyecto utiliza una arquitectura **Dual-Backend** de alto rendimiento:
+### 📋 Prerrequisitos
+- **Docker** y **Docker Compose** instalados en tu máquina (Linux, macOS o Windows con WSL2).
+- **Git** instalado.
+
+---
+
+### ⚡ Paso 1: Clonar el Repositorio
+```bash
+git clone https://github.com/tu-usuario/Kono.AI.git
+cd Kono.AI
+```
+
+---
+
+### ⚙️ Paso 2: Configurar Variables de Entorno
+Copia la plantilla de configuración `.env.example` a `.env`:
+```bash
+cp .env.example .env
+```
+*(Opcional: Si deseas habilitar el fallback selectivo con OpenAI para facturas con confianza $< 70\%$, ingresa tu `OPENAI_API_KEY` dentro del archivo `.env`).*
+
+---
+
+### 🐳 Paso 3: Levantar el Entorno con Docker Compose (Hot-Reload Activado)
+Ejecuta el siguiente comando para compilar las imágenes e iniciar todos los servicios:
+```bash
+docker compose up --build
+```
+*Para ejecutarlo en segundo plano (modo detached):*
+```bash
+docker compose up -d
+```
+
+---
+
+### 🌐 Paso 4: Acceder a los Servicios
+
+Una vez levantado el stack, los servicios estarán disponibles en:
+
+| Servicio | URL Local | Descripción |
+| :--- | :--- | :--- |
+| **⚛️ Frontend App (React + Tailwind)** | [http://localhost:3000](http://localhost:3000) | Dashboard de auditoría Split-Screen y Mascota Kono interactiva con Hot-Reload (Vite HMR). |
+| **🐍 Backend API (FastAPI / Swagger)** | [http://localhost:8000/docs](http://localhost:8000/docs) | Documentación interactiva de la API REST y endpoints de auditoría. |
+| **⚡ WebSocket Feed en Vivo** | `ws://localhost:8000/api/v1/ws/audit-feed` | Canal WebSocket en tiempo real para transmisión de documentos procesados. |
+| **🔴 Redis Broker & Colas** | `localhost:6379` | Broker en memoria de eventos y tareas asíncronas. |
+| **🦀 Rust Core (Ingesta)** | `kono-rust-core` | Servicio interno escuchando eventos en `/data/storage/inbound/`. |
+
+---
+
+### 🧪 Paso 5: Generar Facturas de Prueba Sintéticas
+Para probar la ingesta y el motor de auditoría con facturas de prueba (🟢 Válidas, 🟡 Descuadres y 🔴 Duplicadas):
+```bash
+# Crear entorno virtual local para el script generador (opcional)
+python3 -m venv venv && source venv/bin/activate
+pip install reportlab
+
+# Generar lote de facturas de prueba
+python scripts/invoices.py --output-dir ./test_invoices
+```
+
+---
+
+## 🏗️ Arquitectura del Sistema (Dual-Backend)
 
 1. **🦀 Core de Ingesta & Pre-procesamiento (Rust):**
    - Folder Watcher de ultra-bajo consumo de memoria con `notify` y `tokio`.
@@ -37,31 +99,17 @@ El proyecto utiliza una arquitectura **Dual-Backend** de alto rendimiento:
 
 ## 📚 Índice de Documentación Técnica
 
-Toda la documentación técnica del proyecto se encuentra estructurada y lista para consulta:
-
+- **Entregables Finales y Métricas:** [documentation/delivery/FINAL_DELIVERABLES.md](documentation/delivery/FINAL_DELIVERABLES.md)
 - **Especificación de Negocio:** [documentation/business-doc.md](documentation/business-doc.md)
 - **Arquitectura Backend:** [documentation/back/backend.md](documentation/back/backend.md)
 - **Arquitectura Frontend:** [documentation/front/frontend.md](documentation/front/frontend.md)
 - **Modelo de Base de Datos:** [documentation/db/db_v0.md](documentation/db/db_v0.md)
-- **Backlog & Historias de Usuario Jira-Ready:** [documentation/US/BACKLOG_SUMMARY.md](documentation/US/BACKLOG_SUMMARY.md)
+- **Backlog & Historias de Usuario Jira-Ready (65 SP):** [documentation/US/BACKLOG_SUMMARY.md](documentation/US/BACKLOG_SUMMARY.md)
   - 🦀 [Historias Backend Rust (Dylan & Daniel)](documentation/US/backend-rust/)
   - 🐍 [Historias Backend Python (Dylan & Daniel)](documentation/US/backend-python/)
   - ⚛️ [Historias Frontend React (Sayder)](documentation/US/frontend/)
 - **Guía de Instalación Universal de Skill & Reglas:** [INSTALL_SKILL.md](INSTALL_SKILL.md)
 - **Changelog Diario:** [documentation/changelog/](documentation/changelog/)
-
----
-
-## 🛠️ Herramientas de Prueba y Testing
-
-- **Generador de Facturas Sintéticas:** `scripts/invoices.py`
-  ```bash
-  python scripts/invoices.py --output-dir ./test_invoices
-  ```
-  Genera automáticamente PDFs con casos:
-  - 🟢 `factura_valida_green.pdf` (Matemática perfecta)
-  - 🟡 `factura_descuadre_yellow.pdf` (Error aritmético de centavos)
-  - 🔴 `factura_duplicada_red.pdf` (Duplicado)
 
 ---
 
