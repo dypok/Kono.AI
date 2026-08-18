@@ -30,3 +30,4 @@
 - [Tuesday]-[18/08/2026]-[20:12] : Fixed incorrect SHA-256 test vector in tests/hasher_test.rs (89115be... -> 1b2a4fb...) during RUST-001 integration, with Dylan's approval.
 - [Tuesday]-[18/08/2026]-[12:14] : Implemented Feature 1 of US-PY-001 in branch feature/py-spatial-engine-vendor-templates: SpatialEngine with multiregional financial anchors, Ray-Casting horizontal/vertical projections, and spatial schemas.
 - [Tuesday]-[18/08/2026]-[12:16] : Implemented Feature 2 of US-PY-001 in branch feature/py-spatial-engine-vendor-templates: DeterministicTableParser with Y-clustering row segmentation, international currency parsing, and line items schema.
+- [Tuesday]-[18/08/2026]-[12:17] : Completed US-PY-001 in branch feature/py-spatial-engine-vendor-templates: implemented VendorTemplate model, vendor_matcher.py with layout cache extraction, template builder from user corrections, and unit tests.
