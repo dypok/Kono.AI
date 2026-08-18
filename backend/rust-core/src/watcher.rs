@@ -23,6 +23,12 @@ impl FolderWatcherDaemon {
         Self { config, redis_conn }
     }
 
+    /// Injects a Redis connection after construction so callers can connect
+    /// lazily once the async runtime is available.
+    pub fn set_redis_connection(&mut self, conn: Option<MultiplexedConnection>) {
+        self.redis_conn = conn;
+    }
+
     pub async fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         // Ensure directories exist
         fs::create_dir_all(&self.config.watch_dir)?;
