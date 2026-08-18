@@ -31,3 +31,4 @@
 - [Tuesday]-[18/08/2026]-[12:12] : Completed US-RUST-001 in branch feature/rust-folder-watcher-hasher: implemented FolderWatcherDaemon with notify, fast SHA-256 streaming hasher, Redis stream publisher, unit tests, and summary documentation.
 - [Tuesday]-[18/08/2026]-[12:14] : Implemented Feature 1 of US-PY-001 in branch feature/py-spatial-engine-vendor-templates: SpatialEngine with multiregional financial anchors, Ray-Casting horizontal/vertical projections, and spatial schemas.
 - [Tuesday]-[18/08/2026]-[12:16] : Implemented Feature 2 of US-PY-001 in branch feature/py-spatial-engine-vendor-templates: DeterministicTableParser with Y-clustering row segmentation, international currency parsing, and line items schema.
+- [Tuesday]-[18/08/2026]-[12:17] : Completed US-PY-001 in branch feature/py-spatial-engine-vendor-templates: implemented VendorTemplate model, vendor_matcher.py with layout cache extraction, template builder from user corrections, and unit tests.
