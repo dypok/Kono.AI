@@ -1,6 +1,6 @@
 # ==============================================================================
-# 🪙 Kono.ai — Unified Docker Compose (Development Hot-Reload by Default)
-# Architecture: Rust Ingestion Core + Python FastAPI Engine + Redis + React App
+# 🪙 Kono.ai — Development Docker Compose (Hot-Reloading Enabled)
+# Changes in Python, React, or Rust trigger instant reloads without rebuilds
 # ==============================================================================
 
 services:
@@ -25,7 +25,7 @@ services:
       retries: 5
 
   # ----------------------------------------------------------------------------
-  # 2. 🦀 Rust Ingestion Core (Folder Watcher & PDF/Image Triage)
+  # 2. 🦀 Rust Ingestion Core (Development Mode)
   # ----------------------------------------------------------------------------
   rust-core:
     build:
@@ -66,7 +66,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/python-api/app:/app/app
+      - ./backend/python-api/app:/app/app:ro
       - shared_storage:/data/storage
     depends_on:
       redis:
@@ -75,11 +75,11 @@ services:
       - kono-network
 
   # ----------------------------------------------------------------------------
-  # 4. ⚛️ Frontend Split-Screen Dashboard (Vite HMR Live Reload)
+  # 4. ⚛️ Frontend Split-Screen Dashboard (Vite HMR Dev Server)
   # ----------------------------------------------------------------------------
   frontend:
     image: node:20-alpine
-    container_name: kono-frontend
+    container_name: kono-frontend-dev
     working_dir: /app
     restart: unless-stopped
     command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0 --port 3000"]

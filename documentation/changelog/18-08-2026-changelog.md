@@ -19,3 +19,4 @@
 - [Tuesday]-[18/08/2026]-[10:32] : Bootstrapped Rust, Python, and React services source code and fixed docker-compose.yml validation (removed obsolete version and verified config).
 - [Tuesday]-[18/08/2026]-[10:41] : Fixed frontend/Dockerfile to use `npm install` instead of `npm ci` when package-lock.json is not yet generated.
 - [Tuesday]-[18/08/2026]-[10:43] : Fixed frontend TypeScript unused import in App.tsx and adjusted tsconfig.json compiler options.
+- [Tuesday]-[18/08/2026]-[10:46] : Configured live hot-reloading in docker-compose.yml: mounted ./backend/python-api/app into FastAPI with `--reload` and mounted ./frontend with Vite HMR dev server.
