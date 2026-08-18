@@ -1,13 +1,16 @@
-# Especificación Técnica de Arquitectura Backend: Kono.ai
+# Especificación Técnica de Arquitectura Dual-Backend: Kono.ai
 
 **Versión:** 1.0.0  
-**Stack Principal:** Python 3.11+, FastAPI, Redis (Async Queue / ARQ / Celery), PyMuPDF (C-bindings), Pydantic v2, RapidOCR, OpenAI API (`gpt-4o-mini`).
+**Stack Principal:** 
+- **Core de Ingesta y Pre-procesamiento:** Rust (Tokio, `notify`, `lopdf` / `pdfium-render`, `image-rs` / OpenCV bindings, `sha2`, `redis-rs`).
+- **Core de Negocio, Auditoría y API:** Python 3.11+ (FastAPI, SQLAlchemy 2.0 Async, Pydantic v2, RapidOCR, OpenAI API `gpt-4o-mini`).
+- **Broker / Job Queue:** Redis (Redis Streams / In-Memory Queue).
 
 ---
 
-## 1. Visión General de la Arquitectura Backend
+## 1. Visión General de la Arquitectura Dual-Backend (Rust + Python)
 
-El backend de **Kono.ai** está diseñado bajo los principios de **alto rendimiento, determinismo matemático estricto y cero desperdicio de tokens de IA**. Procesa documentos PDF digitales e imágenes en milisegundos mediante análisis posicional y encola tareas en **Redis** para garantizar procesamiento asíncrono no bloqueante.
+La arquitectura de **Kono.ai** combina la velocidad extrema y seguridad de memoria de **Rust** para el I/O intensivo, hashing y triage de documentos, junto con la flexibilidad y ecosistema de **Python** para el motor de auditoría determinista, reglas fiscales y endpoints REST.
 
 ```
                            [Fuentes de Ingesta]
@@ -18,143 +21,105 @@ El backend de **Kono.ai** está diseñado bajo los principios de **alto rendimie
            └────────────────────────┬────────────────────────┘
                                     │
                                     ▼
-                 ┌──────────────────────────────────────┐
-                 │ 🚀 FastAPI Ingestion API (< 2 ms)    │
-                 │ • Genera UUIDv4 y Hash SHA-256       │
-                 │ • Guarda archivo original en Storage │
-                 │ • Encola tarea en Redis Stream/Queue │
-                 └──────────────────┬───────────────────┘
+       ┌─────────────────────────────────────────────────────────────┐
+       │ 🦀 RUST INGESTION & PRE-PROCESSING CORE (< 3 ms)            │
+       │ • Daemon Folder Watcher (`notify` / inotify bajo nivel)     │
+       │ • Hashing instantáneo SHA-256 (`sha2`) para deduplicación   │
+       │ • Storage Persistor: Guarda archivo original en disco / S3  │
+       │ • Fast PDF Triage & Geometría (`lopdf` / `pdfium`):         │
+       │   - Extracción de palabras con Bounding Boxes (x0,y0,x1,y1) │
+       │ • Image Pre-processor (`image-rs` / OpenCV):                │
+       │   - Deskewing (enderezado), Denoise y Otsu Thresholding     │
+       │ • Encolador ultra-rápido en Redis Stream (`redis-rs`)       │
+       └────────────────────────────┬────────────────────────────────┘
                                     │
                                     ▼
-                 ┌──────────────────────────────────────┐
-                 │ 📨 Redis Job Queue (In-Memory Broker)│
-                 └──────────────────┬───────────────────┘
+       ┌─────────────────────────────────────────────────────────────┐
+       │ 📨 REDIS JOB QUEUE (Broker asíncrono y búfer de eventos)   │
+       └────────────────────────────┬────────────────────────────────┘
                                     │
                                     ▼
-                 ┌──────────────────────────────────────┐
-                 │ ⚙️ Async Background Worker (ARQ)     │
-                 │                                      │
-                 │ 1. TRIAGE DE DOCUMENTO:              │
-                 │    - PDF Digital (PyMuPDF) -> BBoxes │
-                 │    - Imagen/Scan (RapidOCR + OpenCV) │
-                 │                                      │
-                 │ 2. MOTOR DE EXTRACCIÓN DETERMINISTA: │
-                 │    - Layout Cache (Vendor Template)  │
-                 │    - Anclas & Ray-Casting Heurístico │
-                 │    - Extractor Tabular de Ítems      │
-                 │                                      │
-                 │ 3. MOTOR DE VALIDACIÓN MATEMÁTICA:   │
-                 │    - Σ(Cant * P.Unit) = Subtotal     │
-                 │    - Subtotal + IVA - Ret = Total    │
-                 │    - Tolerancia de redondeo: ±0.02   │
-                 │                                      │
-                 │ 4. FALLBACK INTELIGENTE (Opcional):  │
-                 │    - Solo si Confianza < 70%         │
-                 │    - Invocación selectiva a OpenAI   │
-                 │                                      │
-                 │ 5. ASIGNACIÓN ESTADO KONO:           │
-                 │    - 🟢 GREEN / 🟡 YELLOW / 🔴 RED   │
-                 └──────────────────┬───────────────────┘
+       ┌─────────────────────────────────────────────────────────────┐
+       │ 🐍 PYTHON BUSINESS, AUDIT & API ENGINE (FastAPI)            │
+       │ • Consumidor Worker Async de Redis                          │
+       │ • Vendor Matcher (Búsqueda de plantillas aprendidas)        │
+       │ • Spatial Heuristic Parser (Ray-Casting de Anclas & Tablas) │
+       │ • Motor Determinista de Validación Matemática (±0.02)       │
+       │ • Fallback Inteligente Opcional (OpenAI solo si duda < 70%) │
+       │ • Asignador de Estado Kono (🟢 Green / 🟡 Yellow / 🔴 Red)  │
+       │ • FastAPI REST API & WebSockets en tiempo real              │
+       └────────────────────────────┬────────────────────────────────┘
                                     │
                          ┌──────────┴──────────┐
                          ▼                     ▼
                ┌──────────────────┐  ┌──────────────────┐
                │ 🗄️ Base de Datos │  │ ⚡ WebSockets    │
-               │ (SQLite / Postgres) │ (Alerta a UI)   │
+               │ (SQLite / Postgres) │ (Feed para React)│
                └──────────────────┘  └──────────────────┘
 ```
 
 ---
 
-## 2. Módulos y Estructura del Código Backend
+## 2. Estructura del Código del Proyecto (Doble Backend)
 
 ```
 backend/
-├── app/
-│   ├── main.py                  # Entrada FastAPI, CORS y ciclo de vida
-│   ├── core/
-│   │   ├── config.py            # Variables de entorno (Redis URL, DB URL, OpenAI Key)
-│   │   ├── security.py          # Hashing, autenticación y tokens
-│   │   └── database.py          # Sesión SQLAlchemy / asyncpg
-│   ├── api/
-│   │   ├── v1/
-│   │   │   ├── documents.py     # Endpoints CRUD de facturas y subida de archivos
-│   │   │   ├── vendors.py       # Endpoints de proveedores y plantillas aprendidas
-│   │   │   ├── audit.py         # Endpoints de aprobación 1-click y correcciones
-│   │   │   └── websockets.py    # Notificaciones en tiempo real para la UI
-│   ├── engine/
-│   │   ├── triage.py            # Detección de PDF digital vs escaneo
-│   │   ├── digital_parser.py    # Extractor posicional PyMuPDF (palabras y coordenadas)
-│   │   ├── image_ocr.py         # Deskewing OpenCV + RapidOCR posicional
-│   │   ├── spatial_engine.py    # Anclas geométricas, Ray-Casting y parser de tablas
-│   │   ├── validator.py         # Reglas aritméticas deterministas (±0.02)
-│   │   ├── vendor_matcher.py    # Auto-aprendizaje y ejecución de plantillas
-│   │   └── ai_fallback.py       # Cliente OpenAI con Pydantic/Structured Outputs
-│   ├── queue/
-│   │   ├── worker.py            # Consumidor de tareas asíncronas Redis (ARQ / Celery)
-│   │   └── tasks.py             # Definición del pipeline de procesamiento
-│   ├── watcher/
-│   │   └── folder_watcher.py    # Observador de carpetas locales/NFS con watchdog
-│   ├── models/                  # Modelos SQLAlchemy ORM
-│   └── schemas/                 # Esquemas Pydantic v2 (Input/Output/JSON Schemas)
-└── requirements.txt
+├── rust-core/                   # 🦀 Microservicio / Demonio en Rust
+│   ├── Cargo.toml               # Dependencias (tokio, notify, lopdf, image, sha2, redis)
+│   └── src/
+│       ├── main.rs              # Punto de entrada y loop asíncrono tokio
+│       ├── watcher.rs           # Folder watcher nativo sobre inotify/FSEvents
+│       ├── hasher.rs            # Cálculo de hash SHA-256 en tiempo récord
+│       ├── pdf_triage.rs        # Extractor vectorial y detector de texto digital
+│       ├── img_preprocessor.rs  # Deskewing y normalización de contraste para escaneos
+│       └── queue_publisher.rs   # Publicador de eventos hacia Redis
+│
+├── python-api/                  # 🐍 Backend de Negocio, Auditoría y API
+│   ├── app/
+│   │   ├── main.py              # FastAPI server y ciclo de vida
+│   │   ├── core/
+│   │   │   ├── config.py        # Configuración (Redis, DB, OpenAI Keys)
+│   │   │   └── database.py      # SQLAlchemy Async Engine
+│   │   ├── api/v1/
+│   │   │   ├── documents.py     # Endpoints CRUD de documentos
+│   │   │   ├── vendors.py       # Endpoints de proveedores y plantillas
+│   │   │   ├── audit.py         # Endpoints de 1-Click Approval y correcciones
+│   │   │   └── websockets.py    # Stream WebSocket de auditoría en vivo
+│   │   ├── engine/
+│   │   │   ├── spatial_engine.py# Anclas geométricas y Ray-Casting
+│   │   │   ├── validator.py     # Motor aritmético determinista (±0.02)
+│   │   │   ├── vendor_matcher.py# Auto-aprendizaje de plantillas
+│   │   │   └── ai_fallback.py   # Fallback estructurado a gpt-4o-mini
+│   │   ├── queue/
+│   │   │   └── worker.py        # Consumidor asíncrono de tareas de Redis
+│   │   ├── models/              # Modelos ORM
+│   │   └── schemas/             # Esquemas Pydantic v2
+│   └── requirements.txt
+└── docker-compose.yml           # Orquestador local (Rust-Core + Python-API + Redis + DB)
 ```
 
 ---
 
-## 3. Detalle del Pipeline de Procesamiento
+## 3. Detalle de Responsabilidades: Rust vs. Python
 
-### 3.1 Ingesta & Folder Watcher
-- **Mecanismo:** El servicio utiliza `watchdog` en Python con eventos de inotify de bajo nivel.
-- **Acción:** Al detectar un archivo cerrado (`IN_CLOSE_WRITE`), calcula inmediatamente el `SHA-256`. Si el hash ya existe en la base de datos, lo marca como duplicado en **< 1 ms**. Si es nuevo, encola la ruta del archivo en Redis.
+### 3.1 🦀 Rust Core (Ingesta, Triage y Geometría)
+1. **Folder Watcher de Consumo Cero:** Utiliza `notify` para suscribirse a eventos del kernel (`IN_CLOSE_WRITE`), permitiendo vigilar directorios con miles de archivos con < 10 MB de RAM.
+2. **Deduplicación Flash:** Calcula el hash `SHA-256` en microsegundos antes de que el archivo toque la capa de negocio.
+3. **Triage de Documentos:**
+   - Si el PDF tiene texto embebido, `lopdf` / `pdfium` extrae la lista de palabras y sus coordenadas:
+     `{"text": "FACTURA", "bbox": [100.5, 720.0, 180.2, 735.0]}`.
+   - Si es imagen o escaneo, `image-rs` endereza el ángulo (deskewing) y aplica binarización Otsu para entregárselo limpio al OCR.
+4. **Publicación en Redis:** Empaqueta el payload normalizado y lo inserta en la cola Redis (`LPUSH invoice_queue` o Redis Stream).
 
-### 3.2 Triage Posicional
-- Con `PyMuPDF`, se analiza el número de caracteres vectoriales extraíbles:
-  - Si `len(page.get_text()) > 50`: Se extraen las palabras directamente con sus Bounding Boxes: `page.get_text("words")` -> `[x0, y0, x1, y1, "texto", block_no, line_no, word_no]`.
-  - Si `len(page.get_text()) <= 50`: Se rasteriza la página a 300 DPI y se pasa a `RapidOCR` + `OpenCV` para obtener la matriz de palabras con coordenadas.
-
-### 3.3 Extracción Espacial Heurística (Ray-Casting)
-- **Búsqueda de Anclas:** Diccionario de sinónimos configurables:
-  - `TOTAL`: `["total", "total a pagar", "gran total", "importe total", "valor total", "total factura"]`
-  - `SUBTOTAL`: `["subtotal", "sub-total", "base imponible", "valor antes de iva", "importe neto"]`
-  - `TAX`: `["iva", "impuesto", "vat", "tax", "igv"]`
-  - `DATE`: `["fecha", "fecha emision", "fecha de expedición", "date", "fecha factura"]`
-  - `INVOICE_NUM`: `["factura n", "factura no", "factura electrónica", "invoice no", "folio"]`
-- **Geometría de Búsqueda:** Para cada ancla encontrada en $(X_a, Y_a)$, busca valores numéricos o de fecha en:
-  1. Franja horizontal derecha: $X > X_a$ dentro de un margen vertical $|Y - Y_a| \le 12\text{ px}$.
-  2. Franja vertical inferior: $Y > Y_a$ alineado con $X \approx X_a$.
-
-### 3.4 Motor Determinista de Validación Matemática
-```python
-def validate_financials(extracted_data: InvoiceExtractedData) -> AuditResult:
-    alerts = []
-    
-    # 1. Sumatoria de items
-    calculated_subtotal = sum(
-        item.quantity * item.unit_price for item in extracted_data.items
-    )
-    
-    # 2. Tolerancia de redondeo
-    subtotal_diff = abs(extracted_data.subtotal - calculated_subtotal)
-    if subtotal_diff > 0.02:
-        alerts.append(f"Discrepancia en Subtotal: extraído={extracted_data.subtotal}, calculado={calculated_subtotal}")
-        
-    # 3. Total general
-    expected_total = extracted_data.subtotal + extracted_data.tax_total - extracted_data.withholding_total
-    total_diff = abs(extracted_data.grand_total - expected_total)
-    if total_diff > 0.02:
-        alerts.append(f"Discrepancia en Total: extraído={extracted_data.grand_total}, calculado={expected_total}")
-        
-    # 4. Asignación de Estado Kono
-    if not alerts and extracted_data.tax_id_valid:
-        state = "GREEN"
-    elif any("duplicado" in a.lower() for a in alerts) or not extracted_data.tax_id_valid:
-        state = "RED"
-    else:
-        state = "YELLOW"
-        
-    return AuditResult(state=state, alerts=alerts, discrepancy_amount=max(subtotal_diff, total_diff))
-```
+### 3.2 🐍 Python Engine (Negocio, Auditoría y API)
+1. **Consumo de Cola:** Worker asíncrono toma los payloads geométricos generados por Rust.
+2. **Reconocimiento por Plantilla:** Si el emisor ya tiene plantilla registrada, extrae los campos en < 2 ms por coordenadas directas.
+3. **Parser Heurístico Espacial (Ray-Casting):** Si es un emisor nuevo, busca anclas (`TOTAL`, `SUBTOTAL`, `NIT`, `IVA`) proyectando rayos de proximidad horizontal y vertical.
+4. **Auditoría Matemática Determinista:**
+   - $\sum (\text{item\_qty} \times \text{unit\_price}) = \text{Subtotal}$
+   - $\text{Subtotal} + \text{IVA} - \text{Retenciones} = \text{Total}$ (Margen de tolerancia $\pm 0.02$).
+5. **Fallback Selectivo a OpenAI:** Solo se invoca si la confianza es $< 70\%$ o el documento está severamente deteriorado.
+6. **Notificación en Vivo:** Envía el resultado procesado a la interfaz React mediante WebSockets.
 
 ---
 
@@ -163,19 +128,47 @@ def validate_financials(extracted_data: InvoiceExtractedData) -> AuditResult:
 | Método | Endpoint | Descripción |
 | :--- | :--- | :--- |
 | `POST` | `/api/v1/documents/upload` | Subida manual de factura (PDF o Imagen). Encola en Redis. |
-| `GET` | `/api/v1/documents/` | Lista paginada con filtros por estado Kono (Green/Yellow/Red), fecha y proveedor. |
-| `GET` | `/api/v1/documents/{id}` | Detalle completo de factura, campos extraídos, coordenadas BBox y alertas. |
-| `GET` | `/api/v1/documents/{id}/file` | Sirve el archivo binario original para el visor PDF interactivo. |
-| `PUT` | `/api/v1/documents/{id}/approve` | Aprobación 1-Click (actualiza estado a `APPROVED` y exporta a contabilidad). |
-| `PUT` | `/api/v1/documents/{id}/correct` | Corrección manual de campos y auto-generación de plantilla de proveedor. |
-| `GET` | `/api/v1/vendors/{tax_id}/template` | Obtiene las reglas/coordenadas aprendidas para un proveedor. |
+| `GET` | `/api/v1/documents/` | Lista paginada con filtros por estado Kono (Green/Yellow/Red). |
+| `GET` | `/api/v1/documents/{id}` | Detalle completo de factura, ítems, Bounding Boxes y alertas. |
+| `GET` | `/api/v1/documents/{id}/file` | Sirve el archivo binario original para el visor PDF. |
+| `PUT` | `/api/v1/documents/{id}/approve` | Aprobación 1-Click y exportación a contabilidad. |
+| `PUT` | `/api/v1/documents/{id}/correct` | Corrección manual y auto-generación de plantilla de proveedor. |
+| `GET` | `/api/v1/vendors/{tax_id}/template` | Consulta reglas/coordenadas aprendidas de un emisor. |
 | `WS` | `/api/v1/ws/audit-feed` | Stream WebSocket en tiempo real de documentos procesados. |
 
 ---
 
-## 5. Resiliencia, Concurrencia y Configuración de Redis
+## 5. Orquestación y Despliegue con Docker Compose
 
-- **Gestor de Colas:** `arq` (Redis-based async queue para Python asyncio) o `Celery` con Redis broker.
-- **Concurrencia:** 4 a 8 workers asíncronos en paralelo.
-- **Reintentos:** 3 reintentos con backoff exponencial para llamadas opcionales de fallback.
-- **Persistencia de Redis:** RDB snapshot cada 60 segundos o AOF para evitar pérdida de tareas en caso de reinicio.
+```yaml
+version: '3.8'
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rust-core:
+    build: ./backend/rust-core
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - WATCH_DIR=/data/inbound_invoices
+    volumes:
+      - ./data:/data
+    depends_on:
+      - redis
+
+  python-api:
+    build: ./backend/python-api
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=sqlite+aiosqlite:///./kono.db
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    depends_on:
+      - redis
+```
+

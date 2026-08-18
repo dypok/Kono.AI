@@ -8,3 +8,7 @@
   3. Format each entry strictly as:
      `- [Day]-[DD/MM/YYYY]-[HH:MM] : [Description of change]`
   4. Ensure each calendar day maintains its own isolated separate file.
+
+## Automatic Git Commit Protocol
+- **Trigger:** Whenever any file is created, modified, or deleted.
+- **Requirement:** Stage and commit all changes immediately using conventional commits (`feat:`, `fix:`, `docs:`, `chore:`).

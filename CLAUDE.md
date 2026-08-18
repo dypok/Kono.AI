@@ -9,3 +9,7 @@
   4. Append the change entry using the mandatory format:
      `- [Day]-[DD/MM/YYYY]-[HH:MM] : [Summary of the change]`
   5. Each new calendar day automatically starts its own separate file (e.g. `18-08-2026-changelog.md`, `19-08-2026-changelog.md`).
+
+## Automatic Git Commit Protocol
+- **Trigger:** Whenever any file is created, modified, or deleted.
+- **Requirement:** Stage and commit all changes immediately using conventional commits (`feat:`, `fix:`, `docs:`, `chore:`).
