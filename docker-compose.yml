@@ -3,8 +3,6 @@
 # Architecture: Rust Ingestion Core + Python FastAPI Engine + Redis + React App
 # ==============================================================================
 
-version: '3.8'
-
 services:
   # ----------------------------------------------------------------------------
   # 1. In-Memory Event Broker & Job Queue
