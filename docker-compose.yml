@@ -1,0 +1,104 @@
+# ==============================================================================
+# 🪙 Kono.ai — Microservices Multi-Container Docker Compose Stack
+# Architecture: Rust Ingestion Core + Python FastAPI Engine + Redis + React App
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. In-Memory Event Broker & Job Queue
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: kono-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - kono-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 2. 🦀 Rust Ingestion Core (Folder Watcher, SHA-256 Hasher & PDF/Image Triage)
+  # ----------------------------------------------------------------------------
+  rust-core:
+    build:
+      context: ./backend/rust-core
+      dockerfile: Dockerfile
+    container_name: kono-rust-core
+    restart: unless-stopped
+    environment:
+      - RUST_LOG=info
+      - REDIS_URL=redis://redis:6379/0
+      - WATCH_DIR=/data/storage/inbound
+      - STORAGE_DIR=/data/storage
+    volumes:
+      - shared_storage:/data/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - kono-network
+
+  # ----------------------------------------------------------------------------
+  # 3. 🐍 Python API & Business Engine (FastAPI, Validator & AI Fallback)
+  # ----------------------------------------------------------------------------
+  python-api:
+    build:
+      context: ./backend/python-api
+      dockerfile: Dockerfile
+    container_name: kono-python-api
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite+aiosqlite:////data/storage/kono.db
+      - STORAGE_DIR=/data/storage
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-kono_secret}
+    ports:
+      - "8000:8000"
+    volumes:
+      - shared_storage:/data/storage
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - kono-network
+
+  # ----------------------------------------------------------------------------
+  # 4. ⚛️ Frontend Split-Screen Dashboard & Kono Mascot (React + Nginx)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kono-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - python-api
+    networks:
+      - kono-network
+
+# ------------------------------------------------------------------------------
+# Volumes & Networks
+# ------------------------------------------------------------------------------
+volumes:
+  shared_storage:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  kono-network:
+    driver: bridge
