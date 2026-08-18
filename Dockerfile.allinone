@@ -1,0 +1,109 @@
+# ==============================================================================
+# 🪙 Kono.ai — All-in-One Monolithic Container
+# Combines: Redis + Rust Core + Python FastAPI + React/Nginx in a single container
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Stage 1: Build Frontend React App
+# ------------------------------------------------------------------------------
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# ------------------------------------------------------------------------------
+# Stage 2: Build Rust Core Binary
+# ------------------------------------------------------------------------------
+FROM rust:1-slim-bookworm AS rust-builder
+RUN apt-get update && apt-get install -y --no-install-recommends pkg-config libssl-dev build-essential && rm -rf /var/lib/apt/lists/*
+WORKDIR /usr/src/kono-rust-core
+COPY backend/rust-core/Cargo.toml backend/rust-core/Cargo.lock* ./
+COPY backend/rust-core/src ./src
+RUN cargo build --release
+
+# ------------------------------------------------------------------------------
+# Stage 3: Final Runtime Image with Supervisord
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm
+
+# Install Redis, Nginx, Supervisord, Tesseract OCR, and C-dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    redis-server \
+    nginx \
+    supervisor \
+    tesseract-ocr \
+    tesseract-ocr-spa \
+    tesseract-ocr-eng \
+    libgl1 \
+    libglib2.0-0 \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python API dependencies
+COPY backend/python-api/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy Python API source code
+COPY backend/python-api/app ./app
+
+# Copy Rust Binary from Stage 2
+COPY --from=rust-builder /usr/src/kono-rust-core/target/release/kono-rust-core /usr/local/bin/kono-rust-core
+
+# Copy Built Frontend Static Files from Stage 1 to Nginx HTML
+COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+
+# Copy Nginx & Supervisor Configs
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Setup shared storage directory
+RUN mkdir -p /data/storage/inbound /data/storage/failed /var/log/supervisor
+
+# Configure Supervisord to run Redis, Rust Core, FastAPI, and Nginx concurrently
+RUN cat << 'SUP_EOF' > /etc/supervisor/conf.d/kono.conf
+[supervisord]
+nodaemon=true
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+
+[program:redis]
+command=redis-server --daemonize no
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/supervisor/redis.log
+stderr_logfile=/var/log/supervisor/redis_err.log
+
+[program:rust-core]
+command=/usr/local/bin/kono-rust-core
+autostart=true
+autorestart=true
+environment=REDIS_URL="redis://127.0.0.1:6379/0",WATCH_DIR="/data/storage/inbound",STORAGE_DIR="/data/storage"
+stdout_logfile=/var/log/supervisor/rust.log
+stderr_logfile=/var/log/supervisor/rust_err.log
+
+[program:python-api]
+command=uvicorn app.main:app --host 127.0.0.1 --port 8000
+autostart=true
+autorestart=true
+environment=REDIS_URL="redis://127.0.0.1:6379/0",DATABASE_URL="sqlite+aiosqlite:////data/storage/kono.db",STORAGE_DIR="/data/storage"
+stdout_logfile=/var/log/supervisor/python.log
+stderr_logfile=/var/log/supervisor/python_err.log
+
+[program:nginx]
+command=nginx -g "daemon off;"
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/supervisor/nginx.log
+stderr_logfile=/var/log/supervisor/nginx_err.log
+SUP_EOF
+
+# Update Nginx config to point to local Python API
+RUN sed -i 's/python-api:8000/127.0.0.1:8000/g' /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/kono.conf"]

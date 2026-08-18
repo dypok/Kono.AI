@@ -1,0 +1,28 @@
+# Changelog: 18-08-2026
+
+- [Tuesday]-[18/08/2026]-[09:22] : Created complete backend architecture specification in documentation/back/backend.md with FastAPI, Redis Queue, deterministic engine, and OCR fallback.
+- [Tuesday]-[18/08/2026]-[09:23] : Created frontend architecture specification in documentation/front/frontend.md with React 18, Tailwind, PDF split-screen bounding boxes viewer, and Kono mascot states.
+- [Tuesday]-[18/08/2026]-[09:24] : Created database schema specification in documentation/db/db_v0.md with ERD, documents, vendor templates, audit logs, and SHA-256 deduplication index.
+- [Tuesday]-[18/08/2026]-[09:25] : Created synthetic PDF test invoices generator in scripts/invoices.py with ReportLab supporting Green, Yellow, and Red validation cases.
+- [Tuesday]-[18/08/2026]-[09:32] : Installed global daily-changelog skill and automated daily file separation rule.
+- [Tuesday]-[18/08/2026]-[09:34] : Created INSTALL_SKILL.md with 1-step installation script for team members (Linux, macOS, Windows).
+- [Tuesday]-[18/08/2026]-[09:34] : Added native multi-CLI support with CLAUDE.md and AGENTS.md for OpenCode, Claude Code, and Cursor.
+- [Tuesday]-[18/08/2026]-[09:48] : Updated documentation/back/backend.md to formally define the Dual-Backend architecture (Rust Ingestion Core + Python FastAPI Engine + Redis Queue + Docker Compose).
+- [Tuesday]-[18/08/2026]-[09:51] : Created comprehensive .gitignore covering Python, Rust (Cargo target), Node.js (React/Vite), SQLite/Databases, Local Storage, and Environment Secrets.
+- [Tuesday]-[18/08/2026]-[09:56] : Generated complete User Stories structure for team roles in documentation/US/ (backend-rust, backend-python, frontend) for Dylan, Daniel, and Sayder.
+- [Tuesday]-[18/08/2026]-[10:00] : Re-generated complete Jira-ready User Stories in documentation/US/ with full Definition of Done, Acceptance Criteria, Layer Subtasks, and BACKLOG_SUMMARY.md for Dylan, Daniel, and Sayder.
+- [Tuesday]-[18/08/2026]-[10:02] : Updated root README.md with full project vision, architecture diagrams summary, documentation index, test invoice generator guide, and team roles breakdown.
+- [Tuesday]-[18/08/2026]-[10:03] : Expanded User Stories backlog to 10 comprehensive Jira-Ready stories (65 SP) adding US-RUST-003 (Concurrency/Resilience), US-PY-004 (Inbound Email/n8n Webhook), and US-FRONT-003 (Point & Click Template Builder).
+- [Tuesday]-[18/08/2026]-[10:04] : Created documentation/delivery/FINAL_DELIVERABLES.md containing the 5 mandatory final deliverables: Architecture Diagram, Risk Matrix, Definition of Done (DoD), Efficiency Analysis, and Impact Metrics.
+- [Tuesday]-[18/08/2026]-[10:06] : Created global auto-commit skill, autocommit.sh script, and automatic commit rules across Antigravity, CLAUDE.md, and AGENTS.md.
+- [Tuesday]-[18/08/2026]-[10:30] : Created production-ready docker-compose.yml, .env.example, backend/rust-core/Dockerfile, backend/python-api/Dockerfile, frontend/Dockerfile, and frontend/nginx.conf.
+- [Tuesday]-[18/08/2026]-[10:32] : Bootstrapped Rust, Python, and React services source code and fixed docker-compose.yml validation (removed obsolete version and verified config).
+- [Tuesday]-[18/08/2026]-[10:41] : Fixed frontend/Dockerfile to use `npm install` instead of `npm ci` when package-lock.json is not yet generated.
+- [Tuesday]-[18/08/2026]-[10:43] : Fixed frontend TypeScript unused import in App.tsx and adjusted tsconfig.json compiler options.
+- [Tuesday]-[18/08/2026]-[10:46] : Configured live hot-reloading in docker-compose.yml: mounted ./backend/python-api/app into FastAPI with `--reload` and mounted ./frontend with Vite HMR dev server.
+- [Tuesday]-[18/08/2026]-[10:48] : Updated backend/rust-core/Dockerfile to use `rust:1.80-slim-bookworm` avoiding musl/openssl-dev compilation bottlenecks in Alpine.
+- [Tuesday]-[18/08/2026]-[11:11] : Fixed Rust Cargo.toml and Dockerfile by pinning `cpufeatures = "=0.2.12"` to avoid edition2024 incompatibility and switched base image to `rust:1-slim-bookworm`.
+- [Tuesday]-[18/08/2026]-[11:51] : Added step-by-step installation, Docker Compose hot-reload execution guide, URL table, and testing commands to README.md.
+- [Tuesday]-[18/08/2026]-[11:51] : Created Dockerfile.allinone and docker-compose.monodocker.yml enabling a single monolithic container managed by Supervisord (Redis, Rust, Python, Nginx/React on port 80).
+- [Tuesday]-[18/08/2026]-[11:54] : Documented Rust Core daemon communication pattern (Event-Driven / Queue-based without exposed HTTP port, communicating directly via Redis Stream on port 6379).
+- [Tuesday]-[18/08/2026]-[12:16] : Added mandatory Skills & Code Best Practices rules to AGENTS.md and CLAUDE.md (backend-architect + code-reviewer, SOLID/DRY, security, API, performance, maintainability and test standards).

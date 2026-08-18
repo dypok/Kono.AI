@@ -1,0 +1,22 @@
+# ==============================================================================
+# 🪙 Kono.ai — Mono-Container (Single All-in-One Docker Image)
+# Runs everything (Redis + Rust Core + Python FastAPI + React/Nginx) on port 80
+# ==============================================================================
+
+services:
+  kono-allinone:
+    build:
+      context: .
+      dockerfile: Dockerfile.allinone
+    container_name: kono-app
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - kono_storage:/data/storage
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+
+volumes:
+  kono_storage:
+    driver: local
