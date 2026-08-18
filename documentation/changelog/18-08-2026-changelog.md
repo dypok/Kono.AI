@@ -17,3 +17,4 @@
 - [Tuesday]-[18/08/2026]-[10:06] : Created global auto-commit skill, autocommit.sh script, and automatic commit rules across Antigravity, CLAUDE.md, and AGENTS.md.
 - [Tuesday]-[18/08/2026]-[10:30] : Created production-ready docker-compose.yml, .env.example, backend/rust-core/Dockerfile, backend/python-api/Dockerfile, frontend/Dockerfile, and frontend/nginx.conf.
 - [Tuesday]-[18/08/2026]-[10:32] : Bootstrapped Rust, Python, and React services source code and fixed docker-compose.yml validation (removed obsolete version and verified config).
+- [Tuesday]-[18/08/2026]-[10:41] : Fixed frontend/Dockerfile to use `npm install` instead of `npm ci` when package-lock.json is not yet generated.
