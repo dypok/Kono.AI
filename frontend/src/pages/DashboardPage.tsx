@@ -27,6 +27,7 @@ export const DashboardPage: React.FC = () => {
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDocuments = async () => {
     try {
@@ -56,9 +57,18 @@ export const DashboardPage: React.FC = () => {
 
     try {
       setIsUploading(true);
-      const file = files[0];
-      await documentsApi.uploadDocument(file);
-      setUploadSuccessMsg(`Comprobante "${file.name}" cargado y procesado.`);
+      if (files.length === 1) {
+        const file = files[0];
+        await documentsApi.uploadDocument(file);
+        setUploadSuccessMsg(`Comprobante "${file.name}" cargado y procesado.`);
+      } else {
+        const fileList = Array.from(files).filter((f) => {
+          const name = f.name.toLowerCase();
+          return name.endsWith('.pdf') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg');
+        });
+        const res = await documentsApi.batchUploadDocuments(fileList);
+        setUploadSuccessMsg(`Lote completado: ${res.processed_count || fileList.length} facturas extraídas con éxito.`);
+      }
       setTimeout(() => setUploadSuccessMsg(null), 4000);
       fetchDocuments();
     } catch (err: any) {
@@ -66,6 +76,7 @@ export const DashboardPage: React.FC = () => {
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (folderInputRef.current) folderInputRef.current.value = '';
     }
   };
 
@@ -104,12 +115,24 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Hidden File Input */}
+      {/* Hidden File Input (Multiple files) */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileUpload}
         accept=".pdf,.png,.jpg,.jpeg"
+        multiple
+        className="hidden"
+      />
+
+      {/* Hidden Folder Input (Directory scan) */}
+      <input
+        type="file"
+        ref={folderInputRef}
+        onChange={handleFileUpload}
+        // @ts-ignore
+        webkitdirectory=""
+        directory=""
         className="hidden"
       />
 
@@ -133,13 +156,24 @@ export const DashboardPage: React.FC = () => {
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
             className="px-4 py-2.5 rounded-xl liquid-glass-card hover:bg-white/5 border border-white/10 text-xs text-alabaster-200 flex items-center space-x-2 transition disabled:opacity-50"
+            title="Sube uno o varios archivos PDF"
           >
             {isUploading ? (
               <IconLoader2 className="w-4 h-4 text-kono-silver animate-spin" />
             ) : (
               <IconUpload className="w-4 h-4 text-kono-silver" />
             )}
-            <span>{isUploading ? 'Subiendo...' : 'Cargar Comprobante'}</span>
+            <span>{isUploading ? 'Subiendo...' : 'Cargar Comprobantes'}</span>
+          </button>
+
+          <button
+            onClick={() => folderInputRef.current?.click()}
+            disabled={isUploading}
+            className="px-4 py-2.5 rounded-xl liquid-glass-card hover:bg-white/5 border border-white/10 text-xs text-alabaster-200 flex items-center space-x-2 transition disabled:opacity-50"
+            title="Escanea una carpeta completa con facturas"
+          >
+            <IconInbox className="w-4 h-4 text-cyan-400" />
+            <span>Escanear Carpeta</span>
           </button>
 
           <button

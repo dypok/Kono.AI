@@ -160,6 +160,114 @@ async def upload_document(
 
 
 # -------------------------------------------------------------------------- #
+# POST /api/v1/documents/batch-upload (Upload multiple files or folder at once)
+# -------------------------------------------------------------------------- #
+@router.post("/batch-upload", status_code=201)
+async def batch_upload_documents(
+    request: Request,
+    files: List[UploadFile] = File(...),
+    current_user: SupabaseUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Processes multiple invoices uploaded concurrently or via a folder drag-and-drop."""
+    settings = get_settings()
+    inbound_dir = Path(settings.storage_dir) / "inbound"
+    inbound_dir.mkdir(parents=True, exist_ok=True)
+
+    processed_items = []
+
+    for file in files:
+        mime = file.content_type or "application/octet-stream"
+        ext = ALLOWED_MIME.get(mime, "pdf" if file.filename.lower().endswith(".pdf") else "png")
+        raw = await file.read()
+        if len(raw) == 0:
+            continue
+
+        doc_id = str(uuid.uuid4())
+        target_name = f"{doc_id}.{ext}"
+        target_path = inbound_dir / target_name
+        with open(target_path, "wb") as fh:
+            fh.write(raw)
+
+        extracted = pdf_extractor_service.extract_document(str(target_path))
+
+        doc = Document(
+            id=doc_id,
+            user_id=current_user.id,
+            file_name=file.filename or target_name,
+            file_path=str(target_path),
+            file_hash_sha256=extracted.get("file_hash_sha256"),
+            mime_type=mime,
+            file_size_bytes=len(raw),
+            invoice_number=extracted.get("invoice_number"),
+            vendor_name=extracted.get("vendor_name"),
+            vendor_tax_id=extracted.get("vendor_tax_id"),
+            issue_date=extracted.get("issue_date"),
+            currency=extracted.get("currency", "COP"),
+            subtotal=extracted.get("subtotal"),
+            tax_total=extracted.get("tax_total"),
+            withholding_total=extracted.get("withholding_total", 0.0),
+            grand_total=extracted.get("grand_total"),
+            processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
+            kono_state=extracted.get("kono_state", "GREEN"),
+            extraction_method=extracted.get("extraction_method", "DETERMINISTIC"),
+            bounding_boxes=extracted.get("bounding_boxes"),
+        )
+        db.add(doc)
+
+        for it in extracted.get("items", []):
+            item_obj = InvoiceItem(
+                document_id=doc_id,
+                line_number=it["line_number"],
+                description=it.get("description", ""),
+                quantity=it.get("quantity", 1.0),
+                unit_price=it.get("unit_price", 0.0),
+                tax_rate=it.get("tax_rate", 19.0),
+                total_price=it.get("total_price", 0.0),
+                is_math_valid=it.get("is_math_valid", True),
+            )
+            db.add(item_obj)
+
+        for disc in extracted.get("discrepancies", []):
+            disc_obj = Discrepancy(
+                document_id=doc_id,
+                field_name=disc["field_name"],
+                alert_type=disc["alert_type"],
+                expected_value=disc.get("expected_value"),
+                extracted_value=disc.get("extracted_value"),
+                delta_amount=disc.get("delta_amount"),
+                description=disc.get("description", ""),
+            )
+            db.add(disc_obj)
+
+        processed_items.append({
+            "id": doc_id,
+            "file_name": file.filename,
+            "invoice_number": doc.invoice_number,
+            "kono_state": doc.kono_state,
+            "grand_total": doc.grand_total,
+        })
+
+    await db.commit()
+
+    # Broadcast batch event
+    await _get_manager(request).broadcast(
+        {
+            "type": "BATCH_DOCUMENTS_PROCESSED",
+            "count": len(processed_items),
+            "user_id": current_user.id,
+        }
+    )
+
+    return {
+        "status": "SUCCESS",
+        "processed_count": len(processed_items),
+        "items": processed_items,
+        "message": f"Se procesaron {len(processed_items)} facturas exitosamente.",
+    }
+
+
+# -------------------------------------------------------------------------- #
 # GET /api/v1/documents/  (paginated list with filters and counts)
 # -------------------------------------------------------------------------- #
 @router.get("/", response_model=dict)
@@ -289,10 +397,31 @@ async def stream_file(document_id: str, db: AsyncSession = Depends(get_db)):
     doc = await db.get(Document, document_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="Document not found")
-    path = Path(doc.file_path)
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Original file missing")
-    media_type = doc.mime_type or "application/octet-stream"
+    
+    # 1. Check primary file_path
+    path = Path(doc.file_path) if doc.file_path else None
+    
+    # 2. Check alternative storage locations if primary does not exist
+    if not path or not path.exists():
+        settings = get_settings()
+        candidates = [
+            Path(settings.storage_dir) / "inbound" / f"{doc.id}.pdf",
+            Path(settings.storage_dir) / "inbound" / f"{doc.id}.png",
+            Path(settings.storage_dir) / "inbound" / f"{doc.id}.jpg",
+            Path("/data/storage/inbound") / f"{doc.id}.pdf",
+            Path("/app/data/storage/inbound") / f"{doc.id}.pdf",
+            Path("/app/scripts/facturas_pdf") / (doc.file_name or ""),
+        ]
+        found = False
+        for c in candidates:
+            if c.exists() and c.is_file():
+                path = c
+                found = True
+                break
+        if not found:
+            raise HTTPException(status_code=404, detail="Original file missing")
+            
+    media_type = doc.mime_type or "application/pdf"
 
     def iter_file():
         with open(path, "rb") as fh:

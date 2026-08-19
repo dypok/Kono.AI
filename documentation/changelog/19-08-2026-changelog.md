@@ -81,3 +81,4 @@
 - [Wednesday]-[19/08/2026]-[18:30] : Generated realistic sample invoice PDFs using scripts/index.html template and WeasyPrint in scripts/facturas_pdf.
 - [Wednesday]-[19/08/2026]-[18:34] : Connected dynamic split-screen invoice auditor visor. Left panel loads native streaming PDF/vector bounding boxes, right panel displays extracted metadata, line items, totals and 1-Click approval connected to backend API.
 - [Wednesday]-[19/08/2026]-[18:35] : Locked invoice audit summary fields to strict read-only mode to prevent manual tampering of extracted values.
+- [Wednesday]-[19/08/2026]-[18:37] : Fixed "Original file missing" 404 in /api/v1/documents/:id/file by resolving dynamic absolute paths and storage fallback locations. Implemented folder batch scanning and multi-file upload button in Dashboard.

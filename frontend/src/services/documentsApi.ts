@@ -77,6 +77,30 @@ export const documentsApi = {
     return res.json();
   },
 
+  /** Sube múltiples comprobantes o una carpeta completa a /api/v1/documents/batch-upload */
+  async batchUploadDocuments(files: File[]): Promise<any> {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    const headers = await getAuthHeader();
+    const res = await fetch('/api/v1/documents/batch-upload', {
+      method: 'POST',
+      headers: {
+        ...headers,
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error en la subida en lote' }));
+      throw new Error(err.detail || 'Fallo al procesar lote de comprobantes');
+    }
+
+    return res.json();
+  },
+
   /** Sube un comprobante a /api/v1/documents/upload */
   async uploadDocument(file: File): Promise<any> {
     const formData = new FormData();
