@@ -99,6 +99,9 @@ export const SettingsPage: React.FC = () => {
   const handleRequestRemoveInbox = (id: string, email: string) => {
     if (inboxes.length <= 1) {
       setShowSingleInboxAlert(true);
+      setTimeout(() => {
+        setShowSingleInboxAlert(false);
+      }, 3000);
       return;
     }
     setInboxToDelete({ id, email });
@@ -352,38 +355,32 @@ export const SettingsPage: React.FC = () => {
           document.body
         )}
 
-      {/* ⚠️ Modal 3: Advertencia de Bandeja Única Obligatoria */}
+      {/* ⚠️ Toast Emergente 3: Advertencia de Bandeja Única (Desaparece en 3s) */}
       {showSingleInboxAlert &&
         createPortal(
           <div
-            className="fixed inset-0 w-screen h-screen z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl animate-fade-in"
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+            className="fixed top-6 right-6 z-[9999] max-w-md w-full p-4 bg-titanium-950/95 border border-amber-500/30 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-fade-in text-alabaster-100 flex items-start space-x-3.5"
           >
-            <div className="w-full max-w-md bg-titanium-950/95 border border-white/20 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden text-alabaster-100">
-              <div className="absolute -top-10 -left-10 w-44 h-44 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+              <IconAlertCircle className="w-5 h-5" />
+            </div>
 
-              <div className="flex items-center space-x-3 mb-4 relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shadow-md shrink-0">
-                  <IconAlertCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-alabaster-100">Bandeja Principal Activa</h3>
-                  <p className="text-xs text-zinc-400">Requisito de Facturación</p>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 leading-relaxed mb-6 relative z-10">
-                Debes mantener al menos una bandeja vinculada para recibir facturas y ejecutar la auditoría financiera.
-              </div>
-
-              <div className="flex items-center justify-end relative z-10">
+            <div className="flex-1 text-xs">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-amber-400">Requisito Obligatorio</h4>
                 <button
-                  type="button"
                   onClick={() => setShowSingleInboxAlert(false)}
-                  className="w-full py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition shadow-md"
+                  className="text-zinc-400 hover:text-white"
                 >
-                  Entendido
+                  <IconX className="w-4 h-4" />
                 </button>
+              </div>
+              <p className="text-zinc-300 mt-1 leading-relaxed">
+                Debes mantener al menos una bandeja vinculada para recibir facturas.
+              </p>
+              {/* Animated 3-second progress bar */}
+              <div className="mt-2.5 w-full bg-white/10 h-1 rounded-full overflow-hidden">
+                <div className="bg-amber-400 h-full w-full animate-[shrink_3s_linear_forwards]" />
               </div>
             </div>
           </div>,
