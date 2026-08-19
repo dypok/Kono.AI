@@ -19,3 +19,4 @@
 - [Wednesday]-[19/08/2026]-[11:28] : Saved MCP configuration in .gemini/settings.json pointing to Supabase project avkxhplapmibhyleywzd.
 - [Wednesday]-[19/08/2026]-[11:29] : Configured Supabase MCP server in global ~/.gemini/antigravity/mcp_config.json for Antigravity IDE tool integration.
 - [Wednesday]-[19/08/2026]-[11:34] : Installed official Supabase agent skills (supabase & supabase-postgres-best-practices) under .agents/skills/.
+- [Wednesday]-[19/08/2026]-[11:34] : Connected to Supabase project avkxhplapmibhyleywzd via MCP, retrieved project URL and API keys, and injected credentials into .env.
