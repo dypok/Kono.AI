@@ -45,6 +45,8 @@ def _get_manager(request: Request) -> ConnectionManager:
     return manager
 
 
+from app.core.supabase_auth import get_current_user, SupabaseUser
+
 # -------------------------------------------------------------------------- #
 # POST /api/v1/documents/upload
 # -------------------------------------------------------------------------- #
@@ -52,6 +54,7 @@ def _get_manager(request: Request) -> ConnectionManager:
 async def upload_document(
     request: Request,
     file: UploadFile = File(...),
+    current_user: SupabaseUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Uploads a PDF/image, validates MIME, persists the original file and
@@ -80,6 +83,7 @@ async def upload_document(
 
     doc = Document(
         id=doc_id,
+        user_id=current_user.id,
         file_name=file.filename or target_name,
         file_path=str(target_path),
         file_hash_sha256=None,  # filled later by the hasher/triage step
@@ -95,47 +99,71 @@ async def upload_document(
 
     # Notify connected clients of a new document entering the pipeline.
     await _get_manager(request).broadcast(
-        {"type": "DOCUMENT_PROCESSED", "document_id": doc_id, "kono_state": "PENDING"}
+        {"type": "DOCUMENT_PROCESSED", "document_id": doc_id, "kono_state": "PENDING", "user_id": current_user.id}
     )
 
     return ActionResponse(
         id=doc_id,
-        processing_status="PENDING",
         kono_state="YELLOW",
+        processing_status="PENDING",
         message="Document uploaded and queued for triage",
     )
 
 
 # -------------------------------------------------------------------------- #
-# GET /api/v1/documents/  (paginated list with filters)
+# GET /api/v1/documents/  (paginated list with filters and counts)
 # -------------------------------------------------------------------------- #
 @router.get("/", response_model=dict)
 async def list_documents(
     kono_state: Optional[str] = Query(None, pattern="^(GREEN|YELLOW|RED)$"),
-    q: Optional[str] = Query(None, description="Search in invoice number / file name"),
+    q: Optional[str] = Query(None, description="Search in invoice number / vendor name / NIT"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    current_user: SupabaseUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(Document).order_by(Document.created_at.desc())
+    # Filter documents by authenticated user_id
+    base_stmt = select(Document).where(
+        (Document.user_id == current_user.id) | (Document.user_id.is_(None))
+    )
+
+    # Calculate real-time counts by kono_state for the active user
+    all_user_docs = (await db.execute(base_stmt)).scalars().all()
+    count_all = len(all_user_docs)
+    count_green = sum(1 for d in all_user_docs if d.kono_state == "GREEN")
+    count_yellow = sum(1 for d in all_user_docs if d.kono_state == "YELLOW")
+    count_red = sum(1 for d in all_user_docs if d.kono_state == "RED")
+
+    stmt = base_stmt.order_by(Document.created_at.desc())
     if kono_state:
         stmt = stmt.where(Document.kono_state == kono_state.upper())
     if q:
         like = f"%{q}%"
         stmt = stmt.where(
-            (Document.invoice_number.like(like)) | (Document.file_name.like(like))
+            (Document.invoice_number.like(like))
+            | (Document.file_name.like(like))
+            | (Document.vendor_name.like(like))
+            | (Document.vendor_tax_id.like(like))
         )
 
-    total = len((await db.execute(select(Document.id))).scalars().all())
-    added = await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))
-    rows = added.scalars().unique().all()
+    filtered_docs = (await db.execute(stmt)).scalars().all()
+    total = len(filtered_docs)
+    
+    # Paginate
+    paged_docs = (await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))).scalars().all()
 
     return {
-        "items": [DocumentListItem.model_validate(d) for d in rows],
+        "items": [DocumentListItem.model_validate(d) for d in paged_docs],
         "page": page,
         "page_size": page_size,
         "total": total,
-        "total_pages": (total + page_size - 1) // page_size,
+        "total_pages": (total + page_size - 1) // page_size if total > 0 else 0,
+        "counts": {
+            "all": count_all,
+            "green": count_green,
+            "yellow": count_yellow,
+            "red": count_red,
+        },
     }
 
 
@@ -294,8 +322,116 @@ async def correct_document(
 
 
 # -------------------------------------------------------------------------- #
+# POST /api/v1/documents/bulk-approve  (Batch 1-Click approval)
+# -------------------------------------------------------------------------- #
+@router.post("/bulk-approve")
+async def bulk_approve_documents(
+    current_user: SupabaseUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Approves all pending/audited documents for the active user in 1-Click."""
+    stmt = select(Document).where(
+        ((Document.user_id == current_user.id) | (Document.user_id.is_(None)))
+        & (Document.processing_status != "APPROVED")
+    )
+    docs = (await db.execute(stmt)).scalars().all()
+    count = 0
+    for doc in docs:
+        prev = _state_snapshot(doc)
+        doc.processing_status = "APPROVED"
+        doc.kono_state = "GREEN"
+        await _audit(db, doc, "1CLICK_BULK_APPROVE", prev, _state_snapshot(doc))
+        count += 1
+
+    await db.commit()
+    return {
+        "status": "APPROVED",
+        "approved_count": count,
+        "message": f"Se han aprobado {count} comprobante(s) exitosamente.",
+    }
+
+
+# -------------------------------------------------------------------------- #
 # GET /api/v1/documents/export?format=csv|json
 # -------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------- #
+# POST /api/v1/documents/seed-demo  (Seed demo real invoices for active user)
+# -------------------------------------------------------------------------- #
+@router.post("/seed-demo")
+async def seed_demo_documents(
+    current_user: SupabaseUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generates initial realistic test invoices for the active authenticated user."""
+    demo_samples = [
+        {
+            "id": f"demo_{uuid.uuid4().hex[:8]}",
+            "user_id": current_user.id,
+            "file_name": "factura_aws_cloud_hosting.pdf",
+            "file_path": "/data/storage/inbound/demo_aws.pdf",
+            "invoice_number": "INV-2026-8891",
+            "vendor_name": "Amazon Web Services Colombia SAS",
+            "vendor_tax_id": "900.123.456-1",
+            "issue_date": "2026-08-15",
+            "currency": "COP",
+            "subtotal": 1500000.0,
+            "tax_total": 285000.0,
+            "withholding_total": 0.0,
+            "grand_total": 1785000.0,
+            "kono_state": "GREEN",
+            "processing_status": "AUDITED",
+            "extraction_method": "DETERMINISTIC",
+        },
+        {
+            "id": f"demo_{uuid.uuid4().hex[:8]}",
+            "user_id": current_user.id,
+            "file_name": "comprobante_papeleria_suministros.pdf",
+            "file_path": "/data/storage/inbound/demo_office.pdf",
+            "invoice_number": "FAC-9012",
+            "vendor_name": "Office Supplies & Papelería LTDA",
+            "vendor_tax_id": "800.999.111-2",
+            "issue_date": "2026-08-16",
+            "currency": "COP",
+            "subtotal": 353361.34,
+            "tax_total": 67138.66,
+            "withholding_total": 0.0,
+            "grand_total": 420500.0,
+            "kono_state": "YELLOW",
+            "processing_status": "PENDING",
+            "extraction_method": "TEMPLATE",
+        },
+        {
+            "id": f"demo_{uuid.uuid4().hex[:8]}",
+            "user_id": current_user.id,
+            "file_name": "factura_aws_cloud_hosting_duplicada.pdf",
+            "file_path": "/data/storage/inbound/demo_aws_dup.pdf",
+            "invoice_number": "INV-2026-8891",
+            "vendor_name": "Amazon Web Services Colombia SAS (Duplicado)",
+            "vendor_tax_id": "900.123.456-1",
+            "issue_date": "2026-08-18",
+            "currency": "COP",
+            "subtotal": 1500000.0,
+            "tax_total": 285000.0,
+            "withholding_total": 0.0,
+            "grand_total": 1785000.0,
+            "kono_state": "RED",
+            "processing_status": "REJECTED",
+            "extraction_method": "DETERMINISTIC",
+        },
+    ]
+
+    for d in demo_samples:
+        doc = Document(**d)
+        db.add(doc)
+    await db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "created_count": len(demo_samples),
+        "message": f"Se han sembrado {len(demo_samples)} facturas de prueba vinculadas a tu cuenta.",
+    }
+
+
 # -------------------------------------------------------------------------- #
 # Helpers
 # -------------------------------------------------------------------------- #
