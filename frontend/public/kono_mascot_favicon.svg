@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F1F5F9" />
+      <stop offset="50%" stop-color="#94A3B8" />
+      <stop offset="100%" stop-color="#475569" />
+    </linearGradient>
+    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer Silver Titanium Ring -->
+  <circle cx="32" cy="32" r="30" fill="url(#silverGrad)" stroke="#FFFFFF" stroke-width="2" />
+  
+  <!-- Dark Liquid Core -->
+  <circle cx="32" cy="32" r="23" fill="url(#coreGrad)" stroke="#CBD5E1" stroke-width="1.5" />
+  
+  <!-- Kono Mascot Expressive Eyes -->
+  <ellipse cx="25" cy="28" rx="3.5" ry="5.5" fill="#FAF8F5" />
+  <ellipse cx="39" cy="28" rx="3.5" ry="5.5" fill="#FAF8F5" />
+  
+  <!-- Silver Smile Mouth -->
+  <path d="M 27 39 Q 32 44 37 39" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round" />
+</svg>
