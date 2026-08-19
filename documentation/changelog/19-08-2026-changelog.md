@@ -64,3 +64,4 @@
 - [Wednesday]-[19/08/2026]-[14:45] : Added CSS shrinkWidth3s animation for the single-inbox constraint toast progress bar and equipped the toast with an instant dismiss 'X' button that cancels the 3-second auto-dismiss timeout immediately.
 - [Wednesday]-[19/08/2026]-[14:46] : Migrated animation definitions from manual CSS into tailwind.config.js (keyframes: shrink-progress, animation: animate-shrink-3s) to ensure 100% pure Tailwind CSS styling.
 - [Wednesday]-[19/08/2026]-[14:47] : Implemented real-time dynamic countdown progress bar (alertProgress calculated at 60fps across 3000ms duration) styled with Tailwind CSS transition classes for the single-inbox constraint toast.
+- [Wednesday]-[19/08/2026]-[14:52] : Fixed OAuth redirect destination to stay on /settings when linking secondary email inboxes, and ensured multi-inbox accumulation without overwriting previous connected emails in authStore.ts and SettingsPage.tsx.

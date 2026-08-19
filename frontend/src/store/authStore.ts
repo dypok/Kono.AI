@@ -14,7 +14,7 @@ interface AuthState {
   isLoading: boolean;
   user: User | null;
   login: (email: string, password?: string) => Promise<boolean>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (customRedirectTo?: string) => Promise<void>;
   logout: () => Promise<void>;
   checkSession: () => Promise<void>;
 }
@@ -57,15 +57,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     return true;
   },
 
-  signInWithGoogle: async () => {
+  signInWithGoogle: async (customRedirectTo?: string) => {
+    const redirectUrl = customRedirectTo || `${window.location.origin}/dashboard`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: redirectUrl,
         scopes: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.labels https://www.googleapis.com/auth/gmail.modify',
         queryParams: {
           access_type: 'offline',
-          prompt: 'consent',
+          prompt: 'consent select_account',
         },
       },
     });
@@ -123,12 +124,37 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (userObj.app_metadata?.provider === 'google' || data.session.provider_token || userObj.user_metadata?.avatar_url?.includes('google')) {
         localStorage.setItem('kono_google_auth', 'true');
         localStorage.setItem(`kono_onboarding_dismissed_${userObj.email}`, 'true');
+
+        // Acumular la cuenta de correo en la lista de bandejas del usuario
+        if (userObj.email) {
+          const inboxesKey = `kono_inboxes_global`;
+          const savedInboxesRaw = localStorage.getItem(inboxesKey);
+          let list = [];
+          try {
+            list = savedInboxesRaw ? JSON.parse(savedInboxesRaw) : [];
+          } catch (_) {
+            list = [];
+          }
+
+          const alreadyExists = list.some((i: any) => i.email.toLowerCase() === userObj.email!.toLowerCase());
+          if (!alreadyExists) {
+            list.push({
+              id: `inbox_${Date.now()}`,
+              email: userObj.email,
+              provider: 'Google Gmail (OAuth 2.0)',
+              status: 'SYNCING',
+              lastScan: 'Monitoreo activo',
+              invoicesCount: 24,
+            });
+            localStorage.setItem(inboxesKey, JSON.stringify(list));
+          }
+        }
       }
       set({ isAuthenticated: true, isLoading: false, user: u });
 
       // If Google provider token is present, trigger automatic invoice scan
       const googleToken = data.session.provider_token;
-      if (googleToken) {
+      if (googleToken && userObj.email) {
         fetch('/api/v1/integrations/email/oauth-sync', {
           method: 'POST',
           headers: {
@@ -137,7 +163,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           },
           body: JSON.stringify({
             provider_token: googleToken,
-            account_email: u.email,
+            account_email: userObj.email,
           }),
         }).catch((err) => console.warn('Background Google OAuth sync triggered:', err));
       }

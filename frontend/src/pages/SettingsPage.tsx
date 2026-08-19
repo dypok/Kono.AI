@@ -26,13 +26,16 @@ interface ConnectedInbox {
 export const SettingsPage: React.FC = () => {
   const { user, signInWithGoogle } = useAuthStore();
   const [inboxes, setInboxes] = useState<ConnectedInbox[]>(() => {
-    const saved = localStorage.getItem(`kono_inboxes_${user?.email}`);
+    const saved = localStorage.getItem('kono_inboxes_global');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       } catch (_) {}
     }
-    return [
+    const initialList: ConnectedInbox[] = [
       {
         id: 'inbox_primary',
         email: user?.email || 'dylan@kono.ai',
@@ -42,6 +45,8 @@ export const SettingsPage: React.FC = () => {
         invoicesCount: 24,
       },
     ];
+    localStorage.setItem('kono_inboxes_global', JSON.stringify(initialList));
+    return initialList;
   });
 
   const [isSyncingAll, setIsSyncingAll] = useState(false);
@@ -61,10 +66,26 @@ export const SettingsPage: React.FC = () => {
   const [progressIntervalId, setProgressIntervalId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (user?.email) {
-      localStorage.setItem(`kono_inboxes_${user.email}`, JSON.stringify(inboxes));
-    }
-  }, [inboxes, user]);
+    localStorage.setItem('kono_inboxes_global', JSON.stringify(inboxes));
+  }, [inboxes]);
+
+  // Escuchar cambios de almacenamiento en tiempo real (tras el retorno del OAuth redirect)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('kono_inboxes_global');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setInboxes(parsed);
+          }
+        } catch (_) {}
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const handleSyncAllNow = async () => {
     setIsSyncingAll(true);
@@ -305,7 +326,7 @@ export const SettingsPage: React.FC = () => {
                     try {
                       setIsAdding(true);
                       setErrorMessage(null);
-                      await signInWithGoogle();
+                      await signInWithGoogle(`${window.location.origin}/settings`);
                     } catch (err: any) {
                       setErrorMessage(err?.message || 'Error al conectar cuenta Google');
                       setIsAdding(false);
