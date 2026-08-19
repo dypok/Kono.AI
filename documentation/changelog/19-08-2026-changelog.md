@@ -58,3 +58,4 @@
 - [Wednesday]-[19/08/2026]-[14:38] : Fixed modal overlay viewport coverage in SettingsPage.tsx by setting explicit w-screen h-screen fixed inset-0 z-[100] with backdrop-blur-xl and glow ambient lighting.
 - [Wednesday]-[19/08/2026]-[14:40] : Installed @tabler/icons-react package and migrated icons across LiquidSidebar.tsx, SettingsPage.tsx, DashboardPage.tsx, TopNavbar.tsx, and LoginPage.tsx to use Tabler Icons.
 - [Wednesday]-[19/08/2026]-[14:41] : Refactored SettingsPage.tsx modal to use React Portal (createPortal) rendered directly onto document.body with z-[9999] and full-viewport fixed overlay to ensure 100% proper viewport coverage regardless of parent layout bounds.
+- [Wednesday]-[19/08/2026]-[14:42] : Replaced raw distorted inline SVGs with the official @tabler/icons-react IconBrandGoogle component across SettingsPage.tsx, ConnectGmailModal.tsx, and LoginPage.tsx.

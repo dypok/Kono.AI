@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Mail, Sparkles, X, CheckCircle2, RefreshCw } from 'lucide-react';
+import {
+  IconMail,
+  IconSparkles,
+  IconX,
+  IconCircleCheck,
+  IconRefresh,
+  IconBrandGoogle,
+} from '@tabler/icons-react';
 import { useAuthStore } from '../../store/authStore';
 
 interface ConnectGmailModalProps {
@@ -45,7 +52,7 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
         {syncedStats ? (
           <div className="space-y-4 py-4 text-center">
             <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6" />
+              <IconCircleCheck className="w-6 h-6" />
             </div>
             <div>
               <h3 className="text-base font-bold text-alabaster-100">¡Bandeja Sincronizada!</h3>
@@ -62,6 +69,17 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Feature Note */}
+            <div className="liquid-glass-card rounded-2xl p-4 text-xs text-zinc-400 border border-white/5 space-y-1.5">
+              <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
+                <IconSparkles className="w-3.5 h-3.5 text-kono-silver" />
+                <span>Escaneo histórico y etiquetado nativo automático</span>
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                Kono se conectará de forma segura vía Google OAuth, analizará tus correos con facturas y les colocará automáticamente la etiqueta <strong className="text-zinc-300 font-mono">KONO_INVOICE</strong>.
+              </p>
+            </div>
+
             {/* 🌟 1-Click Google OAuth Button */}
             <button
               type="button"
@@ -80,27 +98,10 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
               className="w-full py-3.5 px-4 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 flex items-center justify-center space-x-2.5 shadow-lg shadow-white/5 disabled:opacity-50"
             >
               {isSyncing ? (
-                <RefreshCw className="w-4 h-4 animate-spin text-titanium-950" />
+                <IconRefresh className="w-4 h-4 animate-spin text-titanium-950" />
               ) : (
                 <>
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path
-                      fill="#EA4335"
-                      d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"
-                    />
-                    <path
-                      fill="#4285F4"
-                      d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.1s.7 5.4 1.9 7.8l3.7-3.1z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16.7C3.7 20.4 7.5 23.5 12 23.5z"
-                    />
-                  </svg>
+                  <IconBrandGoogle className="w-4 h-4 text-titanium-950 stroke-[2.2]" />
                   <span>Conectar Gmail con 1-Click (Google OAuth)</span>
                 </>
               )}
@@ -113,16 +114,7 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
               </div>
             )}
 
-            {/* Feature Note */}
-            <div className="liquid-glass-card rounded-2xl p-4 text-xs text-zinc-400 border border-white/5 space-y-1.5">
-              <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
-                <Sparkles className="w-3.5 h-3.5 text-kono-silver" />
-                <span>Escaneo histórico y etiquetado nativo automático</span>
-              </div>
-              <p className="text-[11px] leading-relaxed">
-                Kono se conectará de forma segura vía Google OAuth, analizará tus correos con facturas y les colocará automáticamente la etiqueta <strong className="text-zinc-300 font-mono">KONO_INVOICE</strong>.
-              </p>
-            </div>
+            
 
             <div className="pt-2 flex items-center justify-end">
               <button
