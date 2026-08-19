@@ -4,53 +4,42 @@
 
 @layer base {
   body {
-    background-color: #080B11;
-    color: #F8FAFC;
+    @apply bg-titanium-900 text-alabaster-100 font-sans antialiased selection:bg-alabaster-300/20 selection:text-alabaster-50;
+    background-color: #0D1117;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(30, 41, 59, 0.35) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.5) 0px, transparent 50%);
+    min-height: 100vh;
   }
 }
 
-/* Custom glass styling */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+/* Liquid Glass Surface Utilities */
+.liquid-glass {
+  background: rgba(250, 248, 245, 0.03);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+.liquid-glass-card {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.glass-input {
+.liquid-glass-input {
   background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.2s ease-in-out;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(232, 225, 215, 0.15);
+  color: #FAF8F5;
+  transition: all 0.2s ease;
 }
 
-.glass-input:focus {
-  border-color: rgba(34, 211, 238, 0.6);
-  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+.liquid-glass-input:focus {
+  border-color: rgba(232, 225, 215, 0.5);
+  box-shadow: 0 0 15px rgba(250, 248, 245, 0.08);
   outline: none;
-}
-
-/* Custom sleek scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.3);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
 }

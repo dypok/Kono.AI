@@ -7,29 +7,44 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      colors: {
+        titanium: {
+          950: '#080B0F',
+          900: '#0D1117',
+          800: '#161F2C',
+          700: '#222F42',
+          600: '#33445C',
+        },
+        alabaster: {
+          50: '#FDFBF7',
+          100: '#FAF8F5',
+          200: '#F3EFEA',
+          300: '#E8E1D7',
+          400: '#D6CBBF',
+        },
+        kono: {
+          silver: '#CBD5E1',
+          chrome: '#94A3B8',
+          gold: '#EAB308',
+          emerald: '#10B981',
+          amber: '#F59E0B',
+          rose: '#F43F5E',
+        }
+      },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
-      colors: {
-        obsidian: '#080B11',
+      backdropBlur: {
+        '2xl': '40px',
+        '3xl': '64px',
       },
       boxShadow: {
-        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-        'glass-glow-emerald': '0 0 25px rgba(16, 185, 129, 0.25)',
-        'glass-glow-amber': '0 0 25px rgba(245, 158, 11, 0.25)',
-        'glass-glow-rose': '0 0 25px rgba(239, 68, 68, 0.25)',
-        'glass-glow-cyan': '0 0 25px rgba(6, 182, 212, 0.25)',
-      },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'float': 'float 4s ease-in-out infinite',
-      },
-      keyframes: {
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-6px)' },
-        }
+        'liquid': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+        'liquid-glow': '0 0 25px -5px rgba(203, 213, 225, 0.15)',
+        'liquid-emerald': '0 0 25px -5px rgba(16, 185, 129, 0.25)',
+        'liquid-amber': '0 0 25px -5px rgba(245, 158, 11, 0.25)',
+        'liquid-rose': '0 0 25px -5px rgba(244, 63, 94, 0.25)',
       }
     },
   },
