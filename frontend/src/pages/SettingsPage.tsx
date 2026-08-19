@@ -53,6 +53,10 @@ export const SettingsPage: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Modal State for Delete Confirmation & Single Inbox Alert
+  const [inboxToDelete, setInboxToDelete] = useState<{ id: string; email: string } | null>(null);
+  const [showSingleInboxAlert, setShowSingleInboxAlert] = useState(false);
+
   useEffect(() => {
     if (user?.email) {
       localStorage.setItem(`kono_inboxes_${user.email}`, JSON.stringify(inboxes));
@@ -92,43 +96,19 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const handleAddInbox = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEmail.trim()) return;
-
-    if (inboxes.some((i) => i.email.toLowerCase() === newEmail.trim().toLowerCase())) {
-      setErrorMessage('Este correo ya se encuentra vinculado en tu cuenta.');
+  const handleRequestRemoveInbox = (id: string, email: string) => {
+    if (inboxes.length <= 1) {
+      setShowSingleInboxAlert(true);
       return;
     }
-
-    setIsAdding(true);
-    setErrorMessage(null);
-
-    setTimeout(() => {
-      const newInboxObj: ConnectedInbox = {
-        id: `inbox_${Date.now()}`,
-        email: newEmail.trim(),
-        provider: 'Google Gmail / Ingesta Vinculada',
-        status: 'ACTIVE',
-        lastScan: 'Recién conectado',
-        invoicesCount: 0,
-      };
-
-      setInboxes((prev) => [...prev, newInboxObj]);
-      setIsAdding(false);
-      setIsAddModalOpen(false);
-      setNewEmail('');
-      setSyncFeedback(`Bandeja ${newEmail.trim()} vinculada exitosamente.`);
-    }, 400);
+    setInboxToDelete({ id, email });
   };
 
-  const handleRemoveInbox = (id: string, email: string) => {
-    if (inboxes.length === 1) {
-      setSyncFeedback('Debes mantener al menos una bandeja vinculada para recibir facturas.');
-      return;
-    }
-    setInboxes((prev) => prev.filter((i) => i.id !== id));
-    setSyncFeedback(`Bandeja ${email} desvinculada.`);
+  const handleConfirmDelete = () => {
+    if (!inboxToDelete) return;
+    setInboxes((prev) => prev.filter((i) => i.id !== inboxToDelete.id));
+    setSyncFeedback(`Bandeja ${inboxToDelete.email} desvinculada exitosamente.`);
+    setInboxToDelete(null);
   };
 
   return (
@@ -218,7 +198,7 @@ export const SettingsPage: React.FC = () => {
 
               <div className="flex items-center space-x-3 self-end sm:self-center">
                 <button
-                  onClick={() => handleRemoveInbox(inbox.id, inbox.email)}
+                  onClick={() => handleRequestRemoveInbox(inbox.id, inbox.email)}
                   className="p-2 rounded-xl text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
                   title="Desvincular bandeja"
                 >
@@ -241,7 +221,7 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 🪄 Modal para Añadir Nuevo Correo renderizado en Portal a document.body */}
+      {/* 🪄 Modal 1: Añadir Nuevo Correo */}
       {isAddModalOpen &&
         createPortal(
           <div
@@ -249,7 +229,6 @@ export const SettingsPage: React.FC = () => {
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
           >
             <div className="w-full max-w-md bg-titanium-950/95 border border-white/20 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden text-alabaster-100">
-              {/* Glow Ambient Accent */}
               <div className="absolute -top-10 -left-10 w-44 h-44 bg-slate-400/25 rounded-full blur-3xl pointer-events-none" />
 
               <button
@@ -277,7 +256,6 @@ export const SettingsPage: React.FC = () => {
               )}
 
               <div className="space-y-4 relative z-10">
-                {/* 🌟 Pure 1-Click Google OAuth Connection */}
                 <button
                   type="button"
                   onClick={async () => {
@@ -322,6 +300,90 @@ export const SettingsPage: React.FC = () => {
                     Cancelar
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* 🛑 Modal 2: Confirmación de Eliminación de Bandeja */}
+      {inboxToDelete &&
+        createPortal(
+          <div
+            className="fixed inset-0 w-screen h-screen z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl animate-fade-in"
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+          >
+            <div className="w-full max-w-md bg-titanium-950/95 border border-white/20 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden text-alabaster-100">
+              <div className="absolute -top-10 -right-10 w-44 h-44 bg-rose-500/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="flex items-center space-x-3 mb-4 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-md shrink-0">
+                  <IconTrash className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-alabaster-100">Desvincular Bandeja</h3>
+                  <p className="text-xs text-zinc-400 font-mono">{inboxToDelete.email}</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-zinc-300 leading-relaxed mb-6 relative z-10">
+                ¿Estás seguro de que deseas desvincular esta cuenta de correo? Kono dejará de escanear y etiquetar facturas para esta dirección en segundo plano.
+              </p>
+
+              <div className="flex items-center justify-end space-x-3 relative z-10">
+                <button
+                  type="button"
+                  onClick={() => setInboxToDelete(null)}
+                  className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-zinc-400 hover:text-white transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs transition shadow-lg shadow-rose-500/20 flex items-center space-x-1.5"
+                >
+                  <IconTrash className="w-4 h-4" />
+                  <span>Sí, Desvincular</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* ⚠️ Modal 3: Advertencia de Bandeja Única Obligatoria */}
+      {showSingleInboxAlert &&
+        createPortal(
+          <div
+            className="fixed inset-0 w-screen h-screen z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl animate-fade-in"
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+          >
+            <div className="w-full max-w-md bg-titanium-950/95 border border-white/20 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden text-alabaster-100">
+              <div className="absolute -top-10 -left-10 w-44 h-44 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="flex items-center space-x-3 mb-4 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shadow-md shrink-0">
+                  <IconAlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-alabaster-100">Bandeja Principal Activa</h3>
+                  <p className="text-xs text-zinc-400">Requisito de Facturación</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 leading-relaxed mb-6 relative z-10">
+                Debes mantener al menos una bandeja vinculada para recibir facturas y ejecutar la auditoría financiera.
+              </div>
+
+              <div className="flex items-center justify-end relative z-10">
+                <button
+                  type="button"
+                  onClick={() => setShowSingleInboxAlert(false)}
+                  className="w-full py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition shadow-md"
+                >
+                  Entendido
+                </button>
               </div>
             </div>
           </div>,
