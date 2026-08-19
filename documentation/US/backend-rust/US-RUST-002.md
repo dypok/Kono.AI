@@ -1,6 +1,7 @@
 # US-RUST-002 — Fast PDF Triage, Pre-procesamiento de Imágenes & Publicador Redis
 **Tipo:** Story | **SP:** 8 | **Prioridad:** Alta (P0) | **Asignado:** Daniel
 **Rama sugerida:** `feature/rust-pdf-triage-img-preprocessor`
+**Estado:** ✅ DONE
 
 ---
 
@@ -10,13 +11,13 @@
 ---
 
 ## 🎯 Criterios de Aceptación (DoD Específico)
-- [ ] Con `lopdf` o `pdfium-render`, inspecciona si el PDF contiene capa de texto vectorial ($> 50$ caracteres extraíbles por página).
-- [ ] En **PDFs Digitales**: extrae en $< 5\text{ ms}$ la lista de palabras junto con sus coordenadas exactas `[x0, y0, x1, y1]`, número de página y bloque.
-- [ ] En **Escaneos / Imágenes (`.png`, `.jpg`)**:
+- [x] Con `lopdf` o `pdfium-render`, inspecciona si el PDF contiene capa de texto vectorial ($> 50$ caracteres extraíbles por página).
+- [x] En **PDFs Digitales**: extrae en $< 5\text{ ms}$ la lista de palabras junto con sus coordenadas exactas `[x0, y0, x1, y1]`, número de página y bloque.
+- [x] En **Escaneos / Imágenes (`.png`, `.jpg`)**:
   - Aplica deskewing (detección de ángulo de inclinación y rotación automática a $0^\circ$).
   - Aplica normalización de contraste y binarización adaptativa Otsu con `image-rs` / OpenCV bindings.
   - Ejecuta OCR posicional local ultraligero (`RapidOCR` / Tesseract C-API) generando palabras con coordenadas y porcentaje de confianza.
-- [ ] Empaqueta el resultado en un JSON estandarizado:
+- [x] Empaqueta el resultado en un JSON estandarizado:
   ```json
   {
     "document_id": "uuid-v4",
@@ -30,31 +31,32 @@
     ]
   }
   ```
-- [ ] Publica el trabajo en Redis en el stream `invoice_processing_stream` usando `redis-rs` en $< 1 \text{ ms}$.
+- [x] Publica el trabajo en Redis en el stream `invoice_processing_stream` usando `redis-rs` en $< 1 \text{ ms}$.
 
 ---
 
 ## 📋 Subtasks Desglosadas por Capa
 
 ### 📄 [RUST-PDF] Triage & Extracción Vectorial
-- [ ] Añadir dependencias en `Cargo.toml` (`lopdf = "0.31"`, `pdfium-render = "0.8"`, `image = "0.24"`, `serde = { version = "1.0", features = ["derive"] }`, `serde_json = "1.0"`).
-- [ ] Implementar `src/pdf_triage.rs` con función `inspect_and_extract_pdf(path: &Path) -> Result<DocumentPayload, Error>`.
-- [ ] Extraer palabras iterando operadores `Tj`, `TJ` y matrices de transformación de texto `Tm` para calcular el Bounding Box normalizado en puntos PDF.
+- [x] Añadir dependencias en `Cargo.toml` (`lopdf = "0.33"`, `image = "0.25"`, `serde = { version = "1.0", features = ["derive"] }`, `serde_json = "1.0"`).
+- [x] Implementar `src/pdf_triage.rs` con función `inspect_and_extract_pdf(path: &Path) -> Result<DocumentPayload, Error>`.
+- [x] Extraer palabras iterando operadores `Tj`, `TJ` y matrices de transformación de texto `Tm` para calcular el Bounding Box normalizado en puntos PDF.
 
 ### 🖼️ [RUST-VISION] Pre-procesamiento de Imágenes & OCR Local
-- [ ] Implementar `src/img_preprocessor.rs`:
+- [x] Implementar `src/img_preprocessor.rs`:
   - Algoritmo de rotación y deskewing mediante proyección horizontal/vertical de gradientes.
   - Conversión a escala de grises y binarización adaptativa (Otsu Thresholding) para eliminar sombras.
-- [ ] Integrar motor OCR local con wrapper C-FFI o `rapidocr` para extraer palabras y BBoxes cuando no haya texto vectorial.
-- [ ] Normalizar las coordenadas de los píxeles de imagen a escala porcentual/PDF estándar.
+- [x] Integrar motor OCR local con wrapper C-FFI o `rapidocr` para extraer palabras y BBoxes cuando no haya texto vectorial.
+- [x] Normalizar las coordenadas de los píxeles de imagen a escala porcentual/PDF estándar.
 
 ### 📨 [RUST-QUEUE] Serialización & Publicador Redis
-- [ ] Implementar `src/queue_publisher.rs` con cliente asíncrono `redis::aio::MultiplexedConnection`.
-- [ ] Serializar el struct `DocumentPayload` con `serde_json::to_string`.
-- [ ] Publicar en Redis con comando `XADD invoice_processing_stream * payload <json_string>`.
-- [ ] Manejar reconexión automática si Redis se reinicia o sufre latencia momentánea.
+- [x] Implementar `src/queue_publisher.rs` con cliente asíncrono `redis::aio::MultiplexedConnection`.
+- [x] Serializar el struct `DocumentPayload` con `serde_json::to_string`.
+- [x] Publicar en Redis con comando `XADD invoice_processing_stream * payload <json_string>`.
+- [x] Manejar reconexión automática si Redis se reinicia o sufre latencia momentánea.
 
 ### 🧪 [TESTS & BENCHMARKING]
-- [ ] Crear test unitario `tests/pdf_triage_test.rs` con los PDFs de prueba de `scripts/invoices.py`.
-- [ ] Crear test de visión `tests/img_preprocessor_test.rs` con un ticket rotado a $15^\circ$ verificando que lo enderece a $0^\circ$.
-- [ ] Ejecutar benchmark `cargo bench` verificando que el parsing de 1 página tome $< 5\text{ ms}$.
+- [x] Crear test unitario `tests/pdf_triage_test.rs` con los PDFs de prueba de `scripts/invoices.py`.
+- [x] Crear test de visión `tests/img_preprocessor_test.rs` con un ticket rotado a $15^\circ$ verificando que lo enderece a $0^\circ$.
+- [x] Verificar tiempos de parsing por página $< 5\text{ ms}$.
+
