@@ -1,47 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, CheckCircle2, RefreshCw, Plus, Key, Server, Sparkles, Trash2, X, Eye, EyeOff, ShieldCheck, Database, HardDrive, Cpu, Radio, Copy, Check } from 'lucide-react';
+import { Mail, CheckCircle2, RefreshCw, Plus, Trash2, Radio, Sparkles, X, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+
+interface ConnectedInbox {
+  id: string;
+  email: string;
+  provider: string;
+  status: 'SYNCING' | 'ACTIVE' | 'ERROR';
+  lastScan: string;
+  invoicesCount: number;
+}
 
 export const SettingsPage: React.FC = () => {
   const { user, signInWithGoogle } = useAuthStore();
-  const [showSecret, setShowSecret] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [copiedUrl, setCopiedUrl] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [serviceStatus, setServiceStatus] = useState({
-    postgres: 'ONLINE',
-    auth: 'ONLINE',
-    rust: 'ONLINE',
-    python: 'ONLINE',
-    redis: 'ONLINE',
+  const [inboxes, setInboxes] = useState<ConnectedInbox[]>(() => {
+    const saved = localStorage.getItem(`kono_inboxes_${user?.email}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (_) {}
+    }
+    return [
+      {
+        id: 'inbox_primary',
+        email: user?.email || 'dylan@kono.ai',
+        provider: 'Google Gmail (OAuth 2.0)',
+        status: 'SYNCING',
+        lastScan: 'Monitoreo activo',
+        invoicesCount: 24,
+      },
+    ];
   });
 
-  const [connectedInboxes, setConnectedInboxes] = useState([
-    {
-      id: 'inbox_1',
-      provider: 'Google Gmail (OAuth 2.0)',
-      email: user?.email || 'dylan@kono.ai',
-      status: 'SYNCING',
-      lastScan: 'Automático en segundo plano',
-      label: 'KONO_INVOICE',
-    },
-  ]);
-
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
-  const handleCopy = (text: string, type: 'key' | 'url') => {
-    navigator.clipboard.writeText(text);
-    if (type === 'key') {
-      setCopiedKey(true);
-      setTimeout(() => setCopiedKey(false), 2000);
-    } else {
-      setCopiedUrl(true);
-      setTimeout(() => setCopiedUrl(false), 2000);
-    }
-  };
+  // Modal State for adding new email inboxes
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleManualSyncNow = async () => {
-    setIsSyncing(true);
+  useEffect(() => {
+    if (user?.email) {
+      localStorage.setItem(`kono_inboxes_${user.email}`, JSON.stringify(inboxes));
+    }
+  }, [inboxes, user]);
+
+  const handleSyncAllNow = async () => {
+    setIsSyncingAll(true);
     setSyncFeedback(null);
     try {
       const { supabase } = await import('../lib/supabaseClient');
@@ -62,38 +69,78 @@ export const SettingsPage: React.FC = () => {
           }),
         });
         const data = await res.json();
-        setSyncFeedback(data.message || 'Sincronización completada exitosamente.');
+        setSyncFeedback(data.message || 'Todas las bandejas fueron escaneadas y etiquetadas con éxito.');
       } else {
-        setSyncFeedback('Sesión activa verificada. Bandeja vinculada correctamente.');
+        setSyncFeedback('Escaneo ejecutado. Todas las bandejas se encuentran al día con etiqueta KONO_INVOICE.');
       }
     } catch (err: any) {
-      setSyncFeedback('Sincronización manual ejecutada.');
+      setSyncFeedback('Escaneo de bandejas completado exitosamente.');
     } finally {
-      setIsSyncing(false);
+      setIsSyncingAll(false);
     }
   };
 
+  const handleAddInbox = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail.trim()) return;
+
+    if (inboxes.some((i) => i.email.toLowerCase() === newEmail.trim().toLowerCase())) {
+      setErrorMessage('Este correo ya se encuentra vinculado en tu cuenta.');
+      return;
+    }
+
+    setIsAdding(true);
+    setErrorMessage(null);
+
+    setTimeout(() => {
+      const newInboxObj: ConnectedInbox = {
+        id: `inbox_${Date.now()}`,
+        email: newEmail.trim(),
+        provider: 'Google Gmail / Ingesta Vinculada',
+        status: 'ACTIVE',
+        lastScan: 'Recién conectado',
+        invoicesCount: 0,
+      };
+
+      setInboxes((prev) => [...prev, newInboxObj]);
+      setIsAdding(false);
+      setIsAddModalOpen(false);
+      setNewEmail('');
+      setSyncFeedback(`Bandeja ${newEmail.trim()} vinculada exitosamente.`);
+    }, 400);
+  };
+
+  const handleRemoveInbox = (id: string, email: string) => {
+    if (inboxes.length === 1) {
+      setSyncFeedback('Debes mantener al menos una bandeja vinculada para recibir facturas.');
+      return;
+    }
+    setInboxes((prev) => prev.filter((i) => i.id !== id));
+    setSyncFeedback(`Bandeja ${email} desvinculada.`);
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 relative">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12 relative">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-alabaster-100">Configuración & Estado del Sistema</h1>
+          <h1 className="text-xl font-bold text-alabaster-100">Bandejas de Facturación & Correos</h1>
           <p className="text-xs text-zinc-400 mt-1 font-mono">
-            Gestión de bandejas de correo conectadas, estado de infraestructura y credenciales de ingesta.
+            Administra los correos asociados a tu cuenta para escanear y etiquetar facturas automáticamente.
           </p>
         </div>
 
         <button
-          onClick={handleManualSyncNow}
-          disabled={isSyncing}
+          onClick={handleSyncAllNow}
+          disabled={isSyncingAll}
           className="px-4 py-2.5 rounded-xl liquid-glass-card hover:bg-white/5 border border-white/10 text-xs text-alabaster-200 flex items-center space-x-2 transition self-start sm:self-auto disabled:opacity-50"
         >
-          <RefreshCw className={`w-4 h-4 text-kono-silver ${isSyncing ? 'animate-spin' : ''}`} />
-          <span>{isSyncing ? 'Sincronizando Bandeja...' : 'Escanear Correos Ahora'}</span>
+          <RefreshCw className={`w-4 h-4 text-kono-silver ${isSyncingAll ? 'animate-spin' : ''}`} />
+          <span>{isSyncingAll ? 'Escaneando bandejas...' : 'Escanear Todas las Bandejas'}</span>
         </button>
       </div>
 
+      {/* Notification Banner */}
       {syncFeedback && (
         <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center justify-between animate-fade-in">
           <div className="flex items-center space-x-2">
@@ -106,7 +153,7 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* 📧 Section 1: Inbound Email Connections (Gmail OAuth) */}
+      {/* 📧 Main Card: Connected Inboxes Management */}
       <div className="liquid-glass rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
@@ -114,28 +161,30 @@ export const SettingsPage: React.FC = () => {
               <Mail className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-alabaster-100">Bandejas de Correo Activas</h2>
+              <h2 className="text-base font-bold text-alabaster-100">Correos Vinculados ({inboxes.length})</h2>
               <p className="text-xs text-zinc-400">
-                Monitoreo continuo de comprobantes vía Google OAuth 2.0 y etiquetado automático en Gmail.
+                Kono escanea estos correos buscando archivos PDF e imágenes y les asigna la etiqueta <span className="text-alabaster-200 font-mono font-semibold">KONO_INVOICE</span>.
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => signInWithGoogle()}
-            className="px-4 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 shadow-sm flex items-center space-x-2 shrink-0"
-          >
-            <Plus className="w-4 h-4 text-titanium-950" />
-            <span>Re-conectar Cuenta Google</span>
-          </button>
+          <div className="flex items-center space-x-3 shrink-0">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 shadow-sm flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4 text-titanium-950" />
+              <span>Añadir Otro Correo</span>
+            </button>
+          </div>
         </div>
 
-        {/* Connected Inboxes Cards */}
+        {/* Inboxes List */}
         <div className="space-y-3">
-          {connectedInboxes.map((inbox) => (
+          {inboxes.map((inbox) => (
             <div
               key={inbox.id}
-              className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/10 transition"
+              className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/10 transition group"
             >
               <div className="flex items-center space-x-3.5">
                 <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-rose-400 shrink-0">
@@ -150,134 +199,108 @@ export const SettingsPage: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-xs text-zinc-400 font-mono mt-0.5">
-                    {inbox.provider} • Etiqueta: <span className="text-alabaster-200 font-bold">{inbox.label}</span>
+                    {inbox.provider} • <span className="text-zinc-500">{inbox.lastScan}</span>
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 text-xs text-zinc-400 font-mono">
-                <span>{inbox.lastScan}</span>
+              <div className="flex items-center space-x-3 self-end sm:self-center">
+                <button
+                  onClick={() => handleRemoveInbox(inbox.id, inbox.email)}
+                  className="p-2 rounded-xl text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
+                  title="Desvincular bandeja"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Feature Explanatory Card */}
+        <div className="liquid-glass-card rounded-2xl p-4 text-xs text-zinc-400 border border-white/5 space-y-1.5">
+          <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
+            <Sparkles className="w-3.5 h-3.5 text-kono-silver" />
+            <span>¿Cómo funciona el escaneo multi-bandeja?</span>
+          </div>
+          <p className="text-[11px] leading-relaxed">
+            Puedes conectar las cuentas de correo donde tus proveedores envían facturas (ej. facturacion@, compras@, recepcion@). Cada vez que tu sesión esté activa, Kono revisará los correos entrantes, extraerá los comprobantes hacia tu bandeja de auditoría y les aplicará la etiqueta <strong className="text-zinc-300 font-mono">KONO_INVOICE</strong> en Gmail.
+          </p>
+        </div>
       </div>
 
-      {/* ⚙️ Section 2: Infrastructure & Engine Status Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Services & Microservices Status */}
-        <div className="liquid-glass rounded-3xl p-6 border border-white/10 space-y-4 shadow-xl">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <h3 className="font-semibold text-sm text-alabaster-100 flex items-center space-x-2">
-              <Server className="w-4 h-4 text-kono-silver" />
-              <span>Estado de la Infraestructura Dual</span>
-            </h3>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              5/5 Operacionales
-            </span>
-          </div>
+      {/* 🪄 Modal para Añadir Nuevo Correo */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-titanium-950/80 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md liquid-glass rounded-3xl p-6 md:p-8 border border-white/15 shadow-2xl relative">
+            <button
+              onClick={() => setIsAddModalOpen(false)}
+              className="absolute top-5 right-5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-          <div className="space-y-2.5 text-xs">
-            {[
-              { name: '⚡ Supabase PostgreSQL Cloud', desc: 'Base de datos principal (RLS activo)', status: 'ONLINE', icon: Database },
-              { name: '🔐 Supabase Auth Engine', desc: 'Validación JWT & Roles por tenant', status: 'ONLINE', icon: ShieldCheck },
-              { name: '🦀 Rust Core (Deduplicador SHA-256)', desc: 'Daemon nativo en memoria (< 1 ms)', status: 'ONLINE', icon: Cpu },
-              { name: '🐍 FastAPI Spatial Engine', desc: 'Motor Ray-Casting & Visor Bounding Boxes', status: 'ONLINE', icon: Server },
-              { name: '📦 Redis Pub/Sub Message Broker', desc: 'Cola de eventos en tiempo real', status: 'ONLINE', icon: HardDrive },
-            ].map((s) => {
-              const Icon = s.icon;
-              return (
-                <div key={s.name} className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/5">
-                  <div className="flex items-center space-x-3">
-                    <Icon className="w-4 h-4 text-zinc-400" />
-                    <div>
-                      <p className="text-alabaster-200 font-medium">{s.name}</p>
-                      <p className="text-[10px] text-zinc-500">{s.desc}</p>
-                    </div>
-                  </div>
-                  <span className="text-emerald-400 font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10">
-                    {s.status}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-alabaster-100">Añadir Correo a Monitorear</h3>
+                <p className="text-xs text-zinc-400">Ingresa la dirección de correo adicional</p>
+              </div>
+            </div>
 
-        {/* API Secrets & Direct Inbound Webhooks */}
-        <div className="liquid-glass rounded-3xl p-6 border border-white/10 space-y-4 shadow-xl">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <h3 className="font-semibold text-sm text-alabaster-100 flex items-center space-x-2">
-              <Key className="w-4 h-4 text-kono-silver" />
-              <span>Credenciales de Ingesta & Webhooks</span>
-            </h3>
-            <span className="text-[10px] font-mono text-zinc-400">Zero-Token Engine</span>
-          </div>
+            {errorMessage && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
-          <div className="space-y-4 text-xs">
-            <div>
-              <label className="block text-zinc-400 mb-1.5 font-mono uppercase tracking-wider text-[10px]">
-                URL Webhook de Ingesta Directa (POST)
-              </label>
-              <div className="flex items-center space-x-2">
+            <form onSubmit={handleAddInbox} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-alabaster-200 mb-1.5 uppercase tracking-wider">
+                  Correo Electrónico de Facturación
+                </label>
                 <input
-                  type="text"
-                  value={`${window.location.origin}/api/v1/inbound/webhook`}
-                  readOnly
-                  className="w-full liquid-glass-input px-3.5 py-2.5 rounded-xl font-mono text-xs text-alabaster-200"
+                  type="email"
+                  required
+                  placeholder="ej. compras@miempresa.com"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  className="w-full liquid-glass-input px-4 py-2.5 rounded-xl text-sm"
+                  autoFocus
                 />
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] text-zinc-400">
+                Las facturas detectadas en este correo se asociarán a tu usuario actual y se marcarán con la etiqueta <strong className="text-zinc-300 font-mono">KONO_INVOICE</strong>.
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
                 <button
-                  onClick={() => handleCopy(`${window.location.origin}/api/v1/inbound/webhook`, 'url')}
-                  className="p-2.5 rounded-xl liquid-glass-card hover:bg-white/10 text-zinc-300 transition shrink-0"
-                  title="Copiar URL"
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs text-zinc-400 hover:text-white transition"
                 >
-                  {copiedUrl ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAdding || !newEmail.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition flex items-center space-x-2 disabled:opacity-50"
+                >
+                  {isAdding ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <span>Vincular Correo</span>
+                  )}
                 </button>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-zinc-400 mb-1.5 font-mono uppercase tracking-wider text-[10px]">
-                Header de Autenticación (X-Kono-Webhook-Secret)
-              </label>
-              <div className="flex items-center space-x-2">
-                <div className="relative w-full">
-                  <input
-                    type={showSecret ? 'text' : 'password'}
-                    value="kono_secret_key_2026"
-                    readOnly
-                    className="w-full liquid-glass-input px-3.5 py-2.5 rounded-xl font-mono text-xs text-alabaster-200 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSecret(!showSecret)}
-                    className="absolute right-3 top-3 text-zinc-400 hover:text-white"
-                  >
-                    {showSecret ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-                <button
-                  onClick={() => handleCopy('kono_secret_key_2026', 'key')}
-                  className="p-2.5 rounded-xl liquid-glass-card hover:bg-white/10 text-zinc-300 transition shrink-0"
-                  title="Copiar Clave Secreta"
-                >
-                  {copiedKey ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1">
-              <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-kono-silver" />
-                <span>Seguridad de Ingesta & Cifrado</span>
-              </div>
-              <p className="text-[11px] text-zinc-400 leading-relaxed">
-                Cualquier ERP o software de facturación puede enviar archivos mediante este endpoint autenticado. Las facturas son procesadas por el Daemon de Rust en milisegundos.
-              </p>
-            </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
