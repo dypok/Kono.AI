@@ -53,3 +53,4 @@
 - [Wednesday]-[19/08/2026]-[13:41] : Refactored SettingsPage.tsx to focus exclusively on active email inbox management and multi-email association per user account, removing all service health cards, API secrets, and webhook sections.
 - [Wednesday]-[19/08/2026]-[13:43] : Implemented continuous 60-second multi-inbox background scheduler (InboxBackgroundScheduler in inbox_scheduler.py) running in FastAPI lifespan, and added 1-Click Google OAuth support directly inside the 'Añadir Otro Correo' modal on SettingsPage.tsx.
 - [Wednesday]-[19/08/2026]-[13:43] : Enhanced InboxBackgroundScheduler in inbox_scheduler.py with asyncio.gather to perform concurrent non-blocking parallel scanning every 60 seconds across all registered inboxes (N arbitrary connected email accounts per user).
+- [Wednesday]-[19/08/2026]-[14:34] : Removed Google OAuth button from LoginPage.tsx to enforce clean and exclusive authentication via corporate email and password backed by Supabase DB.
