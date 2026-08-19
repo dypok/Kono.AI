@@ -1,6 +1,7 @@
 mod config;
 mod hasher;
 mod models;
+mod pipeline;
 mod watcher;
 
 use std::path::{Path, PathBuf};
@@ -10,6 +11,7 @@ use config::AppConfig;
 use kono_rust_core::errors::KonoError;
 use kono_rust_core::img_preprocessor::process_image_and_ocr;
 use kono_rust_core::pdf_triage::inspect_and_extract_pdf;
+use kono_rust_core::pipeline::move_to_failed_dir;
 use kono_rust_core::queue_publisher::{publish_failure, QueuePublisher};
 use kono_rust_core::types::DocumentPayload;
 use tracing::{error, info, warn, Level};
@@ -17,8 +19,6 @@ use tracing_subscriber::FmtSubscriber;
 use watcher::FolderWatcherDaemon;
 
 /// Polling interval between inbound directory scans (US-RUST-002 triage).
-/// The event-driven watcher (US-RUST-001) detects and moves files; this poll
-/// runs the geometric triage on whatever remains in the inbound directory.
 const SCAN_INTERVAL_SECS: u64 = 3;
 
 /// Extensions accepted by the triage pipeline.
@@ -29,32 +29,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_tracing();
 
     let config = AppConfig::from_env();
-    info!("🦀 [Kono Rust Core] Starting Ingestion & Triage Daemon...");
+    info!("🦀 [Kono Rust Core] Starting Ingestion & Triage Daemon (US-RUST-001 + US-RUST-002 + US-RUST-003)...");
     info!("🦀 [Config] Watch Directory: {:?}", config.watch_dir);
     info!("🦀 [Config] Storage Directory: {:?}", config.storage_dir);
     info!("🦀 [Config] Redis URL: {}", config.redis_url);
 
-    // US-RUST-001 (Dylan): event-driven folder watcher with SHA-256
-    // deduplication. Runs concurrently; publishes inbound events to the
-    // `invoice_inbound_stream` and moves detected files to `processed/`.
+    // US-RUST-001 & US-RUST-003 (Dylan & Daniel):
+    // Concurrent, bounded event-driven watcher with exponential backoff and dead-letter queue.
     let redis_url_for_watcher = config.redis_url.clone();
     let mut daemon = FolderWatcherDaemon::new(config.clone(), None);
-    let _watcher_task = tokio::spawn(async move {
-        // Establish a dedicated Redis connection for the deduplicator watcher
-        // (US-RUST-001). Falls back to standalone mode if Redis is unavailable.
+
+    let watcher_handle = tokio::spawn(async move {
         let redis_conn = match redis::Client::open(redis_url_for_watcher.clone()) {
             Ok(client) => match client.get_multiplexed_async_connection().await {
                 Ok(conn) => {
-                    info!("[Redis] US-RUST-001 connected to Redis broker.");
+                    info!("[Redis] US-RUST-001/003 connected to Redis broker.");
                     Some(conn)
                 }
                 Err(e) => {
-                    error!("[Redis] US-RUST-001 could not connect: {e:?}. Running standalone watcher.");
+                    error!("[Redis] US-RUST-001/003 could not connect: {e:?}. Running standalone watcher.");
                     None
                 }
             },
             Err(e) => {
-                error!("[Redis] US-RUST-001 invalid URL: {e:?}.");
+                error!("[Redis] US-RUST-001/003 invalid URL: {e:?}.");
                 None
             }
         };
@@ -64,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // US-RUST-002 (Daniel): geometric triage polling over the inbound dir.
+    // US-RUST-002: Geometric triage polling over inbound
     let redis_url = std::env::var("REDIS_URL")
         .unwrap_or_else(|_| "redis://127.0.0.1:6379/0".into());
     let watch_path = config.watch_dir.clone();
@@ -72,16 +70,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::create_dir_all(&watch_path)?;
     std::fs::create_dir_all(&failed_dir)?;
 
-    let mut publisher = QueuePublisher::connect(&redis_url).await?;
+    let mut publisher = match QueuePublisher::connect(&redis_url).await {
+        Ok(publ) => Some(publ),
+        Err(err) => {
+            warn!("[Redis] Triage QueuePublisher offline: {err}. Proceeding with local triage.");
+            None
+        }
+    };
+
     let mut processed: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
 
-    loop {
-        match scan_and_process(&watch_path, &failed_dir, &mut publisher, &mut processed).await {
-            Ok(()) => {}
-            Err(err) => error!("triage cycle failed: {err}"),
+    // Graceful shutdown handling (SIGINT / Ctrl+C and SIGTERM)
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            info!("🛑 [Graceful Shutdown] Received SIGINT (Ctrl+C). Cleaning up resources and shutting down...");
+            watcher_handle.abort();
         }
-        tokio::time::sleep(Duration::from_secs(SCAN_INTERVAL_SECS)).await;
+        _ = async {
+            loop {
+                if let Some(ref mut publ) = publisher {
+                    match scan_and_process(&watch_path, &failed_dir, publ, &mut processed).await {
+                        Ok(()) => {}
+                        Err(err) => error!("triage cycle failed: {err}"),
+                    }
+                }
+                tokio::time::sleep(Duration::from_secs(SCAN_INTERVAL_SECS)).await;
+            }
+        } => {}
     }
+
+    info!("👋 [Kono Rust Core] Service exited cleanly.");
+    Ok(())
 }
 
 fn init_tracing() {
@@ -132,7 +151,7 @@ async fn scan_and_process(
             Err(err) => {
                 error!("triage failed for {}: {err}", path.display());
                 let _ = publish_failure(&path.to_string_lossy(), &err.to_string()).await;
-                let _ = move_to_failed(&path, failed_dir);
+                let _ = move_to_failed_dir(&path, failed_dir);
             }
         }
     }
@@ -162,7 +181,6 @@ fn is_supported(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-/// Skips files that are still being copied to disk (e.g. `.part`, `.tmp`).
 fn is_temp(path: &Path) -> bool {
     let name = path
         .file_name()
@@ -170,17 +188,4 @@ fn is_temp(path: &Path) -> bool {
         .unwrap_or_default()
         .to_lowercase();
     name.ends_with(".tmp") || name.ends_with(".part") || name.ends_with(".crdownload")
-}
-
-/// Moves an unprocessable file to the failed folder so the pipeline never
-/// stops on a corrupt or password-protected document.
-fn move_to_failed(path: &Path, failed_dir: &Path) -> std::io::Result<()> {
-    let destination = failed_dir.join(path.file_name().unwrap_or_default());
-    if destination.exists() {
-        warn!("{} already in failed folder, skipping move", destination.display());
-        return Ok(());
-    }
-    std::fs::rename(path, &destination)?;
-    warn!("moved corrupt file to {}", destination.display());
-    Ok(())
 }
