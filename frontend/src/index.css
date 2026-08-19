@@ -3,13 +3,19 @@
 @tailwind utilities;
 
 @layer base {
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
   body {
     @apply bg-titanium-900 text-alabaster-100 font-sans antialiased selection:bg-alabaster-300/20 selection:text-alabaster-50;
     background-color: #0D1117;
     background-image: 
       radial-gradient(at 0% 0%, rgba(30, 41, 59, 0.35) 0px, transparent 50%),
       radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.5) 0px, transparent 50%);
-    min-height: 100vh;
   }
 }
 
