@@ -1,8 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { PublicRoute } from './components/auth/PublicRoute';
 import { DashboardPage } from './pages/DashboardPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
@@ -12,8 +14,11 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Authentication Route */}
-        <Route path="/login" element={<LoginPage />} />
+        {/* Public Routes (Protected from already logged-in users) */}
+        <Route element={<PublicRoute />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
 
         {/* Protected Application Routes with Liquid Glass Layout */}
         <Route element={<ProtectedRoute />}>
@@ -26,7 +31,7 @@ export const App: React.FC = () => {
         </Route>
 
         {/* Catch-all Redirect */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
