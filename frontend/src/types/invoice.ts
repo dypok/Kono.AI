@@ -1,53 +1,61 @@
-export type KonoStatus = 'green' | 'yellow' | 'red';
+/**
+ * Core domain types for the Kono.ai Financial Audit Dashboard.
+ */
 
-export type BBoxColor = 'blue' | 'emerald' | 'violet' | 'amber';
+/** Audit health state driving the Kono mascot mood, halo color and UI accents. */
+export type AuditState = 'ok' | 'warning' | 'critical';
 
-export interface BoundingBox {
+/** Semantic color channel used to group related extracted fields on the document canvas. */
+export type FieldColor = 'blue' | 'emerald' | 'violet' | 'amber';
+
+/** Normalized pixel-space bounding box tied to a single extracted field. */
+export interface ExtractedField {
   id: string;
   fieldKey: string;
   label: string;
-  bbox: [number, number, number, number]; // [x0, y0, x1, y1] normalized (0..1000 or px)
-  page: number;
-  confidence: number;
-  colorType: BBoxColor;
   value: string;
+  confidence: number; // 0..1
+  color: FieldColor;
+  page: number;
+  /** [x, y, width, height] in the coordinate space of the rendered document canvas (620x840). */
+  box: [number, number, number, number];
 }
 
-export interface InvoiceItem {
+export interface LineItem {
   id: string;
   description: string;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
-  isVerified: boolean;
+  verified: boolean;
 }
 
-export interface InvoiceData {
+export interface InvoiceRecord {
   id: string;
   invoiceNumber: string;
   issuerName: string;
-  issuerNit: string;
+  issuerTaxId: string;
   customerName: string;
-  customerNit: string;
+  customerTaxId: string;
   issueDate: string;
   dueDate: string;
   currency: string;
   subtotal: number;
-  taxRate: number; // 0.19 = 19%
+  taxRate: number;
   taxAmount: number;
   grandTotal: number;
-  items: InvoiceItem[];
-  boundingBoxes: BoundingBox[];
-  status: KonoStatus;
-  mathDiscrepancy: number;
-  statusMessage: string;
-  duplicateWarning?: string;
+  lineItems: LineItem[];
+  fields: ExtractedField[];
+  auditState: AuditState;
+  deltaAmount: number;
+  auditMessage: string;
+  duplicateFlag?: string;
 }
 
-export interface AuditMetrics {
-  processedToday: number;
-  zeroTokenRate: number; // e.g. 95%
+export interface LiveMetrics {
+  invoicesToday: number;
   tokenCost: number;
+  deterministicRate: number;
   avgLatencyMs: number;
   batchReadyCount: number;
 }

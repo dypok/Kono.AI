@@ -5,3 +5,4 @@
 # Changelog: 19-08-2026
 
 - [Wednesday]-[19/08/2026]-[08:43] : Cleaned multi-container docker stack and launched single all-in-one mono-docker container (kono-app) running Redis, Rust Core, Python FastAPI, and React/Nginx on port 80 via supervisord.
+- [Wednesday]-[19/08/2026]-[08:53] : Rebuilt the Kono.ai Dark Glassmorphism dashboard from scratch with a new component architecture (layout/, viewer/, audit/, mascot/, upload/, lib/, hooks/): KonoCoin mascot with 3 SVG mood states, AuditSpeechBubble, TopNavbar with live KPI pills, DocumentViewer with slider-based zoom and glowing SVG bounding boxes, AuditForm split into MetadataSection/LineItemsTable/TotalsBreakdown/AuditActions, and UploadDropzoneModal. Verified with `npm run build`.
