@@ -11,6 +11,7 @@ interface User {
 
 interface AuthState {
   isAuthenticated: boolean;
+  isLoading: boolean;
   user: User | null;
   login: (email: string, password?: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
@@ -20,6 +21,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
+  isLoading: true,
   user: null,
 
   login: async (email: string, password?: string) => {
@@ -78,7 +80,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       await supabase.auth.signOut();
     } catch (_) {}
     localStorage.removeItem('kono_auth');
-    set({ isAuthenticated: false, user: null });
+    localStorage.removeItem('kono_google_auth');
+    set({ isAuthenticated: false, isLoading: false, user: null });
   },
 
   checkSession: async () => {
@@ -95,6 +98,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // 2. Retrieve session from Supabase Client
       const { data, error } = await supabase.auth.getSession();
       if (error || !data?.session?.user) {
+        set({ isAuthenticated: false, isLoading: false, user: null });
         return;
       }
 
@@ -120,7 +124,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         localStorage.setItem('kono_google_auth', 'true');
         localStorage.setItem(`kono_onboarding_dismissed_${userObj.email}`, 'true');
       }
-      set({ isAuthenticated: true, user: u });
+      set({ isAuthenticated: true, isLoading: false, user: u });
 
       // If Google provider token is present, trigger automatic invoice scan
       const googleToken = data.session.provider_token;
@@ -139,6 +143,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } catch (err) {
       console.warn('Session retrieval exception:', err);
+      set({ isAuthenticated: false, isLoading: false, user: null });
     }
   },
 }));
