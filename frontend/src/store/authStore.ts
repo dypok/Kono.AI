@@ -102,6 +102,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (profileData.company !== undefined) updatePayload.company = profileData.company;
     if (profileData.taxId !== undefined) updatePayload.tax_id = profileData.taxId;
 
+    // 1. Obtener la lista de todos los correos asociados a esta cuenta
+    const inboxesKey = `kono_inboxes_global`;
+    const savedInboxesRaw = localStorage.getItem(inboxesKey);
+    let linkedEmails: string[] = [currentUser.email];
+
+    if (savedInboxesRaw) {
+      try {
+        const parsed = JSON.parse(savedInboxesRaw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((inbox: any) => {
+            if (inbox.email && !linkedEmails.includes(inbox.email)) {
+              linkedEmails.push(inbox.email);
+            }
+          });
+        }
+      } catch (_) {}
+    }
+
+    // 2. Actualizar el perfil del usuario actual por ID
     const { error } = await supabase
       .from('profiles')
       .update(updatePayload)
@@ -109,6 +128,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (error) {
       throw new Error(`Error al actualizar perfil: ${error.message}`);
+    }
+
+    // 3. Sincronizar todos los perfiles asociados en public.profiles que correspondan a los correos vinculados
+    if (linkedEmails.length > 0) {
+      const orgSyncPayload: Record<string, any> = {
+        updated_at: updatePayload.updated_at,
+      };
+      if (profileData.role !== undefined) orgSyncPayload.role = profileData.role;
+      if (profileData.phone !== undefined) orgSyncPayload.phone = profileData.phone;
+      if (profileData.company !== undefined) orgSyncPayload.company = profileData.company;
+      if (profileData.taxId !== undefined) orgSyncPayload.tax_id = profileData.taxId;
+
+      await supabase
+        .from('profiles')
+        .update(orgSyncPayload)
+        .in('email', linkedEmails);
     }
 
     set({
@@ -197,6 +232,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               invoicesCount: 24,
             });
             localStorage.setItem(inboxesKey, JSON.stringify(list));
+          }
+
+          // Si el perfil recién vinculado carece de datos organizacionales, hereda los de la sesión activa
+          if (profile && (!profile.company || !profile.tax_id)) {
+            const orgCompany = u.company || localStorage.getItem('kono_org_company');
+            const orgTaxId = u.taxId || localStorage.getItem('kono_org_tax_id');
+            const orgRole = u.role || 'Lead Financial Auditor';
+            const orgPhone = u.phone || '';
+
+            if (orgCompany || orgTaxId) {
+              await supabase
+                .from('profiles')
+                .update({
+                  company: orgCompany,
+                  tax_id: orgTaxId,
+                  role: orgRole,
+                  phone: orgPhone,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', userObj.id);
+            }
           }
         }
       }
