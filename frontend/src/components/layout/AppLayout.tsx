@@ -1,9 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { LiquidSidebar } from './LiquidSidebar';
 import { TopNavbar } from './TopNavbar';
+import { ConnectGmailModal } from '../onboarding/ConnectGmailModal';
+import { useAuthStore } from '../../store/authStore';
 
 export const AppLayout: React.FC = () => {
+  const { user } = useAuthStore();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (user?.email) {
+      const userDismissKey = `kono_onboarding_dismissed_${user.email}`;
+      const hasDismissed = localStorage.getItem(userDismissKey);
+      const isNew = localStorage.getItem('kono_new_signup') === 'true';
+
+      if (isNew || !hasDismissed) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [user]);
+
+  const handleCloseOnboarding = () => {
+    if (user?.email) {
+      localStorage.setItem(`kono_onboarding_dismissed_${user.email}`, 'true');
+    }
+    localStorage.removeItem('kono_new_signup');
+    setShowOnboarding(false);
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-titanium-950 text-alabaster-100 relative">
       {/* Background Ambient Radial Gradients */}
@@ -20,6 +45,12 @@ export const AppLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Global Onboarding Modal */}
+      <ConnectGmailModal
+        isOpen={showOnboarding}
+        onClose={handleCloseOnboarding}
+      />
     </div>
   );
 };
