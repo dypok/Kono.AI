@@ -64,10 +64,14 @@ class DeterministicTableParser:
                         return header_top, header_bottom
         return None, None
 
-    def find_totals_section_top(self) -> float:
+    def find_totals_section_top(self, header_bottom: Optional[float]) -> float:
         """Finds where the table ends and the summary/totals section begins."""
         totals_anchors = [r"^subtotal", r"^total\s+a\s+pagar", r"^iva", r"^gran\s+total", r"^total"]
         for word in self.words:
+            # Ignore header-column words so e.g. a "Total" column header is not
+            # mistaken for the footer summary section (which sits below the table).
+            if header_bottom is not None and word.bbox.y0 < header_bottom:
+                continue
             for pat in totals_anchors:
                 if re.search(pat, word.text, re.IGNORECASE):
                     return word.bbox.y0
@@ -79,7 +83,7 @@ class DeterministicTableParser:
             return ExtractedTable()
 
         header_top, header_bottom = self.find_header_top_and_bottom()
-        totals_top = self.find_totals_section_top()
+        totals_top = self.find_totals_section_top(header_bottom)
 
         if header_bottom is None:
             # Fallback default table boundaries if no explicit header found

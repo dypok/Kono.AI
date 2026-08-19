@@ -60,7 +60,7 @@ ANCHOR_SYNONYMS = {
 MONEY_PATTERN = re.compile(r"[\$€£]?\s*([0-9]{1,3}(?:[.,][0-9]{3})*(?:[.,][0-9]{2}))")
 DATE_PATTERN = re.compile(r"(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})")
 TAX_ID_PATTERN = re.compile(r"(\d{8,12}(?:-\d)?)")
-INVOICE_FOLIO_PATTERN = re.compile(r"([A-Z0-9]{2,10}(?:-|\s*)\d{1,10})", re.IGNORECASE)
+INVOICE_FOLIO_PATTERN = re.compile(r"([A-Z0-9]{2,10}(?:[-\s]?\d{1,10})+[.\-]?\d*)", re.IGNORECASE)
 
 class SpatialEngine:
     """
