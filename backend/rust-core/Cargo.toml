@@ -15,6 +15,7 @@ redis = { version = "=0.25.3", features = ["tokio-comp", "connection-manager"] }
 chrono = { version = "=0.4.38", features = ["serde"] }
 tracing = "=0.1.40"
 tracing-subscriber = "=0.3.18"
+thiserror = "1.0"
 lopdf = "0.33"
 image = "0.25"
 imageproc = "0.25"
@@ -22,3 +23,4 @@ num_cpus = "1.16"
 
 [dev-dependencies]
 tempfile = "3.10.1"
+font8x8 = "0.3.1"

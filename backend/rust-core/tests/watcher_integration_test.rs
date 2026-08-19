@@ -1,20 +1,11 @@
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::PathBuf;
 use std::time::Duration;
 use tempfile::tempdir;
 
-#[path = "../src/config.rs"]
-mod config;
-#[path = "../src/hasher.rs"]
-mod hasher;
-#[path = "../src/models.rs"]
-mod models;
-#[path = "../src/watcher.rs"]
-mod watcher;
-
-use config::AppConfig;
-use watcher::FolderWatcherDaemon;
+use kono_rust_core::config::AppConfig;
+use kono_rust_core::hasher::compute_sha256;
+use kono_rust_core::watcher::FolderWatcherDaemon;
 
 #[tokio::test]
 async fn test_folder_watcher_detects_and_hashes_inbound_invoices() {
@@ -62,7 +53,7 @@ async fn test_folder_watcher_detects_and_hashes_inbound_invoices() {
     assert_eq!(processed_files.len(), 3);
     for file in processed_files {
         assert_eq!(file.extension().unwrap(), "pdf");
-        let hash = hasher::compute_sha256(&file).unwrap();
+        let hash = compute_sha256(&file).unwrap();
         assert_eq!(hash.len(), 64);
     }
 
