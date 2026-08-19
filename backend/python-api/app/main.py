@@ -11,6 +11,8 @@ from app import models  # noqa: F401  (registers all ORM models on Base)
 from app.api.v1 import audit as audit_router
 from app.api.v1 import documents as documents_router
 from app.api.v1 import vendors as vendors_router
+from app.api.v1 import auth as auth_router
+from app.api.v1 import inbound as inbound_router
 from app.api.v1.websockets import ConnectionManager
 
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +42,8 @@ app.state.ws_manager = ws_manager
 app.include_router(documents_router.router, prefix="/api/v1")
 app.include_router(vendors_router.router, prefix="/api/v1")
 app.include_router(audit_router.router, prefix="/api/v1")
+app.include_router(auth_router.router, prefix="/api/v1")
+app.include_router(inbound_router.router, prefix="/api/v1")
 
 
 @contextlib.asynccontextmanager
