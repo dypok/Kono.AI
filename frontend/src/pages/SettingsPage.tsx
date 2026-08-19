@@ -258,7 +258,7 @@ export const SettingsPage: React.FC = () => {
             )}
 
             <div className="space-y-4">
-              {/* 🌟 Option 1: 1-Click Google OAuth */}
+              {/* 🌟 Pure 1-Click Google OAuth Connection */}
               <button
                 type="button"
                 onClick={async () => {
@@ -272,7 +272,7 @@ export const SettingsPage: React.FC = () => {
                   }
                 }}
                 disabled={isAdding}
-                className="w-full py-3 px-4 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 flex items-center justify-center space-x-2.5 shadow-md disabled:opacity-50"
+                className="w-full py-3.5 px-4 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 flex items-center justify-center space-x-2.5 shadow-lg shadow-white/5 disabled:opacity-50"
               >
                 {isAdding ? (
                   <RefreshCw className="w-4 h-4 animate-spin text-titanium-950" />
@@ -296,57 +296,30 @@ export const SettingsPage: React.FC = () => {
                         d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16.7C3.7 20.4 7.5 23.5 12 23.5z"
                       />
                     </svg>
-                    <span>Vincular con 1-Click vía Google OAuth (Recomendado)</span>
+                    <span>Conectar con Google OAuth (1-Click)</span>
                   </>
                 )}
               </button>
 
-              <div className="flex items-center space-x-3 my-2">
-                <div className="flex-1 h-px bg-white/10" />
-                <span className="text-[10px] text-zinc-500 font-mono uppercase">o añadir dirección manual</span>
-                <div className="flex-1 h-px bg-white/10" />
+              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1.5 text-xs text-zinc-400">
+                <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
+                  <Sparkles className="w-3.5 h-3.5 text-kono-silver" />
+                  <span>Verificación & Monitoreo 60s</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Al autorizar la nueva cuenta en Google, Kono validará los permisos de Gmail y comenzará a escanear en paralelo todas tus bandejas cada 60 segundos mientras tu sesión esté activa.
+                </p>
               </div>
 
-              <form onSubmit={handleAddInbox} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-alabaster-200 mb-1.5 uppercase tracking-wider">
-                    Correo Electrónico de Facturación
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="ej. compras@miempresa.com"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    className="w-full liquid-glass-input px-4 py-2.5 rounded-xl text-sm"
-                  />
-                </div>
-
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] text-zinc-400">
-                  Kono monitoreará y escaneará automáticamente esta bandeja en segundo plano cada 60s mientras tu sesión esté activa.
-                </div>
-
-                <div className="pt-2 flex items-center justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddModalOpen(false)}
-                    className="px-4 py-2.5 rounded-xl text-xs text-zinc-400 hover:text-white transition"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isAdding || !newEmail.trim()}
-                    className="px-5 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition flex items-center space-x-2 disabled:opacity-50"
-                  >
-                    {isAdding ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <span>Vincular Correo</span>
-                    )}
-                  </button>
-                </div>
-              </form>
+              <div className="pt-2 flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="w-full py-2.5 rounded-xl liquid-glass-card text-xs text-zinc-400 hover:text-white transition"
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
         </div>
