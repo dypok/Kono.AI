@@ -13,6 +13,7 @@ interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   login: (email: string, password?: string) => Promise<boolean>;
+  signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   checkSession: () => Promise<void>;
 }
@@ -57,6 +58,24 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.setItem('kono_auth', 'true');
     set({ isAuthenticated: true, user: u });
     return true;
+  },
+
+  signInWithGoogle: async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+        scopes: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.labels https://www.googleapis.com/auth/gmail.modify',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
   },
 
   logout: async () => {
