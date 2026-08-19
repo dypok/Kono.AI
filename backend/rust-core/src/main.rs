@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // `invoice_inbound_stream` and moves detected files to `processed/`.
     let redis_url_for_watcher = config.redis_url.clone();
     let mut daemon = FolderWatcherDaemon::new(config.clone(), None);
-    let watcher_task = tokio::spawn(async move {
+    let _watcher_task = tokio::spawn(async move {
         // Establish a dedicated Redis connection for the deduplicator watcher
         // (US-RUST-001). Falls back to standalone mode if Redis is unavailable.
         let redis_conn = match redis::Client::open(redis_url_for_watcher.clone()) {
@@ -82,9 +82,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         tokio::time::sleep(Duration::from_secs(SCAN_INTERVAL_SECS)).await;
     }
-
-    // Ensure the spawned watcher is joined if it ever returns unexpectedly.
-    let _ = watcher_task;
 }
 
 fn init_tracing() {
