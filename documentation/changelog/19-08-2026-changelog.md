@@ -1,0 +1,4 @@
+# Changelog: 19-08-2026
+
+- [Wednesday]-[19/08/2026]-[08:05] : Implemented US-PY-004 on feature/py-inbound-email-webhooks: authenticated webhook POST /api/v1/inbound/webhook (X-Kono-Webhook-Secret via hmac.compare_digest, MIME whitelist, 15MB limit), DeferredEmailPoller (aioimaplib IMAP/Gmail with pure attachment extraction + \Seen-on-success), unified WEBHOOK_SECRET to kono_secret_n8n_key_2026 across config.py/.env.example/docker-compose.yml (matches US-INT-001 workflow), and 10 new tests. 45/45 pytest green in clean env. This makes the n8n inbound flow work end-to-end.
+- [Wednesday]-[19/08/2026]-[08:05] : Updated documentation/integrations/n8n_guide.md (documented the visual flow editor, how to activate the workflow, and the implemented backend endpoint) and created documentation/delivery/SUMMARY_US_PY_004.md.
