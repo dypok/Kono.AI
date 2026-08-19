@@ -43,3 +43,4 @@
 - [Wednesday]-[19/08/2026]-[13:22] : Added Supabase onAuthStateChange and checkSession listener in frontend/src/App.tsx to automatically catch Google OAuth redirect hashes and transition directly to /dashboard.
 - [Wednesday]-[19/08/2026]-[13:27] : Enhanced checkSession in authStore.ts with PKCE exchangeCodeForSession and origin redirect to properly resolve Google OAuth code returns and transition smoothly to /dashboard.
 - [Wednesday]-[19/08/2026]-[13:29] : Automatically marked Google OAuth users as pre-connected in authStore.ts and AppLayout.tsx so the 'Conectar Gmail' modal is never shown to users who already logged in through Google OAuth.
+- [Wednesday]-[19/08/2026]-[13:31] : Fixed login card vertical spacing and z-index overlap on LoginPage.tsx and adjusted index.css base overflow to allow natural scrolling without component clipping.

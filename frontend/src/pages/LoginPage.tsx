@@ -53,13 +53,13 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-titanium-950 px-4">
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-y-auto bg-titanium-950 px-4 py-12 z-10">
       {/* Dynamic Ambient Background Glows */}
       <div className="absolute top-1/4 -left-20 w-96 h-96 bg-slate-800/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-zinc-800/20 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Liquid Glass Login Card */}
-      <div className="w-full max-w-md liquid-glass rounded-3xl p-8 md:p-10 border border-white/10 relative z-10 shadow-2xl">
+      <div className="w-full max-w-md liquid-glass rounded-3xl p-6 sm:p-8 md:p-10 border border-white/10 relative z-20 shadow-2xl my-auto">
         {/* Brand Header with Silver Kono Coin Mascot */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="relative mb-3 group cursor-pointer" onClick={() => navigate('/')}>
