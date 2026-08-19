@@ -13,6 +13,7 @@ from app.api.v1 import documents as documents_router
 from app.api.v1 import vendors as vendors_router
 from app.api.v1 import auth as auth_router
 from app.api.v1 import inbound as inbound_router
+from app.api.v1 import integrations as integrations_router
 from app.api.v1.websockets import ConnectionManager
 
 logging.basicConfig(level=logging.INFO)
@@ -44,6 +45,7 @@ app.include_router(vendors_router.router, prefix="/api/v1")
 app.include_router(audit_router.router, prefix="/api/v1")
 app.include_router(auth_router.router, prefix="/api/v1")
 app.include_router(inbound_router.router, prefix="/api/v1")
+app.include_router(integrations_router.router, prefix="/api/v1")
 
 
 @contextlib.asynccontextmanager

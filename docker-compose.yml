@@ -1,6 +1,6 @@
 # ==============================================================================
 # 🪙 Kono.ai — Mono-Docker All-in-One Compose (Hot-Reload Enabled)
-# Runs Redis + Rust Core + Python FastAPI + React/Nginx on port 80
+# Runs Redis + Rust Core + Python FastAPI + React/Nginx on port 80 (Zero n8n)
 # ==============================================================================
 
 services:
@@ -20,31 +20,10 @@ services:
     environment:
       - ENVIRONMENT=development
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - KONO_WEBHOOK_SECRET=${KONO_WEBHOOK_SECRET:-kono_secret_n8n_key_2026}
-
-  # ----------------------------------------------------------------------------
-  # 🤖 n8n Workflow Automation Platform (Inbound & ERP Orchestration)
-  # ----------------------------------------------------------------------------
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: kono-n8n
-    restart: unless-stopped
-    ports:
-      - "5678:5678"
-    environment:
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://localhost:5678/
-      - GENERIC_TIMEZONE=America/Bogota
-      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
-    volumes:
-      - n8n_data:/home/node/.n8n
-      - kono_storage:/data/storage
-    depends_on:
-      - kono-app
+      - KONO_WEBHOOK_SECRET=${KONO_WEBHOOK_SECRET:-kono_secret_key_2026}
+      - SUPABASE_URL=${SUPABASE_URL:-https://avkxhplapmibhyleywzd.supabase.co}
+      - SUPABASE_KEY=${SUPABASE_KEY:-}
 
 volumes:
   kono_storage:
-    driver: local
-  n8n_data:
     driver: local

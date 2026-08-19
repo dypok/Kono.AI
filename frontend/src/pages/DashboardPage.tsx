@@ -1,8 +1,24 @@
-import React, { useState } from 'react';
-import { FileText, CheckCircle2, AlertTriangle, XCircle, Search, Upload, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, CheckCircle2, AlertTriangle, XCircle, Search, Upload, RefreshCw, Mail } from 'lucide-react';
+import { ConnectGmailModal } from '../components/onboarding/ConnectGmailModal';
 
 export const DashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'green' | 'yellow' | 'red'>('all');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [connectedAccount, setConnectedAccount] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check if onboarding was already dismissed
+    const hasSeenOnboarding = localStorage.getItem('kono_onboarding_dismissed');
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleDismissOnboarding = () => {
+    localStorage.setItem('kono_onboarding_dismissed', 'true');
+    setShowOnboarding(false);
+  };
 
   const mockDocuments = [
     {
@@ -170,6 +186,13 @@ export const DashboardPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* 🪄 Onboarding Modal for New Users */}
+      <ConnectGmailModal
+        isOpen={showOnboarding}
+        onClose={handleDismissOnboarding}
+        onConnected={(em) => setConnectedAccount(em)}
+      />
     </div>
   );
 };

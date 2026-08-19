@@ -40,6 +40,15 @@ async def get_current_user(
 
     token = authorization.split(" ")[1]
 
+    # Quick bypass for mock/dev tokens
+    if token.startswith("mock-") or token.startswith("demo-"):
+        return SupabaseUser(
+            id="mock-supabase-user-uuid",
+            email="dylan@kono.ai",
+            role="authenticated",
+            user_metadata={"name": "Dylan P.", "role": "Lead Auditor"}
+        )
+
     # 3. Verify against Supabase Auth API
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
