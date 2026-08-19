@@ -46,3 +46,4 @@
 - [Wednesday]-[19/08/2026]-[13:31] : Fixed login card vertical spacing and z-index overlap on LoginPage.tsx and adjusted index.css base overflow to allow natural scrolling without component clipping.
 - [Wednesday]-[19/08/2026]-[13:32] : Cleaned initial authStore.ts state (removed residual mock user and initial local flag) so unauthenticated users see only the clean standalone login card on /login without any sidebar or layout elements overlapping.
 - [Wednesday]-[19/08/2026]-[13:33] : Added isLoading session check guard in authStore.ts, PublicRoute.tsx, and ProtectedRoute.tsx to eliminate screen flashing and premature modal rendering upon page reloads.
+- [Wednesday]-[19/08/2026]-[13:34] : Synchronously initialized showOnboarding in AppLayout.tsx so the onboarding modal renders instantly on the first frame upon new user sign-in without flashing the background dashboard.
