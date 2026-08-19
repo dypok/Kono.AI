@@ -56,6 +56,7 @@ export const SettingsPage: React.FC = () => {
   // Modal State for Delete Confirmation & Single Inbox Alert
   const [inboxToDelete, setInboxToDelete] = useState<{ id: string; email: string } | null>(null);
   const [showSingleInboxAlert, setShowSingleInboxAlert] = useState(false);
+  const [alertTimeoutId, setAlertTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (user?.email) {
@@ -96,12 +97,23 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleDismissSingleInboxAlert = () => {
+    if (alertTimeoutId) {
+      clearTimeout(alertTimeoutId);
+      setAlertTimeoutId(null);
+    }
+    setShowSingleInboxAlert(false);
+  };
+
   const handleRequestRemoveInbox = (id: string, email: string) => {
     if (inboxes.length <= 1) {
+      if (alertTimeoutId) clearTimeout(alertTimeoutId);
       setShowSingleInboxAlert(true);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setShowSingleInboxAlert(false);
+        setAlertTimeoutId(null);
       }, 3000);
+      setAlertTimeoutId(timer);
       return;
     }
     setInboxToDelete({ id, email });
@@ -359,7 +371,7 @@ export const SettingsPage: React.FC = () => {
       {showSingleInboxAlert &&
         createPortal(
           <div
-            className="fixed top-6 right-6 z-[9999] max-w-md w-full p-4 bg-titanium-950/95 border border-amber-500/30 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-fade-in text-alabaster-100 flex items-start space-x-3.5"
+            className="fixed top-6 right-6 z-[9999] max-w-md w-full p-4 bg-titanium-950/95 border border-amber-500/30 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.6)] backdrop-blur-xl animate-fade-in text-alabaster-100 flex items-start space-x-3.5"
           >
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
               <IconAlertCircle className="w-5 h-5" />
@@ -369,8 +381,9 @@ export const SettingsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-amber-400">Requisito Obligatorio</h4>
                 <button
-                  onClick={() => setShowSingleInboxAlert(false)}
-                  className="text-zinc-400 hover:text-white"
+                  onClick={handleDismissSingleInboxAlert}
+                  className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition"
+                  title="Cerrar notificación"
                 >
                   <IconX className="w-4 h-4" />
                 </button>
@@ -378,9 +391,9 @@ export const SettingsPage: React.FC = () => {
               <p className="text-zinc-300 mt-1 leading-relaxed">
                 Debes mantener al menos una bandeja vinculada para recibir facturas.
               </p>
-              {/* Animated 3-second progress bar */}
-              <div className="mt-2.5 w-full bg-white/10 h-1 rounded-full overflow-hidden">
-                <div className="bg-amber-400 h-full w-full animate-[shrink_3s_linear_forwards]" />
+              {/* Barra de progreso interactiva que se desvanece en 3s */}
+              <div className="mt-3 w-full bg-white/10 h-1 rounded-full overflow-hidden">
+                <div className="bg-amber-400 h-full rounded-full animate-shrink-3s" />
               </div>
             </div>
           </div>,

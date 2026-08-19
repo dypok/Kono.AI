@@ -48,3 +48,19 @@
   box-shadow: 0 0 15px rgba(250, 248, 245, 0.08);
   outline: none;
 }
+
+@keyframes shrinkWidth3s {
+  from {
+    width: 100%;
+    opacity: 1;
+  }
+  to {
+    width: 0%;
+    opacity: 0.2;
+  }
+}
+
+.animate-shrink-3s {
+  animation: shrinkWidth3s 3000ms linear forwards;
+}
+
