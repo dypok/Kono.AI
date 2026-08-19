@@ -7,6 +7,7 @@ import {
   IconLock,
   IconMail,
   IconSparkles,
+  IconBrandGoogle,
 } from '@tabler/icons-react';
 
 export const LoginPage: React.FC = () => {
@@ -14,6 +15,10 @@ export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [company, setCompany] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [role, setRole] = useState('Lead Financial Auditor');
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { login } = useAuthStore();
@@ -32,7 +37,13 @@ export const LoginPage: React.FC = () => {
           email,
           password,
           options: {
-            data: { full_name: fullName, role: 'Lead Financial Auditor' },
+            data: {
+              full_name: fullName,
+              role: role,
+              company: company,
+              tax_id: taxId,
+              phone: phone,
+            },
           },
         });
 
@@ -40,6 +51,20 @@ export const LoginPage: React.FC = () => {
           setErrorMessage(error.message);
           setIsLoading(false);
           return;
+        }
+
+        // Upsert into public.profiles to guarantee persistence
+        if (data.user) {
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            email: email,
+            full_name: fullName,
+            role: role,
+            company: company,
+            tax_id: taxId,
+            phone: phone,
+            updated_at: new Date().toISOString(),
+          });
         }
 
         // Auto login after sign up and trigger onboarding
@@ -149,35 +174,96 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Auth Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
           {isSignUp && (
-            <div>
-              <label className="block text-xs font-medium text-alabaster-300 mb-1.5 uppercase tracking-wider">
-                Nombre Completo
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="w-full liquid-glass-input px-4 py-2.5 rounded-xl text-sm"
-                placeholder="Dylan Palacio"
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                  Nombre Completo
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs"
+                  placeholder="Dylan Palacio"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                    Empresa / Razón Social
+                  </label>
+                  <input
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    required
+                    className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs"
+                    placeholder="Kono Corp SAS"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                    NIT / Tax ID
+                  </label>
+                  <input
+                    type="text"
+                    value={taxId}
+                    onChange={(e) => setTaxId(e.target.value)}
+                    required
+                    className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs font-mono"
+                    placeholder="900.123.456-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                    Cargo / Rol
+                  </label>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs bg-titanium-900 text-alabaster-100"
+                  >
+                    <option value="Lead Financial Auditor">Lead Auditor</option>
+                    <option value="CFO / Director Financiero">CFO / Director</option>
+                    <option value="Contador General">Contador General</option>
+                    <option value="Analista de Cuentas por Pagar">Analista CXP</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                    Teléfono
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs"
+                    placeholder="+57 300 1234567"
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-alabaster-300 mb-1.5 uppercase tracking-wider">
+            <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
               Correo Corporativo
             </label>
             <div className="relative">
-              <IconMail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3.5" />
+              <IconMail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-2.5" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full liquid-glass-input pl-10 pr-4 py-2.5 rounded-xl text-sm"
+                className="w-full liquid-glass-input pl-10 pr-4 py-2 rounded-xl text-xs"
                 placeholder="analista@empresa.com"
               />
             </div>

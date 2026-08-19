@@ -52,6 +52,25 @@ export const SettingsPage: React.FC = () => {
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
+  // Profile Form State
+  const [profileFullName, setProfileFullName] = useState(user?.name || '');
+  const [profileCompany, setProfileCompany] = useState(user?.company || '');
+  const [profileTaxId, setProfileTaxId] = useState(user?.taxId || '');
+  const [profileRole, setProfileRole] = useState(user?.role || 'Lead Financial Auditor');
+  const [profilePhone, setProfilePhone] = useState(user?.phone || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Sync state if user loads after mount
+  useEffect(() => {
+    if (user) {
+      if (user.name) setProfileFullName(user.name);
+      if (user.company) setProfileCompany(user.company);
+      if (user.taxId) setProfileTaxId(user.taxId);
+      if (user.role) setProfileRole(user.role);
+      if (user.phone) setProfilePhone(user.phone);
+    }
+  }, [user]);
+
   // Modal State for adding new email inboxes
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -62,8 +81,8 @@ export const SettingsPage: React.FC = () => {
   const [inboxToDelete, setInboxToDelete] = useState<{ id: string; email: string } | null>(null);
   const [showSingleInboxAlert, setShowSingleInboxAlert] = useState(false);
   const [alertProgress, setAlertProgress] = useState(100);
-  const [alertTimeoutId, setAlertTimeoutId] = useState<NodeJS.Timeout | null>(null);
-  const [progressIntervalId, setProgressIntervalId] = useState<NodeJS.Timeout | null>(null);
+  const [alertTimeoutId, setAlertTimeoutId] = useState<any | null>(null);
+  const [progressIntervalId, setProgressIntervalId] = useState<any | null>(null);
 
   useEffect(() => {
     localStorage.setItem('kono_inboxes_global', JSON.stringify(inboxes));
@@ -209,7 +228,143 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* 📧 Main Card: Connected Inboxes Management */}
+      {/* 👤 Card 1: User Profile & Organization Settings */}
+      <div className="liquid-glass rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+              <IconSparkles className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-alabaster-100">Organización & Perfil de Usuario</h2>
+              <p className="text-xs text-zinc-400">
+                Información tributaria y datos del auditor almacenados en Supabase.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Edit Form */}
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              setIsSavingProfile(true);
+              const { updateProfile } = useAuthStore.getState();
+              await updateProfile({
+                fullName: profileFullName,
+                company: profileCompany,
+                taxId: profileTaxId,
+                role: profileRole,
+                phone: profilePhone,
+              });
+              setSyncFeedback('Perfil y datos de organización actualizados exitosamente en Supabase.');
+            } catch (err: any) {
+              setSyncFeedback(`Error al guardar perfil: ${err.message}`);
+            } finally {
+              setIsSavingProfile(false);
+            }
+          }}
+          className="space-y-4 pt-2"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                Nombre Completo
+              </label>
+              <input
+                type="text"
+                value={profileFullName}
+                onChange={(e) => setProfileFullName(e.target.value)}
+                required
+                className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs text-alabaster-100"
+                placeholder="Dylan Palacio"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                Correo Corporativo (Solo Lectura)
+              </label>
+              <input
+                type="email"
+                value={user?.email || ''}
+                disabled
+                className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs text-zinc-400 opacity-70 cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                Empresa / Razón Social
+              </label>
+              <input
+                type="text"
+                value={profileCompany}
+                onChange={(e) => setProfileCompany(e.target.value)}
+                className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs text-alabaster-100"
+                placeholder="Kono Corp SAS"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                NIT / Tax ID
+              </label>
+              <input
+                type="text"
+                value={profileTaxId}
+                onChange={(e) => setProfileTaxId(e.target.value)}
+                className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs font-mono text-alabaster-100"
+                placeholder="900.123.456-1"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                Cargo / Rol
+              </label>
+              <input
+                type="text"
+                value={profileRole}
+                onChange={(e) => setProfileRole(e.target.value)}
+                className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs text-alabaster-100"
+                placeholder="Lead Financial Auditor"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-alabaster-300 mb-1 uppercase tracking-wider">
+                Teléfono de Contacto
+              </label>
+              <input
+                type="tel"
+                value={profilePhone}
+                onChange={(e) => setProfilePhone(e.target.value)}
+                className="w-full liquid-glass-input px-3.5 py-2 rounded-xl text-xs text-alabaster-100"
+                placeholder="+57 300 1234567"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={isSavingProfile}
+              className="px-5 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 shadow flex items-center space-x-2 disabled:opacity-50"
+            >
+              {isSavingProfile && <IconRefresh className="w-4 h-4 animate-spin text-titanium-950" />}
+              <span>{isSavingProfile ? 'Guardando...' : 'Guardar Cambios de Perfil'}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* 📧 Card 2: Connected Inboxes Management */}
       <div className="liquid-glass rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-4">

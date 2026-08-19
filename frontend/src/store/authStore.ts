@@ -6,6 +6,9 @@ interface User {
   name: string;
   email: string;
   role: string;
+  phone?: string;
+  company?: string;
+  taxId?: string;
   avatarUrl?: string;
 }
 
@@ -15,11 +18,18 @@ interface AuthState {
   user: User | null;
   login: (email: string, password?: string) => Promise<boolean>;
   signInWithGoogle: (customRedirectTo?: string) => Promise<void>;
+  updateProfile: (profileData: {
+    fullName?: string;
+    role?: string;
+    phone?: string;
+    company?: string;
+    taxId?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   checkSession: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: true,
   user: null,
@@ -47,9 +57,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const u: User = {
       id: data.user.id,
-      name: profile?.full_name || data.user.user_metadata?.name || email.split('@')[0].toUpperCase(),
+      name: profile?.full_name || data.user.user_metadata?.name || data.user.user_metadata?.full_name || email.split('@')[0].toUpperCase(),
       email: data.user.email || email,
-      role: profile?.role || 'Lead Financial Auditor',
+      role: profile?.role || data.user.user_metadata?.role || 'Lead Financial Auditor',
+      phone: profile?.phone || data.user.user_metadata?.phone || '',
+      company: profile?.company || data.user.user_metadata?.company || '',
+      taxId: profile?.tax_id || data.user.user_metadata?.tax_id || '',
       avatarUrl: profile?.avatar_url,
     };
     localStorage.setItem('kono_auth', 'true');
@@ -74,6 +87,40 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (error) {
       throw new Error(error.message);
     }
+  },
+
+  updateProfile: async (profileData) => {
+    const currentUser = get().user;
+    if (!currentUser) throw new Error('No hay usuario autenticado');
+
+    const updatePayload: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (profileData.fullName !== undefined) updatePayload.full_name = profileData.fullName;
+    if (profileData.role !== undefined) updatePayload.role = profileData.role;
+    if (profileData.phone !== undefined) updatePayload.phone = profileData.phone;
+    if (profileData.company !== undefined) updatePayload.company = profileData.company;
+    if (profileData.taxId !== undefined) updatePayload.tax_id = profileData.taxId;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updatePayload)
+      .eq('id', currentUser.id);
+
+    if (error) {
+      throw new Error(`Error al actualizar perfil: ${error.message}`);
+    }
+
+    set({
+      user: {
+        ...currentUser,
+        name: profileData.fullName ?? currentUser.name,
+        role: profileData.role ?? currentUser.role,
+        phone: profileData.phone ?? currentUser.phone,
+        company: profileData.company ?? currentUser.company,
+        taxId: profileData.taxId ?? currentUser.taxId,
+      },
+    });
   },
 
   logout: async () => {
@@ -116,7 +163,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         id: userObj.id,
         name: profile?.full_name || userObj.user_metadata?.full_name || userObj.user_metadata?.name || userObj.email?.split('@')[0].toUpperCase() || 'User',
         email: userObj.email || '',
-        role: profile?.role || 'Lead Financial Auditor',
+        role: profile?.role || userObj.user_metadata?.role || 'Lead Financial Auditor',
+        phone: profile?.phone || userObj.user_metadata?.phone || '',
+        company: profile?.company || userObj.user_metadata?.company || '',
+        taxId: profile?.tax_id || userObj.user_metadata?.tax_id || '',
         avatarUrl: profile?.avatar_url || userObj.user_metadata?.avatar_url,
       };
 
