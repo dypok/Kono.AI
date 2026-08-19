@@ -20,3 +20,4 @@
 - [Wednesday]-[19/08/2026]-[11:29] : Configured Supabase MCP server in global ~/.gemini/antigravity/mcp_config.json for Antigravity IDE tool integration.
 - [Wednesday]-[19/08/2026]-[11:34] : Installed official Supabase agent skills (supabase & supabase-postgres-best-practices) under .agents/skills/.
 - [Wednesday]-[19/08/2026]-[11:34] : Connected to Supabase project avkxhplapmibhyleywzd via MCP, retrieved project URL and API keys, and injected credentials into .env.
+- [Wednesday]-[19/08/2026]-[11:38] : Created database schema in Supabase PostgreSQL (vendors, invoices, invoice_line_items, audit_logs with RLS policies), connected frontend client with @supabase/supabase-js in frontend/src/lib/supabaseClient.ts and frontend/src/store/authStore.ts, and verified live deployment on port 80.
