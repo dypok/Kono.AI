@@ -55,3 +55,4 @@
 - [Wednesday]-[19/08/2026]-[13:43] : Enhanced InboxBackgroundScheduler in inbox_scheduler.py with asyncio.gather to perform concurrent non-blocking parallel scanning every 60 seconds across all registered inboxes (N arbitrary connected email accounts per user).
 - [Wednesday]-[19/08/2026]-[14:34] : Removed Google OAuth button from LoginPage.tsx to enforce clean and exclusive authentication via corporate email and password backed by Supabase DB.
 - [Wednesday]-[19/08/2026]-[14:38] : Restored Google OAuth login option on LoginPage.tsx and restricted the 'Añadir Otro Correo' modal in SettingsPage.tsx strictly to 1-Click Google OAuth authentication for genuine multi-inbox token validation.
+- [Wednesday]-[19/08/2026]-[14:38] : Fixed modal overlay viewport coverage in SettingsPage.tsx by setting explicit w-screen h-screen fixed inset-0 z-[100] with backdrop-blur-xl and glow ambient lighting.

@@ -231,33 +231,36 @@ export const SettingsPage: React.FC = () => {
 
       {/* 🪄 Modal para Añadir Nuevo Correo */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-titanium-950/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-md liquid-glass rounded-3xl p-6 md:p-8 border border-white/15 shadow-2xl relative">
+        <div className="fixed inset-0 z-[100] w-screen h-screen flex items-center justify-center p-4 bg-titanium-950/85 backdrop-blur-xl animate-fade-in">
+          <div className="w-full max-w-md liquid-glass rounded-3xl p-6 md:p-8 border border-white/15 shadow-[0_8px_40px_rgba(0,0,0,0.6)] relative overflow-hidden">
+            {/* Glow Accent */}
+            <div className="absolute -top-12 -left-12 w-40 h-40 bg-slate-400/20 rounded-full blur-3xl pointer-events-none" />
+
             <button
               onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-5 right-5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition"
+              className="absolute top-5 right-5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition z-10"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+            <div className="flex items-center space-x-3 mb-6 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-md">
                 <Mail className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="font-bold text-base text-alabaster-100">Añadir Correo a Monitorear</h3>
-                <p className="text-xs text-zinc-400">Ingresa la dirección de correo adicional</p>
+                <p className="text-xs text-zinc-400">Vincula otra cuenta de facturación</p>
               </div>
             </div>
 
             {errorMessage && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center space-x-2">
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center space-x-2 relative z-10">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-4 relative z-10">
               {/* 🌟 Pure 1-Click Google OAuth Connection */}
               <button
                 type="button"
