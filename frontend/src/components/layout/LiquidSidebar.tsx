@@ -86,8 +86,8 @@ export const LiquidSidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex items-center h-11 rounded-xl text-sm font-medium transition-colors duration-150 ${
-                      !isHovered ? 'justify-center px-0' : 'justify-start px-2.5'
+                    `flex items-center h-11 w-full rounded-xl text-sm font-medium transition-colors duration-150 ${
+                      !isHovered ? 'justify-center' : 'justify-start px-3'
                     } ${
                       isActive
                         ? 'bg-white/10 text-alabaster-50 border border-white/20 shadow-sm'
@@ -99,19 +99,17 @@ export const LiquidSidebar: React.FC = () => {
                   {/* Icon */}
                   <Icon className="w-5 h-5 shrink-0" stroke={1.8} />
 
-                  {/* Label */}
-                  <div
-                    className={`flex-1 flex items-center justify-between truncate transition-all duration-300 ${
-                      isHovered ? 'opacity-100 translate-x-0 ml-3' : 'opacity-0 -translate-x-4 pointer-events-none w-0'
-                    }`}
-                  >
-                    <span className="whitespace-nowrap font-medium text-xs">{item.name}</span>
-                    {item.badge && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                        {item.badge}
-                      </span>
-                    )}
-                  </div>
+                  {/* Label (Only in DOM when hovered to avoid pushing the icon) */}
+                  {isHovered && (
+                    <div className="flex-1 flex items-center justify-between truncate ml-3 animate-fade-in">
+                      <span className="whitespace-nowrap font-medium text-xs">{item.name}</span>
+                      {item.badge && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </NavLink>
               );
             })}
@@ -122,8 +120,8 @@ export const LiquidSidebar: React.FC = () => {
         <div className="pt-4 border-t border-white/10 space-y-3">
           {/* Live WebSocket Status Pill */}
           <div
-            className={`flex items-center h-10 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-xs text-emerald-400 overflow-hidden ${
-              !isHovered ? 'justify-center px-0' : 'justify-between px-2.5'
+            className={`flex items-center h-10 w-full rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-xs text-emerald-400 overflow-hidden ${
+              !isHovered ? 'justify-center' : 'justify-between px-3'
             }`}
           >
             <span className="relative flex h-2.5 w-2.5 shrink-0">
@@ -131,44 +129,40 @@ export const LiquidSidebar: React.FC = () => {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
             </span>
 
-            <div
-              className={`flex-1 flex items-center justify-between transition-all duration-300 ${
-                isHovered ? 'opacity-100 translate-x-0 ml-2.5' : 'opacity-0 -translate-x-4 pointer-events-none w-0'
-              }`}
-            >
-              <span className="font-mono text-[11px] whitespace-nowrap">Stream Activo</span>
-              <IconBroadcast className="w-3.5 h-3.5 text-emerald-400/70 shrink-0" />
-            </div>
+            {isHovered && (
+              <div className="flex-1 flex items-center justify-between ml-3 animate-fade-in">
+                <span className="font-mono text-[11px] whitespace-nowrap">Stream Activo</span>
+                <IconBroadcast className="w-3.5 h-3.5 text-emerald-400/70 shrink-0" />
+              </div>
+            )}
           </div>
 
           {/* User Profile & Logout */}
           <div
-            className={`flex items-center h-11 overflow-hidden ${
-              !isHovered ? 'justify-center px-0' : 'justify-between px-1'
+            className={`flex items-center h-11 w-full overflow-hidden ${
+              !isHovered ? 'justify-center' : 'justify-between px-1.5'
             }`}
           >
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-zinc-700 to-slate-500 flex items-center justify-center text-xs font-bold text-alabaster-50 shadow shrink-0">
               {user?.name?.slice(0, 2) || 'DY'}
             </div>
 
-            <div
-              className={`flex-1 flex items-center justify-between transition-all duration-300 ${
-                isHovered ? 'opacity-100 translate-x-0 ml-2.5' : 'opacity-0 -translate-x-4 pointer-events-none w-0'
-              }`}
-            >
-              <div className="truncate text-xs">
-                <p className="font-medium text-alabaster-100 truncate">{user?.name || 'Dylan P.'}</p>
-                <p className="text-[10px] text-zinc-400 truncate">{user?.role || 'Auditor'}</p>
-              </div>
+            {isHovered && (
+              <div className="flex-1 flex items-center justify-between ml-2.5 animate-fade-in">
+                <div className="truncate text-xs">
+                  <p className="font-medium text-alabaster-100 truncate">{user?.name || 'Dylan P.'}</p>
+                  <p className="text-[10px] text-zinc-400 truncate">{user?.role || 'Auditor'}</p>
+                </div>
 
-              <button
-                onClick={handleLogout}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition shrink-0 ml-1"
-                title="Cerrar Sesión"
-              >
-                <IconLogout className="w-4 h-4" />
-              </button>
-            </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition shrink-0 ml-1"
+                  title="Cerrar Sesión"
+                >
+                  <IconLogout className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

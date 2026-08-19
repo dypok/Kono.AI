@@ -71,3 +71,4 @@
 - [Wednesday]-[19/08/2026]-[15:03] : Refactored LiquidSidebar layout with fixed 48px (w-12) column slots for the mascot, navigation icons, stream status, and user avatar. Eliminated horizontal clipping and ensured 100% visible and centered Tabler icons in both collapsed and expanded states.
 - [Wednesday]-[19/08/2026]-[15:03] : Centered the Kono Mascot, navigation icons, stream status, and user avatar perfectly in the collapsed 80px sidebar layout using exact 56px slots and 10px outer padding.
 - [Wednesday]-[19/08/2026]-[15:04] : Fixed sidebar horizontal alignment when collapsed using pure Flexbox justify-center across mascot header, navigation link buttons, stream status, and user avatar.
+- [Wednesday]-[19/08/2026]-[15:05] : Ensured 100% horizontal centering of navigation icons, WebSocket status, and user avatar when the sidebar is collapsed by removing dormant flex-1 labels from the DOM layout.
