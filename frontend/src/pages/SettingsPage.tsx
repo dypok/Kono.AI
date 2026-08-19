@@ -56,7 +56,9 @@ export const SettingsPage: React.FC = () => {
   // Modal State for Delete Confirmation & Single Inbox Alert
   const [inboxToDelete, setInboxToDelete] = useState<{ id: string; email: string } | null>(null);
   const [showSingleInboxAlert, setShowSingleInboxAlert] = useState(false);
+  const [alertProgress, setAlertProgress] = useState(100);
   const [alertTimeoutId, setAlertTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [progressIntervalId, setProgressIntervalId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (user?.email) {
@@ -102,17 +104,43 @@ export const SettingsPage: React.FC = () => {
       clearTimeout(alertTimeoutId);
       setAlertTimeoutId(null);
     }
+    if (progressIntervalId) {
+      clearInterval(progressIntervalId);
+      setProgressIntervalId(null);
+    }
     setShowSingleInboxAlert(false);
+    setAlertProgress(100);
   };
 
   const handleRequestRemoveInbox = (id: string, email: string) => {
     if (inboxes.length <= 1) {
       if (alertTimeoutId) clearTimeout(alertTimeoutId);
+      if (progressIntervalId) clearInterval(progressIntervalId);
+
       setShowSingleInboxAlert(true);
+      setAlertProgress(100);
+
+      const startTime = Date.now();
+      const duration = 3000;
+
+      const progressInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const remainingPercentage = Math.max(0, 100 - (elapsed / duration) * 100);
+        setAlertProgress(remainingPercentage);
+        if (remainingPercentage <= 0) {
+          clearInterval(progressInterval);
+        }
+      }, 20);
+
+      setProgressIntervalId(progressInterval);
+
       const timer = setTimeout(() => {
         setShowSingleInboxAlert(false);
         setAlertTimeoutId(null);
-      }, 3000);
+        clearInterval(progressInterval);
+        setProgressIntervalId(null);
+      }, duration);
+
       setAlertTimeoutId(timer);
       return;
     }
@@ -391,9 +419,12 @@ export const SettingsPage: React.FC = () => {
               <p className="text-zinc-300 mt-1 leading-relaxed">
                 Debes mantener al menos una bandeja vinculada para recibir facturas.
               </p>
-              {/* Barra de progreso interactiva que se desvanece en 3s */}
-              <div className="mt-3 w-full bg-white/10 h-1 rounded-full overflow-hidden">
-                <div className="bg-amber-400 h-full rounded-full animate-shrink-3s" />
+              {/* Barra de tiempo progresiva Tailwind que se consume en exactamente 3 segundos */}
+              <div className="mt-3.5 w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-amber-400 h-full rounded-full transition-all duration-75 ease-linear"
+                  style={{ width: `${alertProgress}%` }}
+                />
               </div>
             </div>
           </div>,
