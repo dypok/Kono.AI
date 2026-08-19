@@ -8,8 +8,12 @@ services:
     ports:
       - "80:80"
     volumes:
-      # Live Hot-Reload Mounts for Python Backend
+      # Live Hot-Reload Mounts for Python Backend & Frontend Vite
       - ./backend/python-api/app:/app/app
+      - ./frontend/src:/app/frontend/src
+      - ./frontend/public:/app/frontend/public
+      - ./frontend/index.html:/app/frontend/index.html
+      - ./frontend/vite.config.ts:/app/frontend/vite.config.ts
       # Persistent Data Storage
       - kono_storage:/data/storage
     environment:

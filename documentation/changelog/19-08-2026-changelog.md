@@ -38,3 +38,4 @@
 - [Wednesday]-[19/08/2026]-[12:59] : Streamlined ConnectGmailModal.tsx to purely use 1-Click Google OAuth 2.0 and removed manual App Password input fields.
 - [Wednesday]-[19/08/2026]-[13:01] : Removed the 'X' close button from ConnectGmailModal.tsx to guide user actions exclusively through 'Conectar Gmail con 1-Click' or 'Configurar más tarde'.
 - [Wednesday]-[19/08/2026]-[13:11] : Completed clean production build and verified Mono-Docker container running properly on port 80.
+- [Wednesday]-[19/08/2026]-[13:15] : Enabled real-time Vite Hot Module Replacement (HMR) by mounting frontend/src, frontend/public, and configuring usePolling and WebSocket proxy in nginx.conf, allowing instant frontend live reloads without rebuilding Docker.
