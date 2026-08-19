@@ -30,3 +30,4 @@
 - [Wednesday]-[19/08/2026]-[12:37] : Implemented full authentication lifecycle in frontend/src/pages/LoginPage.tsx and authStore.ts (Sign In, Sign Up via Supabase Auth, instant Demo access, and secure logout in LiquidSidebar).
 - [Wednesday]-[19/08/2026]-[12:37] : Created Kono silver mascot favicon in frontend/public/kono_mascot_favicon.svg and linked it in index.html for browser tab branding.
 - [Wednesday]-[19/08/2026]-[12:39] : Removed demo access fallback in frontend/src/store/authStore.ts and LoginPage.tsx, enforcing strict authentication against Supabase Database and displaying descriptive authentication error banners.
+- [Wednesday]-[19/08/2026]-[12:41] : Enhanced onboarding flow triggering by setting kono_new_signup flag in LoginPage.tsx and ensuring ConnectGmailModal renders automatically on registration.

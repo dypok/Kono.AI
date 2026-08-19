@@ -36,7 +36,9 @@ export const LoginPage: React.FC = () => {
           return;
         }
 
-        // Auto login after sign up
+        // Auto login after sign up and trigger onboarding
+        localStorage.setItem('kono_new_signup', 'true');
+        localStorage.removeItem('kono_onboarding_dismissed');
         await login(email, password);
       } else {
         await login(email, password);

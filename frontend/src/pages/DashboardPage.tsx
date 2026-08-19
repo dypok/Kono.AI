@@ -8,15 +8,17 @@ export const DashboardPage: React.FC = () => {
   const [connectedAccount, setConnectedAccount] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if onboarding was already dismissed
+    // Show onboarding if new signup or not yet dismissed
+    const isNewSignup = localStorage.getItem('kono_new_signup') === 'true';
     const hasSeenOnboarding = localStorage.getItem('kono_onboarding_dismissed');
-    if (!hasSeenOnboarding) {
+    if (isNewSignup || !hasSeenOnboarding) {
       setShowOnboarding(true);
     }
   }, []);
 
   const handleDismissOnboarding = () => {
     localStorage.setItem('kono_onboarding_dismissed', 'true');
+    localStorage.removeItem('kono_new_signup');
     setShowOnboarding(false);
   };
 
