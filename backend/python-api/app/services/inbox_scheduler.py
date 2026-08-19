@@ -35,25 +35,33 @@ class InboxBackgroundScheduler:
             del self.active_sessions[key]
             logger.info("Unregistered inbox monitoring: %s", email)
 
+    async def _scan_single_inbox(self, session_data: Dict[str, Any]):
+        email = session_data["email"]
+        token = session_data["provider_token"]
+        uid = session_data["user_id"]
+        try:
+            logger.info("Periodic 60s check on inbox: %s", email)
+            await gmail_oauth_service.scan_and_fetch_invoices(
+                access_token=token,
+                user_id=uid,
+                max_results=10,
+            )
+            session_data["last_scanned"] = datetime.utcnow().isoformat()
+        except Exception as err:
+            logger.warning("Error scanning inbox %s in background: %s", email, err)
+
     async def _loop(self):
-        logger.info("Started 60s Inbox Background Scanner loop")
+        logger.info("Started 60s Dynamic Multi-Inbox Background Scanner loop (N accounts supported)")
         while self._running:
             try:
-                for key, session_data in list(self.active_sessions.items()):
-                    email = session_data["email"]
-                    token = session_data["provider_token"]
-                    uid = session_data["user_id"]
-                    try:
-                        logger.info("Periodic 60s check on inbox: %s", email)
-                        await gmail_oauth_service.scan_and_fetch_invoices(
-                            access_token=token,
-                            user_id=uid,
-                            max_results=10,
-                        )
-                        session_data["last_scanned"] = datetime.utcnow().isoformat()
-                    except Exception as err:
-                        logger.warning("Error scanning inbox %s in background: %s", email, err)
-
+                active_items = list(self.active_sessions.values())
+                if active_items:
+                    logger.info("Executing 60s parallel scan across %d active inbox(es)", len(active_items))
+                    # Scan all registered inboxes (3, 5, 10, etc.) concurrently in parallel
+                    await asyncio.gather(
+                        *(self._scan_single_inbox(item) for item in active_items),
+                        return_exceptions=True,
+                    )
             except Exception as e:
                 logger.error("Exception in inbox scheduler loop: %s", e)
 
