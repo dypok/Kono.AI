@@ -1,8 +1,10 @@
-//! Kono.ai Rust Ingestion Core — library surface exposed for integration
-//! testing and reuse by the daemon binary (`main.rs`).
-
+pub mod config;
 pub mod errors;
+pub mod hasher;
 pub mod img_preprocessor;
+pub mod models;
 pub mod pdf_triage;
+pub mod pipeline;
 pub mod queue_publisher;
 pub mod types;
+pub mod watcher;
