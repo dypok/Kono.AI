@@ -37,7 +37,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
 
         <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-emerald-950/30 border border-emerald-500/20 text-xs text-emerald-400">
           <IconCoins className="w-3.5 h-3.5" />
-          <span className="font-mono font-semibold">$0.00 Tokens (95% Determinista)</span>
+          <span className="font-mono font-semibold">$0.00 Tokens</span>
         </div>
 
         <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl liquid-glass-card border border-white/10 text-xs text-zinc-300">

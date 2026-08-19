@@ -99,6 +99,40 @@ export const documentsApi = {
     return res.json();
   },
 
+  /** Obtiene el detalle completo de un comprobante para el visor */
+  async getDocument(documentId: string): Promise<any> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/documents/${documentId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: No se pudo cargar el comprobante`);
+    }
+    return res.json();
+  },
+
+  /** Actualiza o corrige campos de un documento */
+  async correctDocument(documentId: string, data: Record<string, any>): Promise<any> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/documents/${documentId}/correct`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      throw new Error('Error al actualizar datos de la factura');
+    }
+    return res.json();
+  },
+
   /** Aprueba un documento en 1-Click */
   async approveDocument(documentId: string): Promise<any> {
     const headers = await getAuthHeader();

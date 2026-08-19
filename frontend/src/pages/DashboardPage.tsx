@@ -277,10 +277,10 @@ export const DashboardPage: React.FC = () => {
                   </td>
                   <td className="py-4 px-6 text-right">
                     <button
-                      onClick={() => navigate('/audit')}
-                      className="px-3 py-1 rounded-lg liquid-glass-card hover:bg-white/10 text-alabaster-100 text-xs transition border border-white/10"
+                      onClick={() => navigate(`/audit/${doc.id}`)}
+                      className="px-3.5 py-1.5 rounded-xl liquid-glass-card hover:bg-white/10 text-alabaster-100 text-xs transition border border-white/10 font-medium shadow-sm flex items-center space-x-1 ml-auto"
                     >
-                      Auditar Visor
+                      <span>Auditar Visor</span>
                     </button>
                   </td>
                 </tr>

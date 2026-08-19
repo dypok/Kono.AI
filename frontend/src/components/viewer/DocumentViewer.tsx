@@ -8,20 +8,22 @@ interface DocumentViewerProps {
   invoice: InvoiceRecord;
   activeFieldKey: string | null;
   onSelectField: (fieldKey: string) => void;
+  pdfUrl?: string | null;
 }
 
 const CANVAS_WIDTH = 620;
 const CANVAS_HEIGHT = 840;
 
-/** Left panel: frosted-glass document canvas with interactive glowing SVG bounding boxes. */
-export function DocumentViewer({ invoice, activeFieldKey, onSelectField }: DocumentViewerProps) {
+/** Left panel: frosted-glass document canvas with interactive glowing SVG bounding boxes or Native PDF stream. */
+export function DocumentViewer({ invoice, activeFieldKey, onSelectField, pdfUrl }: DocumentViewerProps) {
   const [zoom, setZoom] = useState(100);
   const [showOverlay, setShowOverlay] = useState(true);
+  const [viewMode, setViewMode] = useState<'pdf' | 'vector'>(pdfUrl ? 'pdf' : 'vector');
   const [page, setPage] = useState(1);
   const [hoveredField, setHoveredField] = useState<ExtractedField | null>(null);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/40 p-4 shadow-glass backdrop-blur-xl">
+    <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-slate-900/40 p-4 shadow-glass backdrop-blur-xl">
       <ViewerToolbar
         page={page}
         onPageChange={setPage}
@@ -29,36 +31,49 @@ export function DocumentViewer({ invoice, activeFieldKey, onSelectField }: Docum
         onZoomChange={setZoom}
         showOverlay={showOverlay}
         onToggleOverlay={() => setShowOverlay((prev) => !prev)}
+        viewMode={viewMode}
+        onToggleViewMode={() => setViewMode((prev) => (prev === 'pdf' ? 'vector' : 'pdf'))}
+        hasPdf={Boolean(pdfUrl)}
       />
 
-      <div className="relative flex-1 overflow-auto rounded-xl border border-white/5 bg-slate-950/80 p-4">
-        <div className="flex justify-center">
-          <div
-            className="relative origin-top overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-2xl transition-transform duration-150"
-            style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, transform: `scale(${zoom / 100})` }}
-          >
-            <InvoiceDocument invoice={invoice} />
-
-            {showOverlay && (
-              <svg
-                className="absolute inset-0 h-full w-full"
-                viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
-                preserveAspectRatio="none"
-              >
-                {invoice.fields.map((field) => (
-                  <BoundingBox
-                    key={field.id}
-                    field={field}
-                    isActive={activeFieldKey === field.fieldKey}
-                    isHovered={hoveredField?.id === field.id}
-                    onHover={setHoveredField}
-                    onSelect={onSelectField}
-                  />
-                ))}
-              </svg>
-            )}
+      <div className="relative flex-1 overflow-auto rounded-2xl border border-white/5 bg-slate-950/80 p-2 md:p-4">
+        {viewMode === 'pdf' && pdfUrl ? (
+          <div className="w-full h-full min-h-[600px] flex items-center justify-center rounded-xl overflow-hidden bg-slate-900 border border-slate-700/50">
+            <iframe
+              src={`${pdfUrl}#toolbar=0&navpanes=0`}
+              title="PDF Viewer"
+              className="w-full h-full min-h-[650px] border-none rounded-xl bg-slate-900"
+            />
           </div>
-        </div>
+        ) : (
+          <div className="flex justify-center">
+            <div
+              className="relative origin-top overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-2xl transition-transform duration-150"
+              style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, transform: `scale(${zoom / 100})` }}
+            >
+              <InvoiceDocument invoice={invoice} />
+
+              {showOverlay && (
+                <svg
+                  className="absolute inset-0 h-full w-full pointer-events-none"
+                  viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
+                  preserveAspectRatio="none"
+                >
+                  {invoice.fields.map((field) => (
+                    <BoundingBox
+                      key={field.id}
+                      field={field}
+                      isActive={activeFieldKey === field.fieldKey}
+                      isHovered={hoveredField?.id === field.id}
+                      onHover={setHoveredField}
+                      onSelect={onSelectField}
+                    />
+                  ))}
+                </svg>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {hoveredField && <FieldTooltip field={hoveredField} />}
@@ -75,58 +90,88 @@ interface ViewerToolbarProps {
   onZoomChange: (zoom: number) => void;
   showOverlay: boolean;
   onToggleOverlay: () => void;
+  viewMode: 'pdf' | 'vector';
+  onToggleViewMode: () => void;
+  hasPdf: boolean;
 }
 
-function ViewerToolbar({ page, onPageChange, zoom, onZoomChange, showOverlay, onToggleOverlay }: ViewerToolbarProps) {
+function ViewerToolbar({
+  page,
+  onPageChange,
+  zoom,
+  onZoomChange,
+  showOverlay,
+  onToggleOverlay,
+  viewMode,
+  onToggleViewMode,
+  hasPdf,
+}: ViewerToolbarProps) {
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs text-slate-300 backdrop-blur-md">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-slate-300 backdrop-blur-md">
       <div className="flex items-center gap-2">
         <FileText className="h-4 w-4 text-cyan-400" />
-        <span className="font-semibold text-slate-200">Original Document</span>
-        <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-[10px] text-slate-400 border border-slate-700">Vector Render</span>
+        <span className="font-semibold text-slate-200">Comprobante Original</span>
+        {hasPdf && (
+          <button
+            type="button"
+            onClick={onToggleViewMode}
+            className={cn(
+              'rounded-lg px-2.5 py-1 font-mono text-[10px] font-semibold border transition-all cursor-pointer',
+              viewMode === 'pdf'
+                ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]'
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+            )}
+          >
+            {viewMode === 'pdf' ? '📄 PDF Nativo' : '📐 Vector Canvas'}
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1 rounded-lg border border-white/5 bg-slate-950/60 px-2 py-1 font-mono text-[11px]">
-          <button type="button" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1} className="px-1 text-slate-400 hover:text-white disabled:opacity-30">
-            ◀
-          </button>
-          <span>Page {page} / 1</span>
-          <button type="button" onClick={() => onPageChange(Math.min(1, page + 1))} disabled={page === 1} className="px-1 text-slate-400 hover:text-white disabled:opacity-30">
-            ▶
-          </button>
-        </div>
+        {viewMode === 'vector' && (
+          <>
+            <div className="flex items-center gap-1 rounded-lg border border-white/5 bg-slate-950/60 px-2 py-1 font-mono text-[11px]">
+              <button type="button" onClick={() => onPageChange(Math.max(1, page - 1))} disabled={page === 1} className="px-1 text-slate-400 hover:text-white disabled:opacity-30">
+                ◀
+              </button>
+              <span>Page {page} / 1</span>
+              <button type="button" onClick={() => onPageChange(Math.min(1, page + 1))} disabled={page === 1} className="px-1 text-slate-400 hover:text-white disabled:opacity-30">
+                ▶
+              </button>
+            </div>
 
-        <div className="h-4 w-px bg-white/10" />
+            <div className="h-4 w-px bg-white/10" />
 
-        <div className="flex items-center gap-2">
-          <ZoomOut className="h-3.5 w-3.5 text-slate-400" />
-          <input
-            type="range"
-            min={70}
-            max={160}
-            step={5}
-            value={zoom}
-            onChange={(e) => onZoomChange(Number(e.target.value))}
-            className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-white/10 accent-cyan-400"
-          />
-          <ZoomIn className="h-3.5 w-3.5 text-slate-400" />
-          <span className="w-10 font-mono text-[11px] text-slate-300">{zoom}%</span>
-        </div>
+            <div className="flex items-center gap-2">
+              <ZoomOut className="h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="range"
+                min={70}
+                max={160}
+                step={5}
+                value={zoom}
+                onChange={(e) => onZoomChange(Number(e.target.value))}
+                className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-white/10 accent-cyan-400"
+              />
+              <ZoomIn className="h-3.5 w-3.5 text-slate-400" />
+              <span className="w-10 font-mono text-[11px] text-slate-300">{zoom}%</span>
+            </div>
 
-        <div className="h-4 w-px bg-white/10" />
+            <div className="h-4 w-px bg-white/10" />
 
-        <button
-          type="button"
-          onClick={onToggleOverlay}
-          className={cn(
-            'flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all',
-            showOverlay ? 'border-cyan-500/30 bg-cyan-500/20 text-cyan-300' : 'border-white/5 bg-white/5 text-slate-400',
-          )}
-        >
-          {showOverlay ? <Layers className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-          <span>Bounding Boxes</span>
-        </button>
+            <button
+              type="button"
+              onClick={onToggleOverlay}
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all',
+                showOverlay ? 'border-cyan-500/30 bg-cyan-500/20 text-cyan-300' : 'border-white/5 bg-white/5 text-slate-400',
+              )}
+            >
+              {showOverlay ? <Layers className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              <span>Bounding Boxes</span>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

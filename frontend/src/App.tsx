@@ -6,6 +6,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { PublicRoute } from './components/auth/PublicRoute';
 import { DashboardPage } from './pages/DashboardPage';
+import { AuditorPage } from './pages/AuditorPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -43,6 +44,8 @@ export const App: React.FC = () => {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/audit" element={<AuditorPage />} />
+            <Route path="/audit/:documentId" element={<AuditorPage />} />
             <Route path="/templates" element={<TemplatesPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
