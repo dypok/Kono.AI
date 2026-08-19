@@ -216,26 +216,43 @@ impl ConcurrentIngestionPipeline {
                     let _: () = conn.sadd("kono:document_hashes", &hash).await.unwrap_or(());
                 }
 
-                let event = InboundDocumentEvent {
-                    document_id: doc_id,
-                    original_file_name: file_name,
-                    file_path: target_path.to_string_lossy().to_string(),
-                    file_hash_sha256: hash,
-                    file_size_bytes: file_size,
-                    mime_type,
-                    is_duplicate,
-                    timestamp: Utc::now().to_rfc3339(),
+                // 5. Triage Execution (Vectorial extraction via lopdf or OCR)
+                let triage_res = match extension.to_lowercase().as_str() {
+                    "pdf" => crate::pdf_triage::inspect_and_extract_pdf(&target_path),
+                    "png" | "jpg" | "jpeg" => crate::img_preprocessor::process_image_and_ocr(&target_path),
+                    _ => Ok(crate::types::DocumentPayload::new(
+                        doc_id.to_string(),
+                        hash.clone(),
+                        target_path.to_string_lossy().into_owned(),
+                        false,
+                        1,
+                        Vec::new(),
+                    )),
                 };
 
-                if let Ok(payload_json) = serde_json::to_string(&event) {
-                    let _: () = conn
-                        .xadd(
-                            "invoice_inbound_stream",
-                            "*",
-                            &[("payload", &payload_json)],
-                        )
-                        .await
-                        .unwrap_or(());
+                match triage_res {
+                    Ok(payload) => {
+                        info!(
+                            "🦀 [Rust Triage] Document {} ({}): {} words extracted with geometric BBoxes",
+                            file_name, doc_id, payload.words.len()
+                        );
+                        if let Ok(payload_json) = serde_json::to_string(&payload) {
+                            let _: () = conn
+                                .xadd(
+                                    "invoice_processing_stream",
+                                    "*",
+                                    &[("payload", &payload_json)],
+                                )
+                                .await
+                                .unwrap_or(());
+                        }
+                    }
+                    Err(err) => {
+                        warn!(
+                            "⚠️ [Rust Triage] Triage extraction warning for {}: {}",
+                            file_name, err
+                        );
+                    }
                 }
             }
         });

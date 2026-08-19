@@ -49,6 +49,7 @@ app.include_router(integrations_router.router, prefix="/api/v1")
 
 
 from app.services.inbox_scheduler import inbox_scheduler
+from app.services.redis_pipeline_consumer import redis_pipeline_consumer
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -63,10 +64,14 @@ async def lifespan(app: FastAPI):
     )
     # Start the 60-second periodic background inbox scanner
     inbox_scheduler.start()
-    logger.info("Kono API started; WS bridge & 60s Inbox Scanner launched")
+
+    # Start the Rust Core -> Python Spatial Engine Redis Stream consumer
+    redis_pipeline_consumer.start(settings.redis_url, ws_manager=ws_manager)
+    logger.info("🦀 Kono API started; Rust Redis Pipeline Consumer & WS bridge launched")
     yield
     bridge.cancel()
     inbox_scheduler.stop()
+    redis_pipeline_consumer.stop()
 
 
 # FastAPI lifespan is the supported way to run startup/shutdown in modern

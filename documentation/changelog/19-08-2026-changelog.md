@@ -83,3 +83,5 @@
 - [Wednesday]-[19/08/2026]-[18:35] : Locked invoice audit summary fields to strict read-only mode to prevent manual tampering of extracted values.
 - [Wednesday]-[19/08/2026]-[18:37] : Fixed "Original file missing" 404 in /api/v1/documents/:id/file by resolving dynamic absolute paths and storage fallback locations. Implemented folder batch scanning and multi-file upload button in Dashboard.
 - [Wednesday]-[19/08/2026]-[18:43] : Re-architected deterministic PDF invoice extractor with 2D spatial visual line grouping. Correctly parses actual line items, descriptions, quantities, unit prices, exact Subtotal, Tax/VAT, and Grand Total without hardcoded assumptions.
+- [Wednesday]-[19/08/2026]-[18:49] : Connected Rust Core high-concurrency ingestion & triage pipeline directly to Redis Stream (invoice_processing_stream) and implemented RedisPipelineConsumer in Python backend to reconcile spatial geometric words via Ray-Casting and DeterministicTableParser in real time.
+

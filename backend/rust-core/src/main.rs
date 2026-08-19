@@ -1,22 +1,16 @@
-mod config;
-mod hasher;
-mod models;
-mod pipeline;
-mod watcher;
-
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use config::AppConfig;
+use kono_rust_core::config::AppConfig;
 use kono_rust_core::errors::KonoError;
 use kono_rust_core::img_preprocessor::process_image_and_ocr;
 use kono_rust_core::pdf_triage::inspect_and_extract_pdf;
 use kono_rust_core::pipeline::move_to_failed_dir;
 use kono_rust_core::queue_publisher::{publish_failure, QueuePublisher};
 use kono_rust_core::types::DocumentPayload;
+use kono_rust_core::watcher::FolderWatcherDaemon;
 use tracing::{error, info, warn, Level};
 use tracing_subscriber::FmtSubscriber;
-use watcher::FolderWatcherDaemon;
 
 /// Polling interval between inbound directory scans (US-RUST-002 triage).
 const SCAN_INTERVAL_SECS: u64 = 3;
