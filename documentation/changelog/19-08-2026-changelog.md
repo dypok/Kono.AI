@@ -41,3 +41,4 @@
 - [Wednesday]-[19/08/2026]-[13:15] : Enabled real-time Vite Hot Module Replacement (HMR) by mounting frontend/src, frontend/public, and configuring usePolling and WebSocket proxy in nginx.conf, allowing instant frontend live reloads without rebuilding Docker.
 - [Wednesday]-[19/08/2026]-[13:17] : Fixed Vite HMR continuous reload loop by removing interval polling and setting clean clientPort: 80 in frontend/vite.config.ts, ensuring hot reloads only occur on genuine file modifications.
 - [Wednesday]-[19/08/2026]-[13:22] : Added Supabase onAuthStateChange and checkSession listener in frontend/src/App.tsx to automatically catch Google OAuth redirect hashes and transition directly to /dashboard.
+- [Wednesday]-[19/08/2026]-[13:27] : Enhanced checkSession in authStore.ts with PKCE exchangeCodeForSession and origin redirect to properly resolve Google OAuth code returns and transition smoothly to /dashboard.
