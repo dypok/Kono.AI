@@ -72,3 +72,4 @@
 - [Wednesday]-[19/08/2026]-[15:03] : Centered the Kono Mascot, navigation icons, stream status, and user avatar perfectly in the collapsed 80px sidebar layout using exact 56px slots and 10px outer padding.
 - [Wednesday]-[19/08/2026]-[15:04] : Fixed sidebar horizontal alignment when collapsed using pure Flexbox justify-center across mascot header, navigation link buttons, stream status, and user avatar.
 - [Wednesday]-[19/08/2026]-[15:05] : Ensured 100% horizontal centering of navigation icons, WebSocket status, and user avatar when the sidebar is collapsed by removing dormant flex-1 labels from the DOM layout.
+- [Wednesday]-[19/08/2026]-[15:05] : Upgraded LiquidSidebar collapse/expand easing curve to 500ms cubic-bezier(0.25, 1, 0.5, 1) ease-out with coordinated 500ms text opacity fade out for an ultra-smooth, premium glass contraction.
