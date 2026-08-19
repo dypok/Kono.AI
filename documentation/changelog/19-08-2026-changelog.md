@@ -44,3 +44,4 @@
 - [Wednesday]-[19/08/2026]-[13:27] : Enhanced checkSession in authStore.ts with PKCE exchangeCodeForSession and origin redirect to properly resolve Google OAuth code returns and transition smoothly to /dashboard.
 - [Wednesday]-[19/08/2026]-[13:29] : Automatically marked Google OAuth users as pre-connected in authStore.ts and AppLayout.tsx so the 'Conectar Gmail' modal is never shown to users who already logged in through Google OAuth.
 - [Wednesday]-[19/08/2026]-[13:31] : Fixed login card vertical spacing and z-index overlap on LoginPage.tsx and adjusted index.css base overflow to allow natural scrolling without component clipping.
+- [Wednesday]-[19/08/2026]-[13:32] : Cleaned initial authStore.ts state (removed residual mock user and initial local flag) so unauthenticated users see only the clean standalone login card on /login without any sidebar or layout elements overlapping.

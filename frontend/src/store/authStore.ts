@@ -19,13 +19,8 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: localStorage.getItem('kono_auth') === 'true',
-  user: localStorage.getItem('kono_auth') === 'true' ? {
-    id: 'usr_1',
-    name: 'Dylan P.',
-    email: 'dylan@kono.ai',
-    role: 'Lead Financial Auditor',
-  } : null,
+  isAuthenticated: false,
+  user: null,
 
   login: async (email: string, password?: string) => {
     if (!password) {
