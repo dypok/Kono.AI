@@ -69,3 +69,4 @@
 - [Wednesday]-[19/08/2026]-[14:57] : Added smooth scaling transitions (w-8 h-8 rounded-xl to w-11 h-11 rounded-2xl with duration-300 ease-in-out) for the Kono Mascot in LiquidSidebar when collapsing and expanding.
 - [Wednesday]-[19/08/2026]-[15:02] : Refined LiquidSidebar animation with cubic-bezier easing, fixed mascot clipping by stabilizing outer dimensions with scale transitions, and smoothed text opacity transitions across all nav elements.
 - [Wednesday]-[19/08/2026]-[15:03] : Refactored LiquidSidebar layout with fixed 48px (w-12) column slots for the mascot, navigation icons, stream status, and user avatar. Eliminated horizontal clipping and ensured 100% visible and centered Tabler icons in both collapsed and expanded states.
+- [Wednesday]-[19/08/2026]-[15:03] : Centered the Kono Mascot, navigation icons, stream status, and user avatar perfectly in the collapsed 80px sidebar layout using exact 56px slots and 10px outer padding.

@@ -35,20 +35,20 @@ export const LiquidSidebar: React.FC = () => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`relative h-screen transition-[width] duration-300 ease-in-out z-40 p-3 flex flex-col ${
-        isHovered ? 'w-64' : 'w-[88px]'
+        isHovered ? 'w-64' : 'w-[80px]'
       }`}
     >
       {/* Liquid Glass Container */}
-      <div className="h-full w-full liquid-glass rounded-3xl p-3 flex flex-col justify-between border border-white/10 shadow-2xl relative overflow-hidden">
+      <div className="h-full w-full liquid-glass rounded-3xl p-2.5 flex flex-col justify-between border border-white/10 shadow-2xl relative overflow-hidden">
         {/* Subtle Ambient Light Highlight */}
         <div className="absolute -top-12 -left-12 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl pointer-events-none" />
 
         {/* Top: Brand & Workspace with Mascot */}
         <div>
           {/* Header & Mascot */}
-          <div className="flex items-center pb-4 border-b border-white/10 h-16">
-            {/* Mascot Container - Fixed width for perfect alignment */}
-            <div className="w-12 flex items-center justify-center shrink-0">
+          <div className="flex items-center pb-4 border-b border-white/10 h-16 w-full">
+            {/* Mascot Container - Strictly centered */}
+            <div className="w-[56px] h-full flex items-center justify-center shrink-0">
               <div
                 className="w-10 h-10 rounded-2xl p-0.5 bg-gradient-to-br from-slate-200 via-slate-400 to-zinc-600 shadow-lg group cursor-pointer hover:scale-105 transition-transform"
                 onClick={() => navigate('/dashboard')}
@@ -97,7 +97,7 @@ export const LiquidSidebar: React.FC = () => {
                   title={item.name}
                 >
                   {/* Icon fixed box */}
-                  <div className="w-12 flex items-center justify-center shrink-0">
+                  <div className="w-[56px] flex items-center justify-center shrink-0">
                     <Icon className="w-5 h-5 shrink-0" stroke={1.8} />
                   </div>
 
@@ -124,7 +124,7 @@ export const LiquidSidebar: React.FC = () => {
         <div className="pt-4 border-t border-white/10 space-y-3">
           {/* Live WebSocket Status Pill */}
           <div className="flex items-center h-10 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-xs text-emerald-400 overflow-hidden">
-            <div className="w-12 flex items-center justify-center shrink-0">
+            <div className="w-[56px] flex items-center justify-center shrink-0">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
@@ -142,7 +142,7 @@ export const LiquidSidebar: React.FC = () => {
 
           {/* User Profile & Logout */}
           <div className="flex items-center h-11 overflow-hidden">
-            <div className="w-12 flex items-center justify-center shrink-0">
+            <div className="w-[56px] flex items-center justify-center shrink-0">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-zinc-700 to-slate-500 flex items-center justify-center text-xs font-bold text-alabaster-50 shadow">
                 {user?.name?.slice(0, 2) || 'DY'}
               </div>
