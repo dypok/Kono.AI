@@ -102,9 +102,6 @@ stdout_logfile=/var/log/supervisor/nginx.log
 stderr_logfile=/var/log/supervisor/nginx_err.log
 SUP_EOF
 
-# Update Nginx config to point to local Python API
-RUN sed -i 's/python-api:8000/127.0.0.1:8000/g' /etc/nginx/conf.d/default.conf
-
 EXPOSE 80
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/kono.conf"]
