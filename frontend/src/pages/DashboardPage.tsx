@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { FileText, CheckCircle2, AlertTriangle, XCircle, Search, Upload } from 'lucide-react';
+import {
+  IconFileText,
+  IconCircleCheck,
+  IconAlertTriangle,
+  IconCircleX,
+  IconSearch,
+  IconUpload,
+} from '@tabler/icons-react';
 
 export const DashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'green' | 'yellow' | 'red'>('all');
@@ -69,11 +76,11 @@ export const DashboardPage: React.FC = () => {
         {/* Quick Action Buttons */}
         <div className="flex items-center space-x-3 shrink-0">
           <button className="px-4 py-2.5 rounded-xl liquid-glass-card hover:bg-white/5 border border-white/10 text-xs text-alabaster-200 flex items-center space-x-2 transition">
-            <Upload className="w-4 h-4 text-kono-silver" />
+            <IconUpload className="w-4 h-4 text-kono-silver" />
             <span>Cargar Comprobante</span>
           </button>
           <button className="px-4 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition shadow flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-titanium-950" />
+            <IconCircleCheck className="w-4 h-4 text-titanium-950" />
             <span>Aprobar Todo (482)</span>
           </button>
         </div>
@@ -105,7 +112,7 @@ export const DashboardPage: React.FC = () => {
 
         {/* Search Input */}
         <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
+          <IconSearch className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
           <input
             type="text"
             placeholder="Buscar por NIT, emisor o folio..."
@@ -131,7 +138,7 @@ export const DashboardPage: React.FC = () => {
             {mockDocuments.map((doc) => (
               <tr key={doc.id} className="hover:bg-white/[0.03] transition duration-150 group">
                 <td className="py-4 px-6 font-mono font-medium text-alabaster-100 flex items-center space-x-2.5">
-                  <FileText className="w-4 h-4 text-kono-silver group-hover:text-white transition" />
+                  <IconFileText className="w-4 h-4 text-kono-silver group-hover:text-white transition" />
                   <span>{doc.invoiceNumber}</span>
                 </td>
                 <td className="py-4 px-6">
@@ -143,19 +150,19 @@ export const DashboardPage: React.FC = () => {
                 <td className="py-4 px-6">
                   {doc.status === 'GREEN' && (
                     <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px]">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <IconCircleCheck className="w-3.5 h-3.5" />
                       <span>{doc.statusMessage}</span>
                     </span>
                   )}
                   {doc.status === 'YELLOW' && (
                     <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px]">
-                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <IconAlertTriangle className="w-3.5 h-3.5" />
                       <span>{doc.statusMessage}</span>
                     </span>
                   )}
                   {doc.status === 'RED' && (
                     <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px]">
-                      <XCircle className="w-3.5 h-3.5" />
+                      <IconCircleX className="w-3.5 h-3.5" />
                       <span>{doc.statusMessage}</span>
                     </span>
                   )}

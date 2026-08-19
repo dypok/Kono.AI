@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { ShieldCheck, ArrowRight, Lock, Mail, Sparkles } from 'lucide-react';
+import {
+  IconShieldCheck,
+  IconArrowRight,
+  IconLock,
+  IconMail,
+  IconSparkles,
+} from '@tabler/icons-react';
 
 export const LoginPage: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -182,7 +188,7 @@ export const LoginPage: React.FC = () => {
               Correo Corporativo
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3.5" />
+              <IconMail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3.5" />
               <input
                 type="email"
                 value={email}
@@ -199,7 +205,7 @@ export const LoginPage: React.FC = () => {
               Contraseña de Acceso
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3.5" />
+              <IconLock className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3.5" />
               <input
                 type="password"
                 value={password}
@@ -221,7 +227,7 @@ export const LoginPage: React.FC = () => {
             ) : (
               <>
                 <span>{isSignUp ? 'Completar Registro' : 'Ingresar al Workspace'}</span>
-                <ArrowRight className="w-4 h-4" />
+                <IconArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
@@ -229,7 +235,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Security Badge */}
         <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-center space-x-2 text-zinc-500 text-xs">
-          <ShieldCheck className="w-4 h-4 text-emerald-500/80" />
+          <IconShieldCheck className="w-4 h-4 text-emerald-500/80" />
           <span>Motor Determinista Zero-Token Encriptado</span>
         </div>
       </div>

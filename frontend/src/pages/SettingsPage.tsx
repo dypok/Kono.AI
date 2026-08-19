@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, CheckCircle2, RefreshCw, Plus, Trash2, Radio, Sparkles, X, AlertCircle } from 'lucide-react';
+import {
+  IconMail,
+  IconCircleCheck,
+  IconRefresh,
+  IconPlus,
+  IconTrash,
+  IconBroadcast,
+  IconSparkles,
+  IconX,
+  IconAlertCircle,
+} from '@tabler/icons-react';
 import { useAuthStore } from '../store/authStore';
 
 interface ConnectedInbox {
@@ -135,7 +145,7 @@ export const SettingsPage: React.FC = () => {
           disabled={isSyncingAll}
           className="px-4 py-2.5 rounded-xl liquid-glass-card hover:bg-white/5 border border-white/10 text-xs text-alabaster-200 flex items-center space-x-2 transition self-start sm:self-auto disabled:opacity-50"
         >
-          <RefreshCw className={`w-4 h-4 text-kono-silver ${isSyncingAll ? 'animate-spin' : ''}`} />
+          <IconRefresh className={`w-4 h-4 text-kono-silver ${isSyncingAll ? 'animate-spin' : ''}`} />
           <span>{isSyncingAll ? 'Escaneando bandejas...' : 'Escanear Todas las Bandejas'}</span>
         </button>
       </div>
@@ -144,11 +154,11 @@ export const SettingsPage: React.FC = () => {
       {syncFeedback && (
         <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center justify-between animate-fade-in">
           <div className="flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <IconCircleCheck className="w-4 h-4 shrink-0" />
             <span>{syncFeedback}</span>
           </div>
           <button onClick={() => setSyncFeedback(null)} className="text-emerald-400/60 hover:text-emerald-400">
-            <X className="w-4 h-4" />
+            <IconX className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -158,7 +168,7 @@ export const SettingsPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500/20 to-red-600/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
-              <Mail className="w-6 h-6" />
+              <IconMail className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-base font-bold text-alabaster-100">Correos Vinculados ({inboxes.length})</h2>
@@ -173,7 +183,7 @@ export const SettingsPage: React.FC = () => {
               onClick={() => setIsAddModalOpen(true)}
               className="px-4 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 shadow-sm flex items-center space-x-2"
             >
-              <Plus className="w-4 h-4 text-titanium-950" />
+              <IconPlus className="w-4 h-4 text-titanium-950" />
               <span>Añadir Otro Correo</span>
             </button>
           </div>
@@ -188,13 +198,13 @@ export const SettingsPage: React.FC = () => {
             >
               <div className="flex items-center space-x-3.5">
                 <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-rose-400 shrink-0">
-                  <Mail className="w-5 h-5" />
+                  <IconMail className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
                     <p className="text-sm font-semibold text-alabaster-100">{inbox.email}</p>
                     <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono flex items-center space-x-1">
-                      <Radio className="w-2.5 h-2.5 text-emerald-400 animate-pulse" />
+                      <IconBroadcast className="w-2.5 h-2.5 text-emerald-400 animate-pulse" />
                       <span>{inbox.status}</span>
                     </span>
                   </div>
@@ -210,7 +220,7 @@ export const SettingsPage: React.FC = () => {
                   className="p-2 rounded-xl text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
                   title="Desvincular bandeja"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <IconTrash className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -220,7 +230,7 @@ export const SettingsPage: React.FC = () => {
         {/* Feature Explanatory Card */}
         <div className="liquid-glass-card rounded-2xl p-4 text-xs text-zinc-400 border border-white/5 space-y-1.5">
           <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
-            <Sparkles className="w-3.5 h-3.5 text-kono-silver" />
+            <IconSparkles className="w-3.5 h-3.5 text-kono-silver" />
             <span>¿Cómo funciona el escaneo multi-bandeja?</span>
           </div>
           <p className="text-[11px] leading-relaxed">
@@ -240,12 +250,12 @@ export const SettingsPage: React.FC = () => {
               onClick={() => setIsAddModalOpen(false)}
               className="absolute top-5 right-5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition z-10"
             >
-              <X className="w-5 h-5" />
+              <IconX className="w-5 h-5" />
             </button>
 
             <div className="flex items-center space-x-3 mb-6 relative z-10">
               <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-md">
-                <Mail className="w-5 h-5" />
+                <IconMail className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="font-bold text-base text-alabaster-100">Añadir Correo a Monitorear</h3>
@@ -255,7 +265,7 @@ export const SettingsPage: React.FC = () => {
 
             {errorMessage && (
               <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center space-x-2 relative z-10">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+                <IconAlertCircle className="w-4 h-4 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
@@ -278,7 +288,7 @@ export const SettingsPage: React.FC = () => {
                 className="w-full py-3.5 px-4 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 flex items-center justify-center space-x-2.5 shadow-lg shadow-white/5 disabled:opacity-50"
               >
                 {isAdding ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-titanium-950" />
+                  <IconRefresh className="w-4 h-4 animate-spin text-titanium-950" />
                 ) : (
                   <>
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -306,7 +316,7 @@ export const SettingsPage: React.FC = () => {
 
               <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1.5 text-xs text-zinc-400">
                 <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
-                  <Sparkles className="w-3.5 h-3.5 text-kono-silver" />
+                  <IconSparkles className="w-3.5 h-3.5 text-kono-silver" />
                   <span>Verificación & Monitoreo 60s</span>
                 </div>
                 <p className="text-[11px] leading-relaxed">

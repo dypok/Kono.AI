@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import {
-  FileSearch,
-  Layers,
-  BarChart3,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Radio,
-  Building2,
-} from 'lucide-react';
+  IconFileSearch,
+  IconLayersLinked,
+  IconChartBar,
+  IconSettings,
+  IconLogout,
+  IconChevronLeft,
+  IconChevronRight,
+  IconBroadcast,
+  IconBuildingSkyscraper,
+} from '@tabler/icons-react';
 
 export const LiquidSidebar: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -24,10 +24,10 @@ export const LiquidSidebar: React.FC = () => {
   };
 
   const navItems = [
-    { name: 'Auditoría & Facturas', path: '/dashboard', icon: FileSearch, badge: 'Live' },
-    { name: 'Plantillas Proveedor', path: '/templates', icon: Layers, badge: 'Auto' },
-    { name: 'Conciliación & ERP', path: '/analytics', icon: BarChart3 },
-    { name: 'Configuración & Sistema', path: '/settings', icon: Settings },
+    { name: 'Auditoría & Facturas', path: '/dashboard', icon: IconFileSearch, badge: 'Live' },
+    { name: 'Plantillas Proveedor', path: '/templates', icon: IconLayersLinked, badge: 'Auto' },
+    { name: 'Conciliación & ERP', path: '/analytics', icon: IconChartBar },
+    { name: 'Configuración & Sistema', path: '/settings', icon: IconSettings },
   ];
 
   return (
@@ -73,14 +73,14 @@ export const LiquidSidebar: React.FC = () => {
               className="w-7 h-7 rounded-lg liquid-glass-card flex items-center justify-center text-zinc-400 hover:text-alabaster-100 hover:bg-white/5 transition"
               title={isCollapsed ? 'Expandir' : 'Colapsar'}
             >
-              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+              {isCollapsed ? <IconChevronRight className="w-4 h-4" /> : <IconChevronLeft className="w-4 h-4" />}
             </button>
           </div>
 
           {/* Workspace Pill */}
           {!isCollapsed && (
             <div className="mt-4 liquid-glass-card rounded-xl p-2.5 flex items-center space-x-2.5 text-xs text-alabaster-200 border border-white/5">
-              <Building2 className="w-4 h-4 text-kono-silver shrink-0" />
+              <IconBuildingSkyscraper className="w-4 h-4 text-kono-silver shrink-0" />
               <div className="truncate">
                 <p className="font-medium truncate">Finanzas Corporativas</p>
                 <p className="text-[10px] text-zinc-400 font-mono">900.123.456-1</p>
@@ -138,7 +138,7 @@ export const LiquidSidebar: React.FC = () => {
               </span>
               {!isCollapsed && <span className="font-mono text-[11px]">Stream Activo</span>}
             </div>
-            {!isCollapsed && <Radio className="w-3.5 h-3.5 text-emerald-400/70" />}
+            {!isCollapsed && <IconBroadcast className="w-3.5 h-3.5 text-emerald-400/70" />}
           </div>
 
           {/* User Profile & Logout */}
@@ -160,7 +160,7 @@ export const LiquidSidebar: React.FC = () => {
               className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition"
               title="Cerrar Sesión"
             >
-              <LogOut className="w-4 h-4" />
+              <IconLogout className="w-4 h-4" />
             </button>
           </div>
         </div>
