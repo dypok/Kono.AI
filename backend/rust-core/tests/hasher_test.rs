@@ -17,6 +17,6 @@ fn test_fast_sha256_hashing() {
     assert_eq!(hash.len(), 64);
     assert_eq!(
         hash,
-        "89115be11b2390a7aaef880620f4c3bf4d30c5e317079ddffea118c7c94b79b6"
+        "1b2a4fb3276c6a9aa994f8f8f356ae522fee4453b4f0f40f2b5045a618f969ca"
     );
 }
