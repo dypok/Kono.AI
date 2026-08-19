@@ -46,31 +46,18 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header Banner with Mascot Status */}
+      {/* Header Banner */}
       <div className="liquid-glass rounded-3xl p-6 border border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-        <div className="flex items-center space-x-5">
-          {/* Silver Kono Mascot Card */}
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-300 via-slate-400 to-zinc-600 p-0.5 shadow-lg shrink-0">
-            <div className="w-full h-full rounded-2xl bg-titanium-900 flex flex-col items-center justify-center border border-white/40">
-              <div className="flex space-x-1.5 mb-1">
-                <div className="w-1.5 h-2 bg-alabaster-100 rounded-full animate-bounce" />
-                <div className="w-1.5 h-2 bg-alabaster-100 rounded-full animate-bounce delay-75" />
-              </div>
-              <div className="w-3 h-1 bg-emerald-400 rounded-full" />
-            </div>
+        <div>
+          <div className="flex items-center space-x-2">
+            <h1 className="text-xl font-bold text-alabaster-100">Bandeja de Auditoría Financiera</h1>
+            <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono">
+              Motor Activo
+            </span>
           </div>
-
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-bold text-alabaster-100">Bandeja de Auditoría Financiera</h1>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono">
-                Motor Activo
-              </span>
-            </div>
-            <p className="text-xs text-zinc-400 mt-1">
-              Extracción determinista espacial, Bounding Boxes sincronizados y triage en tiempo real.
-            </p>
-          </div>
+          <p className="text-xs text-zinc-400 mt-1">
+            Extracción determinista espacial, Bounding Boxes sincronizados y triage en tiempo real.
+          </p>
         </div>
 
         {/* Quick Action Buttons */}
