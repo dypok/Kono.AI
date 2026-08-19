@@ -80,3 +80,4 @@
 - [Wednesday]-[19/08/2026]-[16:02] : Implemented multi-account organization profile synchronization in Supabase. When updating profile fields (company, tax_id, role, phone), all linked email inboxes associated with the account in public.profiles are automatically updated in batch to maintain synchronized organizational identification across all user accounts.
 - [Wednesday]-[19/08/2026]-[18:30] : Generated realistic sample invoice PDFs using scripts/index.html template and WeasyPrint in scripts/facturas_pdf.
 - [Wednesday]-[19/08/2026]-[18:34] : Connected dynamic split-screen invoice auditor visor. Left panel loads native streaming PDF/vector bounding boxes, right panel displays extracted metadata, line items, totals and 1-Click approval connected to backend API.
+- [Wednesday]-[19/08/2026]-[18:35] : Locked invoice audit summary fields to strict read-only mode to prevent manual tampering of extracted values.

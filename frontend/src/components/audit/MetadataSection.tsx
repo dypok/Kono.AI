@@ -1,4 +1,4 @@
-import { Building2, Calendar, Hash } from 'lucide-react';
+import { Building2, Calendar, Hash, ShieldCheck } from 'lucide-react';
 import { InvoiceRecord } from '../../types/invoice';
 import { GlassInput } from './GlassInput';
 
@@ -6,67 +6,73 @@ interface MetadataSectionProps {
   invoice: InvoiceRecord;
   activeFieldKey: string | null;
   onSelectField: (fieldKey: string) => void;
-  onUpdateInvoice: (invoice: InvoiceRecord) => void;
+  onUpdateInvoice?: (invoice: InvoiceRecord) => void;
 }
 
-/** Section 1: issuer & customer metadata, in compact glass input fields. */
-export function MetadataSection({ invoice, activeFieldKey, onSelectField, onUpdateInvoice }: MetadataSectionProps) {
+/** Section 1: issuer & customer metadata, displayed in read-only audit tiles. */
+export function MetadataSection({ invoice, activeFieldKey, onSelectField }: MetadataSectionProps) {
   return (
     <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
       <div className="flex items-center justify-between border-b border-white/5 pb-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
           <Building2 className="h-4 w-4 text-cyan-400" />
-          <span>Issuer &amp; Customer Metadata</span>
+          <span>Datos del Comprobante &amp; Emisor</span>
         </div>
-        <span className="rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] text-emerald-400">
-          ✓ OCR Verified
+        <span className="flex items-center gap-1 rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 font-mono text-[10px] text-emerald-400">
+          <ShieldCheck className="h-3 w-3" />
+          Extraído &amp; Bloqueado
         </span>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <GlassInput
-          label="Invoice Number"
+          label="Folio / N° Factura"
           icon={<Hash className="h-3 w-3 text-violet-400" />}
           value={invoice.invoiceNumber}
-          active={activeFieldKey === 'invoiceNumber'}
-          onFocus={() => onSelectField('invoiceNumber')}
-          onChange={(e) => onUpdateInvoice({ ...invoice, invoiceNumber: e.target.value })}
+          readOnly
+          disabled
+          active={activeFieldKey === 'invoice_number' || activeFieldKey === 'invoiceNumber'}
+          onFocus={() => onSelectField('invoice_number')}
         />
 
         <GlassInput
-          label="Issuer Tax ID"
+          label="NIT / Tax ID Emisor"
           value={invoice.issuerTaxId}
-          active={activeFieldKey === 'issuerTaxId'}
-          onFocus={() => onSelectField('issuerTaxId')}
-          onChange={(e) => onUpdateInvoice({ ...invoice, issuerTaxId: e.target.value })}
+          readOnly
+          disabled
+          active={activeFieldKey === 'vendor_tax_id' || activeFieldKey === 'issuerTaxId'}
+          onFocus={() => onSelectField('vendor_tax_id')}
         />
 
         <div className="sm:col-span-2">
           <GlassInput
-            label="Issuer Name"
+            label="Razón Social / Emisor"
             value={invoice.issuerName}
-            active={activeFieldKey === 'issuerName'}
-            onFocus={() => onSelectField('issuerName')}
-            onChange={(e) => onUpdateInvoice({ ...invoice, issuerName: e.target.value })}
+            readOnly
+            disabled
+            active={activeFieldKey === 'vendor_name' || activeFieldKey === 'issuerName'}
+            onFocus={() => onSelectField('vendor_name')}
           />
         </div>
 
         <GlassInput
-          label="Issue Date"
+          label="Fecha de Emisión"
           icon={<Calendar className="h-3 w-3 text-violet-400" />}
           value={invoice.issueDate}
-          active={activeFieldKey === 'issueDate'}
-          onFocus={() => onSelectField('issueDate')}
-          onChange={(e) => onUpdateInvoice({ ...invoice, issueDate: e.target.value })}
+          readOnly
+          disabled
+          active={activeFieldKey === 'issue_date' || activeFieldKey === 'issueDate'}
+          onFocus={() => onSelectField('issue_date')}
         />
 
         <GlassInput
-          label="Due Date"
+          label="Fecha de Vencimiento"
           icon={<Calendar className="h-3 w-3 text-violet-400" />}
           value={invoice.dueDate}
-          active={activeFieldKey === 'dueDate'}
-          onFocus={() => onSelectField('dueDate')}
-          onChange={(e) => onUpdateInvoice({ ...invoice, dueDate: e.target.value })}
+          readOnly
+          disabled
+          active={activeFieldKey === 'due_date' || activeFieldKey === 'dueDate'}
+          onFocus={() => onSelectField('due_date')}
         />
       </div>
     </div>
