@@ -66,3 +66,4 @@
 - [Wednesday]-[19/08/2026]-[14:47] : Implemented real-time dynamic countdown progress bar (alertProgress calculated at 60fps across 3000ms duration) styled with Tailwind CSS transition classes for the single-inbox constraint toast.
 - [Wednesday]-[19/08/2026]-[14:52] : Fixed OAuth redirect destination to stay on /settings when linking secondary email inboxes, and ensured multi-inbox accumulation without overwriting previous connected emails in authStore.ts and SettingsPage.tsx.
 - [Wednesday]-[19/08/2026]-[14:56] : Refactored LiquidSidebar to auto-collapse/expand seamlessly on mouse enter and mouse leave, eliminated manual toggle button, integrated animated Kono Mascot into the sidebar top header, and cleaned up Mascot from DashboardPage header.
+- [Wednesday]-[19/08/2026]-[14:57] : Added smooth scaling transitions (w-8 h-8 rounded-xl to w-11 h-11 rounded-2xl with duration-300 ease-in-out) for the Kono Mascot in LiquidSidebar when collapsing and expanding.

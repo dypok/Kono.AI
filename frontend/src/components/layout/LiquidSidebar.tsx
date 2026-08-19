@@ -46,15 +46,21 @@ export const LiquidSidebar: React.FC = () => {
         {/* Top: Brand & Workspace with Mascot */}
         <div>
           {/* Header & Mascot */}
-          <div className="flex items-center space-x-3 pb-4 border-b border-white/10 overflow-hidden">
-            {/* Animated Silver Kono Mascot Badge */}
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-200 via-slate-400 to-zinc-600 p-0.5 shrink-0 shadow-lg group cursor-pointer" onClick={() => navigate('/dashboard')}>
-              <div className="w-full h-full rounded-2xl bg-titanium-900 flex flex-col items-center justify-center border border-white/40">
-                <div className="flex space-x-1 mb-0.5">
-                  <div className="w-1.5 h-1.5 bg-alabaster-100 rounded-full animate-bounce" />
-                  <div className="w-1.5 h-1.5 bg-alabaster-100 rounded-full animate-bounce delay-75" />
+          <div className={`flex items-center ${!isHovered ? 'justify-center' : 'space-x-3'} pb-4 border-b border-white/10 overflow-hidden transition-all duration-300`}>
+            {/* Animated Silver Kono Mascot Badge with smooth scaling */}
+            <div
+              className={`${
+                isHovered ? 'w-11 h-11 rounded-2xl p-0.5' : 'w-8 h-8 rounded-xl p-[1px]'
+              } bg-gradient-to-br from-slate-200 via-slate-400 to-zinc-600 shrink-0 shadow-lg group cursor-pointer transition-all duration-300 ease-in-out`}
+              onClick={() => navigate('/dashboard')}
+              title="Kono AI Mascot"
+            >
+              <div className={`w-full h-full ${isHovered ? 'rounded-2xl' : 'rounded-xl'} bg-titanium-900 flex flex-col items-center justify-center border border-white/40 transition-all duration-300`}>
+                <div className={`flex ${isHovered ? 'space-x-1 mb-0.5' : 'space-x-0.5 mb-0.5'}`}>
+                  <div className={`${isHovered ? 'w-1.5 h-1.5' : 'w-1 h-1'} bg-alabaster-100 rounded-full animate-bounce`} />
+                  <div className={`${isHovered ? 'w-1.5 h-1.5' : 'w-1 h-1'} bg-alabaster-100 rounded-full animate-bounce delay-75`} />
                 </div>
-                <div className="w-3 h-1 bg-emerald-400 rounded-full" />
+                <div className={`${isHovered ? 'w-3 h-1' : 'w-2 h-0.5'} bg-emerald-400 rounded-full transition-all duration-300`} />
               </div>
             </div>
 
