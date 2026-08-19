@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   IconMail,
   IconCircleCheck,
@@ -239,104 +240,109 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 🪄 Modal para Añadir Nuevo Correo */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-[100] w-screen h-screen flex items-center justify-center p-4 bg-titanium-950/85 backdrop-blur-xl animate-fade-in">
-          <div className="w-full max-w-md liquid-glass rounded-3xl p-6 md:p-8 border border-white/15 shadow-[0_8px_40px_rgba(0,0,0,0.6)] relative overflow-hidden">
-            {/* Glow Accent */}
-            <div className="absolute -top-12 -left-12 w-40 h-40 bg-slate-400/20 rounded-full blur-3xl pointer-events-none" />
+      {/* 🪄 Modal para Añadir Nuevo Correo renderizado en Portal a document.body */}
+      {isAddModalOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 w-screen h-screen z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl animate-fade-in"
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh' }}
+          >
+            <div className="w-full max-w-md bg-titanium-950/95 border border-white/20 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden text-alabaster-100">
+              {/* Glow Ambient Accent */}
+              <div className="absolute -top-10 -left-10 w-44 h-44 bg-slate-400/25 rounded-full blur-3xl pointer-events-none" />
 
-            <button
-              onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-5 right-5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition z-10"
-            >
-              <IconX className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center space-x-3 mb-6 relative z-10">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-md">
-                <IconMail className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base text-alabaster-100">Añadir Correo a Monitorear</h3>
-                <p className="text-xs text-zinc-400">Vincula otra cuenta de facturación</p>
-              </div>
-            </div>
-
-            {errorMessage && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center space-x-2 relative z-10">
-                <IconAlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
-
-            <div className="space-y-4 relative z-10">
-              {/* 🌟 Pure 1-Click Google OAuth Connection */}
               <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    setIsAdding(true);
-                    setErrorMessage(null);
-                    await signInWithGoogle();
-                  } catch (err: any) {
-                    setErrorMessage(err?.message || 'Error al conectar cuenta Google');
-                    setIsAdding(false);
-                  }
-                }}
-                disabled={isAdding}
-                className="w-full py-3.5 px-4 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 flex items-center justify-center space-x-2.5 shadow-lg shadow-white/5 disabled:opacity-50"
+                onClick={() => setIsAddModalOpen(false)}
+                className="absolute top-5 right-5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition z-10"
               >
-                {isAdding ? (
-                  <IconRefresh className="w-4 h-4 animate-spin text-titanium-950" />
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path
-                        fill="#EA4335"
-                        d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"
-                      />
-                      <path
-                        fill="#4285F4"
-                        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.1s.7 5.4 1.9 7.8l3.7-3.1z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16.7C3.7 20.4 7.5 23.5 12 23.5z"
-                      />
-                    </svg>
-                    <span>Conectar con Google OAuth (1-Click)</span>
-                  </>
-                )}
+                <IconX className="w-5 h-5" />
               </button>
 
-              <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1.5 text-xs text-zinc-400">
-                <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
-                  <IconSparkles className="w-3.5 h-3.5 text-kono-silver" />
-                  <span>Verificación & Monitoreo 60s</span>
+              <div className="flex items-center space-x-3 mb-6 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-md">
+                  <IconMail className="w-5 h-5" />
                 </div>
-                <p className="text-[11px] leading-relaxed">
-                  Al autorizar la nueva cuenta en Google, Kono validará los permisos de Gmail y comenzará a escanear en paralelo todas tus bandejas cada 60 segundos mientras tu sesión esté activa.
-                </p>
+                <div>
+                  <h3 className="font-bold text-base text-alabaster-100">Añadir Correo a Monitorear</h3>
+                  <p className="text-xs text-zinc-400">Vincula otra cuenta de facturación</p>
+                </div>
               </div>
 
-              <div className="pt-2 flex items-center justify-end">
+              {errorMessage && (
+                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center space-x-2 relative z-10">
+                  <IconAlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              <div className="space-y-4 relative z-10">
+                {/* 🌟 Pure 1-Click Google OAuth Connection */}
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="w-full py-2.5 rounded-xl liquid-glass-card text-xs text-zinc-400 hover:text-white transition"
+                  onClick={async () => {
+                    try {
+                      setIsAdding(true);
+                      setErrorMessage(null);
+                      await signInWithGoogle();
+                    } catch (err: any) {
+                      setErrorMessage(err?.message || 'Error al conectar cuenta Google');
+                      setIsAdding(false);
+                    }
+                  }}
+                  disabled={isAdding}
+                  className="w-full py-3.5 px-4 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 flex items-center justify-center space-x-2.5 shadow-lg shadow-white/10 disabled:opacity-50"
                 >
-                  Cancelar
+                  {isAdding ? (
+                    <IconRefresh className="w-4 h-4 animate-spin text-titanium-950" />
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                        <path
+                          fill="#EA4335"
+                          d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"
+                        />
+                        <path
+                          fill="#4285F4"
+                          d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.1s.7 5.4 1.9 7.8l3.7-3.1z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16.7C3.7 20.4 7.5 23.5 12 23.5z"
+                        />
+                      </svg>
+                      <span>Conectar con Google OAuth (1-Click)</span>
+                    </>
+                  )}
                 </button>
+
+                <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-1.5 text-xs text-zinc-400">
+                  <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
+                    <IconSparkles className="w-3.5 h-3.5 text-kono-silver" />
+                    <span>Verificación & Monitoreo 60s</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-zinc-300">
+                    Al autorizar la nueva cuenta en Google, Kono validará los permisos de Gmail y comenzará a escanear en paralelo todas tus bandejas cada 60 segundos mientras tu sesión esté activa.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(false)}
+                    className="w-full py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-zinc-400 hover:text-white transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
