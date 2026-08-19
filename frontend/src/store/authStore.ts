@@ -121,6 +121,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       };
 
       localStorage.setItem('kono_auth', 'true');
+      if (userObj.app_metadata?.provider === 'google' || data.session.provider_token || userObj.user_metadata?.avatar_url?.includes('google')) {
+        localStorage.setItem('kono_google_auth', 'true');
+        localStorage.setItem(`kono_onboarding_dismissed_${userObj.email}`, 'true');
+      }
       set({ isAuthenticated: true, user: u });
 
       // If Google provider token is present, trigger automatic invoice scan

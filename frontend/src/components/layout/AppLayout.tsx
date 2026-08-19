@@ -11,9 +11,19 @@ export const AppLayout: React.FC = () => {
 
   useEffect(() => {
     if (user?.email) {
+      // 1. If user signed in with Google OAuth (has google avatar or provider_id), no need to ask for email connection
       const userDismissKey = `kono_onboarding_dismissed_${user.email}`;
       const hasDismissed = localStorage.getItem(userDismissKey);
       const isNew = localStorage.getItem('kono_new_signup') === 'true';
+
+      // Check if user is already Google OAuth authenticated
+      const isGoogleUser = user.avatarUrl?.includes('googleusercontent.com') || localStorage.getItem('kono_google_auth') === 'true';
+
+      if (isGoogleUser) {
+        localStorage.setItem(userDismissKey, 'true');
+        setShowOnboarding(false);
+        return;
+      }
 
       if (isNew || !hasDismissed) {
         setShowOnboarding(true);
