@@ -5,7 +5,7 @@ const STEPS = [
     icon: Mail,
     step: '01',
     title: 'Automated intake',
-    description: 'n8n watches your inbox and pulls every invoice attachment the moment it lands, no manual forwarding.',
+    description: 'Kono watches your inbox via native Google OAuth and pulls every invoice attachment the moment it lands, no manual forwarding.',
   },
   {
     icon: ScanLine,
