@@ -101,10 +101,26 @@ export const useAuthStore = create<AuthState>((set) => ({
           name: profile?.full_name || data.session.user.user_metadata?.name || data.session.user.email?.split('@')[0].toUpperCase() || 'User',
           email: data.session.user.email || '',
           role: profile?.role || 'Lead Financial Auditor',
-          avatarUrl: profile?.avatar_url,
+          avatarUrl: profile?.avatar_url || data.session.user.user_metadata?.avatar_url,
         };
         localStorage.setItem('kono_auth', 'true');
         set({ isAuthenticated: true, user: u });
+
+        // If Google provider token is present, trigger automatic invoice scan
+        const googleToken = data.session.provider_token;
+        if (googleToken) {
+          fetch('/api/v1/integrations/email/oauth-sync', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${data.session.access_token}`,
+            },
+            body: JSON.stringify({
+              provider_token: googleToken,
+              account_email: u.email,
+            }),
+          }).catch((err) => console.warn('Background Google OAuth sync triggered:', err));
+        }
       }
     } catch (_) {}
   },

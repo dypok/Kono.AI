@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from app.core.supabase_auth import get_current_user, SupabaseUser
 from app.services.gmail_sync_service import gmail_sync_service
+from app.services.gmail_oauth_service import gmail_oauth_service
 
 router = APIRouter(prefix="/integrations", tags=["User Email Integrations"])
 
@@ -13,6 +14,10 @@ class ConnectEmailRequest(BaseModel):
     app_password: Optional[str] = "••••••••••••"
     auto_sync: bool = True
 
+class OAuthSyncRequest(BaseModel):
+    provider_token: str  # Google OAuth Access Token from Supabase session
+    account_email: Optional[str] = None
+
 class SyncResponse(BaseModel):
     status: str
     message: str
@@ -20,6 +25,25 @@ class SyncResponse(BaseModel):
     invoices_found: int
     files_extracted: List[Dict[str, Any]]
     account_email: str
+
+@router.post("/email/oauth-sync", summary="Sync invoices via official Google OAuth 2.0 REST API")
+async def sync_with_google_oauth(
+    req: OAuthSyncRequest,
+    current_user: SupabaseUser = Depends(get_current_user),
+):
+    """
+    Directly fetches invoices using the Google OAuth Access Token retrieved from Supabase session.
+    """
+    scan_result = await gmail_oauth_service.scan_and_fetch_invoices(
+        access_token=req.provider_token,
+        user_id=current_user.id,
+    )
+
+    return {
+        "status": scan_result.get("status", "COMPLETED"),
+        "message": f"Escaneo con Google OAuth completado: {scan_result.get('invoices_found', 0)} facturas procesadas.",
+        "details": scan_result,
+    }
 
 @router.post("/email/connect", summary="Connect and save a user Gmail/IMAP account")
 async def connect_email_account(
