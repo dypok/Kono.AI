@@ -45,8 +45,17 @@ export default {
         'liquid-emerald': '0 0 25px -5px rgba(16, 185, 129, 0.25)',
         'liquid-amber': '0 0 25px -5px rgba(245, 158, 11, 0.25)',
         'liquid-rose': '0 0 25px -5px rgba(244, 63, 94, 0.25)',
-      }
+      },
+      keyframes: {
+        'shrink-progress': {
+          '0%': { width: '100%', opacity: '1' },
+          '100%': { width: '0%', opacity: '0.2' },
+        },
+      },
+      animation: {
+        'shrink-3s': 'shrink-progress 3000ms linear forwards',
+      },
     },
   },
   plugins: [],
-}
+};

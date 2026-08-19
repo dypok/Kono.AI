@@ -62,3 +62,4 @@
 - [Wednesday]-[19/08/2026]-[14:43] : Added confirmation modal for deleting connected inboxes and converted the single-inbox requirement warning into a dedicated Liquid Glass Portal modal in SettingsPage.tsx.
 - [Wednesday]-[19/08/2026]-[14:44] : Converted single-inbox requirement warning from a full-screen blocking modal into a smooth floating popup toast modal with a 3-second auto-dismiss timer and progress indicator.
 - [Wednesday]-[19/08/2026]-[14:45] : Added CSS shrinkWidth3s animation for the single-inbox constraint toast progress bar and equipped the toast with an instant dismiss 'X' button that cancels the 3-second auto-dismiss timeout immediately.
+- [Wednesday]-[19/08/2026]-[14:46] : Migrated animation definitions from manual CSS into tailwind.config.js (keyframes: shrink-progress, animation: animate-shrink-3s) to ensure 100% pure Tailwind CSS styling.
