@@ -15,3 +15,4 @@
 - [Wednesday]-[19/08/2026]-[09:46] : Recreated LandingPage.tsx with Liquid Glass aesthetics and implemented PublicRoute guard in frontend/src/components/auth/PublicRoute.tsx to prevent authenticated users from accessing / or /login (auto-redirect to /dashboard).
 - [Wednesday]-[19/08/2026]-[10:39] : Successfully deployed and started official n8n automation container (kono-n8n) on port 5678, verified /healthz status ok.
 - [Wednesday]-[19/08/2026]-[11:25] : Implemented Supabase Auth backend integration in backend/python-api/app/core/supabase_auth.py and backend/python-api/app/api/v1/auth.py, updated .env.example with Supabase and standalone multi-channel configurations, verified /api/v1/auth/health and /api/v1/auth/me endpoints.
+- [Wednesday]-[19/08/2026]-[11:27] : Successfully added official Supabase MCP server (project_ref=avkxhplapmibhyleywzd) to Gemini project settings with database, auth, docs, debugging, and functions features enabled.
