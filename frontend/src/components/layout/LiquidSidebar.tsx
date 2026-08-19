@@ -27,7 +27,7 @@ export const LiquidSidebar: React.FC = () => {
     { name: 'Auditoría & Facturas', path: '/dashboard', icon: FileSearch, badge: 'Live' },
     { name: 'Plantillas Proveedor', path: '/templates', icon: Layers, badge: 'Auto' },
     { name: 'Conciliación & ERP', path: '/analytics', icon: BarChart3 },
-    { name: 'Configuración & n8n', path: '/settings', icon: Settings },
+    { name: 'Configuración & Sistema', path: '/settings', icon: Settings },
   ];
 
   return (
