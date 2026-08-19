@@ -1,10 +1,9 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Integer, DateTime, JSON, Text
-from sqlalchemy.dialects.sqlite import JSON as SQLITE_JSON
-from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+from app.core.database import Base
+
 
 class VendorTemplate(Base):
     """
