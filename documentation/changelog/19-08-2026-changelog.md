@@ -32,3 +32,4 @@
 - [Wednesday]-[19/08/2026]-[12:39] : Removed demo access fallback in frontend/src/store/authStore.ts and LoginPage.tsx, enforcing strict authentication against Supabase Database and displaying descriptive authentication error banners.
 - [Wednesday]-[19/08/2026]-[12:41] : Enhanced onboarding flow triggering by setting kono_new_signup flag in LoginPage.tsx and ensuring ConnectGmailModal renders automatically on registration.
 - [Wednesday]-[19/08/2026]-[12:43] : Fixed onboarding modal display by moving ConnectGmailModal to global AppLayout.tsx with user-isolated localStorage key (kono_onboarding_dismissed_{email}), guaranteeing every new account sees the welcome connect modal.
+- [Wednesday]-[19/08/2026]-[12:47] : Connected Frontend directly to native Backend for real IMAP Gmail scanning in ConnectGmailModal.tsx, including App Password authentication, Supabase token forwarding, and detailed scan results.

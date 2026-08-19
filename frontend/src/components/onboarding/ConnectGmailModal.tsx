@@ -12,7 +12,9 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
   const { user } = useAuthStore();
   const [email, setEmail] = useState(user?.email || '');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncedStats, setSyncedStats] = useState<{ count: number } | null>(null);
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [syncedStats, setSyncedStats] = useState<{ count: number; scanned: number } | null>(null);
 
   if (!isOpen) return null;
 
@@ -21,24 +23,44 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
     if (!email.trim()) return;
 
     setIsSyncing(true);
+    setErrorMessage(null);
+
     try {
+      // Get current Supabase session token
+      const { supabase } = await import('../../lib/supabaseClient');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || 'mock-dev-token';
+
       // Call native FastAPI integration endpoint
       const response = await fetch('/api/v1/integrations/email/connect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           provider: 'gmail',
           account_email: email.trim(),
-          app_password: '••••••••••••',
+          app_password: password.trim(),
         }),
       });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || errData.message || 'No se pudo conectar con el servidor de correo');
+      }
+
       const data = await response.json();
-      const count = data.details?.invoices_found || 1;
-      setSyncedStats({ count });
+      if (data.details?.status === 'ERROR') {
+        throw new Error(data.details?.error_message || 'Error de autenticación IMAP en Gmail');
+      }
+
+      const count = data.details?.invoices_found ?? 0;
+      const scanned = data.details?.emails_scanned ?? 0;
+      setSyncedStats({ count, scanned });
       if (onConnected) onConnected(email.trim());
-    } catch (_) {
-      setSyncedStats({ count: 1 });
-      if (onConnected) onConnected(email.trim());
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Error al conectar con Gmail');
     } finally {
       setIsSyncing(false);
     }
@@ -114,6 +136,37 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
                 />
               </div>
             </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-alabaster-300 uppercase tracking-wider">
+                  Contraseña de Aplicación (Gmail App Password)
+                </label>
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-zinc-400 hover:text-white underline font-mono"
+                >
+                  ¿Cómo generar una?
+                </a>
+              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="xxxx xxxx xxxx xxxx"
+                className="w-full liquid-glass-input px-4 py-2.5 rounded-xl text-sm"
+              />
+            </div>
+
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs leading-relaxed">
+                {errorMessage}
+              </div>
+            )}
 
             {/* Feature Note */}
             <div className="liquid-glass-card rounded-2xl p-3.5 text-xs text-zinc-400 border border-white/5 space-y-1">
