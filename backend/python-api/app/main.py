@@ -48,6 +48,8 @@ app.include_router(inbound_router.router, prefix="/api/v1")
 app.include_router(integrations_router.router, prefix="/api/v1")
 
 
+from app.services.inbox_scheduler import inbox_scheduler
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize async engine and create tables for the configured DB.
@@ -59,9 +61,12 @@ async def lifespan(app: FastAPI):
     bridge = asyncio.create_task(
         ws_manager.run_redis_bridge(settings.redis_url, settings.kono_feed_channel)
     )
-    logger.info("Kono API started; WS bridge task launched")
+    # Start the 60-second periodic background inbox scanner
+    inbox_scheduler.start()
+    logger.info("Kono API started; WS bridge & 60s Inbox Scanner launched")
     yield
     bridge.cancel()
+    inbox_scheduler.stop()
 
 
 # FastAPI lifespan is the supported way to run startup/shutdown in modern

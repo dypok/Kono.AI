@@ -26,14 +26,25 @@ class SyncResponse(BaseModel):
     files_extracted: List[Dict[str, Any]]
     account_email: str
 
+from app.services.inbox_scheduler import inbox_scheduler
+
 @router.post("/email/oauth-sync", summary="Sync invoices via official Google OAuth 2.0 REST API")
 async def sync_with_google_oauth(
     req: OAuthSyncRequest,
     current_user: SupabaseUser = Depends(get_current_user),
 ):
     """
-    Directly fetches invoices using the Google OAuth Access Token retrieved from Supabase session.
+    Directly fetches invoices using the Google OAuth Access Token retrieved from Supabase session,
+    and registers the inbox for automatic 60s background monitoring.
     """
+    # 1. Register inbox for periodic 60s background checks
+    inbox_scheduler.register_inbox_session(
+        user_id=current_user.id,
+        email=req.account_email or current_user.email,
+        provider_token=req.provider_token,
+    )
+
+    # 2. Perform initial instant scan
     scan_result = await gmail_oauth_service.scan_and_fetch_invoices(
         access_token=req.provider_token,
         user_id=current_user.id,
@@ -41,7 +52,7 @@ async def sync_with_google_oauth(
 
     return {
         "status": scan_result.get("status", "COMPLETED"),
-        "message": f"Escaneo con Google OAuth completado: {scan_result.get('invoices_found', 0)} facturas procesadas.",
+        "message": f"Escaneo con Google OAuth completado: {scan_result.get('invoices_found', 0)} facturas procesadas. Monitoreo continuo cada 60s activo.",
         "details": scan_result,
     }
 
