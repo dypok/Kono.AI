@@ -47,6 +47,8 @@ def _get_manager(request: Request) -> ConnectionManager:
 
 from app.core.supabase_auth import get_current_user, SupabaseUser
 
+from app.services.pdf_extractor_service import pdf_extractor_service
+
 # -------------------------------------------------------------------------- #
 # POST /api/v1/documents/upload
 # -------------------------------------------------------------------------- #
@@ -57,9 +59,8 @@ async def upload_document(
     current_user: SupabaseUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Uploads a PDF/image, validates MIME, persists the original file and
-    registers the document with status PENDING (it will be triaged by the
-    pipeline and later notified via WebSocket)."""
+    """Uploads a PDF/image, extracts deterministic fields using PyMuPDF,
+    validates math, persists items and bounding boxes, and broadcasts via WebSocket."""
     mime = file.content_type or "application/octet-stream"
     ext = ALLOWED_MIME.get(mime)
     if ext is None:
@@ -81,32 +82,80 @@ async def upload_document(
     with open(target_path, "wb") as fh:
         fh.write(raw)
 
+    # Deterministic extraction via PyMuPDF (zero-token fast path)
+    extracted = pdf_extractor_service.extract_document(str(target_path))
+
     doc = Document(
         id=doc_id,
         user_id=current_user.id,
         file_name=file.filename or target_name,
         file_path=str(target_path),
-        file_hash_sha256=None,  # filled later by the hasher/triage step
+        file_hash_sha256=extracted.get("file_hash_sha256"),
         mime_type=mime,
         file_size_bytes=len(raw),
-        processing_status="PENDING",
-        kono_state="YELLOW",  # not yet audited -> pending review
-        extraction_method="DETERMINISTIC",
+        invoice_number=extracted.get("invoice_number"),
+        vendor_name=extracted.get("vendor_name"),
+        vendor_tax_id=extracted.get("vendor_tax_id"),
+        issue_date=extracted.get("issue_date"),
+        currency=extracted.get("currency", "COP"),
+        subtotal=extracted.get("subtotal"),
+        tax_total=extracted.get("tax_total"),
+        withholding_total=extracted.get("withholding_total", 0.0),
+        grand_total=extracted.get("grand_total"),
+        processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
+        kono_state=extracted.get("kono_state", "GREEN"),
+        extraction_method=extracted.get("extraction_method", "DETERMINISTIC"),
+        bounding_boxes=extracted.get("bounding_boxes"),
     )
     db.add(doc)
+
+    # Persist extracted line items
+    for it in extracted.get("items", []):
+        item_obj = InvoiceItem(
+            document_id=doc_id,
+            line_number=it["line_number"],
+            description=it.get("description", ""),
+            quantity=it.get("quantity", 1.0),
+            unit_price=it.get("unit_price", 0.0),
+            tax_rate=it.get("tax_rate", 19.0),
+            total_price=it.get("total_price", 0.0),
+            is_math_valid=it.get("is_math_valid", True),
+        )
+        db.add(item_obj)
+
+    # Persist discrepancies if any
+    for disc in extracted.get("discrepancies", []):
+        disc_obj = Discrepancy(
+            document_id=doc_id,
+            field_name=disc["field_name"],
+            alert_type=disc["alert_type"],
+            expected_value=disc.get("expected_value"),
+            extracted_value=disc.get("extracted_value"),
+            delta_amount=disc.get("delta_amount"),
+            description=disc.get("description", ""),
+        )
+        db.add(disc_obj)
+
     await db.commit()
     await db.refresh(doc)
 
-    # Notify connected clients of a new document entering the pipeline.
+    # Notify connected clients of the processed document.
     await _get_manager(request).broadcast(
-        {"type": "DOCUMENT_PROCESSED", "document_id": doc_id, "kono_state": "PENDING", "user_id": current_user.id}
+        {
+            "type": "DOCUMENT_PROCESSED",
+            "document_id": doc_id,
+            "kono_state": doc.kono_state,
+            "user_id": current_user.id,
+            "invoice_number": doc.invoice_number,
+            "grand_total": doc.grand_total,
+        }
     )
 
     return ActionResponse(
         id=doc_id,
-        kono_state="YELLOW",
-        processing_status="PENDING",
-        message="Document uploaded and queued for triage",
+        kono_state=doc.kono_state,
+        processing_status=doc.processing_status,
+        message="Document uploaded and processed deterministically",
     )
 
 
@@ -355,81 +404,7 @@ async def bulk_approve_documents(
 # GET /api/v1/documents/export?format=csv|json
 # -------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------- #
-# POST /api/v1/documents/seed-demo  (Seed demo real invoices for active user)
-# -------------------------------------------------------------------------- #
-@router.post("/seed-demo")
-async def seed_demo_documents(
-    current_user: SupabaseUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Generates initial realistic test invoices for the active authenticated user."""
-    demo_samples = [
-        {
-            "id": f"demo_{uuid.uuid4().hex[:8]}",
-            "user_id": current_user.id,
-            "file_name": "factura_aws_cloud_hosting.pdf",
-            "file_path": "/data/storage/inbound/demo_aws.pdf",
-            "invoice_number": "INV-2026-8891",
-            "vendor_name": "Amazon Web Services Colombia SAS",
-            "vendor_tax_id": "900.123.456-1",
-            "issue_date": "2026-08-15",
-            "currency": "COP",
-            "subtotal": 1500000.0,
-            "tax_total": 285000.0,
-            "withholding_total": 0.0,
-            "grand_total": 1785000.0,
-            "kono_state": "GREEN",
-            "processing_status": "AUDITED",
-            "extraction_method": "DETERMINISTIC",
-        },
-        {
-            "id": f"demo_{uuid.uuid4().hex[:8]}",
-            "user_id": current_user.id,
-            "file_name": "comprobante_papeleria_suministros.pdf",
-            "file_path": "/data/storage/inbound/demo_office.pdf",
-            "invoice_number": "FAC-9012",
-            "vendor_name": "Office Supplies & Papelería LTDA",
-            "vendor_tax_id": "800.999.111-2",
-            "issue_date": "2026-08-16",
-            "currency": "COP",
-            "subtotal": 353361.34,
-            "tax_total": 67138.66,
-            "withholding_total": 0.0,
-            "grand_total": 420500.0,
-            "kono_state": "YELLOW",
-            "processing_status": "PENDING",
-            "extraction_method": "TEMPLATE",
-        },
-        {
-            "id": f"demo_{uuid.uuid4().hex[:8]}",
-            "user_id": current_user.id,
-            "file_name": "factura_aws_cloud_hosting_duplicada.pdf",
-            "file_path": "/data/storage/inbound/demo_aws_dup.pdf",
-            "invoice_number": "INV-2026-8891",
-            "vendor_name": "Amazon Web Services Colombia SAS (Duplicado)",
-            "vendor_tax_id": "900.123.456-1",
-            "issue_date": "2026-08-18",
-            "currency": "COP",
-            "subtotal": 1500000.0,
-            "tax_total": 285000.0,
-            "withholding_total": 0.0,
-            "grand_total": 1785000.0,
-            "kono_state": "RED",
-            "processing_status": "REJECTED",
-            "extraction_method": "DETERMINISTIC",
-        },
-    ]
 
-    for d in demo_samples:
-        doc = Document(**d)
-        db.add(doc)
-    await db.commit()
-
-    return {
-        "status": "SUCCESS",
-        "created_count": len(demo_samples),
-        "message": f"Se han sembrado {len(demo_samples)} facturas de prueba vinculadas a tu cuenta.",
-    }
 
 
 # -------------------------------------------------------------------------- #

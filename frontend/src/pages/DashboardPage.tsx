@@ -214,33 +214,17 @@ export const DashboardPage: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400">
               <IconInbox className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-semibold text-alabaster-100">No hay facturas registradas</h3>
+            <h3 className="text-sm font-semibold text-alabaster-100">No hay facturas procesadas aún</h3>
             <p className="text-xs text-zinc-400 max-w-sm">
-              Sube un archivo PDF o imagen, conecta tu correo Gmail en Configuración, o genera comprobantes de prueba iniciales.
+              Sube tus comprobantes en PDF o imagen para procesarlos inmediatamente con extracción determinista, o vincula tu bandeja de Gmail en Configuración.
             </p>
-            <div className="flex items-center space-x-3 mt-2">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs text-alabaster-100 transition"
-              >
-                Cargar primer comprobante
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    setIsLoading(true);
-                    await documentsApi.seedDemo();
-                    fetchDocuments();
-                  } catch (e: any) {
-                    alert(`Error: ${e.message}`);
-                    setIsLoading(false);
-                  }
-                }}
-                className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs text-emerald-300 transition"
-              >
-                Sembrar datos de prueba
-              </button>
-            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-medium text-alabaster-100 transition shadow flex items-center space-x-2"
+            >
+              <IconUpload className="w-4 h-4 text-kono-silver" />
+              <span>Cargar primer PDF / Comprobante</span>
+            </button>
           </div>
         ) : (
           <table className="w-full text-left border-collapse">

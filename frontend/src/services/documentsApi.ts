@@ -132,21 +132,4 @@ export const documentsApi = {
     }
     return res.json();
   },
-
-  /** Siembra facturas demo vinculadas al usuario autenticado */
-  async seedDemo(): Promise<any> {
-    const headers = await getAuthHeader();
-    const res = await fetch('/api/v1/documents/seed-demo', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error('Error al sembrar datos de prueba');
-    }
-    return res.json();
-  },
 };
