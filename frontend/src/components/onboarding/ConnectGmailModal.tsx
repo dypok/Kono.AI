@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Sparkles, X, ArrowRight, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Mail, Sparkles, X, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 interface ConnectGmailModalProps {
@@ -10,61 +10,11 @@ interface ConnectGmailModalProps {
 
 export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, onClose, onConnected }) => {
   const { user } = useAuthStore();
-  const [email, setEmail] = useState(user?.email || '');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [syncedStats, setSyncedStats] = useState<{ count: number; scanned: number } | null>(null);
 
   if (!isOpen) return null;
-
-  const handleConnect = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-
-    setIsSyncing(true);
-    setErrorMessage(null);
-
-    try {
-      // Get current Supabase session token
-      const { supabase } = await import('../../lib/supabaseClient');
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token || 'mock-dev-token';
-
-      // Call native FastAPI integration endpoint
-      const response = await fetch('/api/v1/integrations/email/connect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          provider: 'gmail',
-          account_email: email.trim(),
-          app_password: password.trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || errData.message || 'No se pudo conectar con el servidor de correo');
-      }
-
-      const data = await response.json();
-      if (data.details?.status === 'ERROR') {
-        throw new Error(data.details?.error_message || 'Error de autenticación IMAP en Gmail');
-      }
-
-      const count = data.details?.invoices_found ?? 0;
-      const scanned = data.details?.emails_scanned ?? 0;
-      setSyncedStats({ count, scanned });
-      if (onConnected) onConnected(email.trim());
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Error al conectar con Gmail');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-titanium-950/85 backdrop-blur-xl animate-fade-in">
@@ -96,7 +46,7 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
             ¡Bienvenido a Kono<span className="text-kono-chrome font-light">.ai</span>!
           </h2>
           <p className="text-xs text-zinc-400 mt-1 max-w-sm">
-            Conecta tu cuenta de correo para escanear facturas automáticamente en segundo plano.
+            Conecta tu cuenta de Gmail con 1-Click para escanear facturas automáticamente en segundo plano.
           </p>
         </div>
 
@@ -108,7 +58,7 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
             <div>
               <h3 className="text-base font-bold text-alabaster-100">¡Bandeja Sincronizada!</h3>
               <p className="text-xs text-zinc-400 mt-1">
-                Se detectaron y etiquetaron <span className="text-emerald-400 font-bold font-mono">{syncedStats.count} facturas</span> como <span className="text-alabaster-200 font-mono">KONO_INVOICE</span> en tu Gmail.
+                Se escanearon <span className="text-alabaster-100 font-bold">{syncedStats.scanned}</span> correos y se detectaron <span className="text-emerald-400 font-bold font-mono">{syncedStats.count} facturas</span> etiquetadas como <span className="text-alabaster-200 font-mono">KONO_INVOICE</span> en tu Gmail.
               </p>
             </div>
             <button
@@ -119,8 +69,8 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
             </button>
           </div>
         ) : (
-          <form onSubmit={handleConnect} className="space-y-4">
-            {/* 🌟 1-Click Google OAuth Option */}
+          <div className="space-y-4">
+            {/* 🌟 1-Click Google OAuth Button */}
             <button
               type="button"
               onClick={async () => {
@@ -135,75 +85,34 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
                 }
               }}
               disabled={isSyncing}
-              className="w-full py-3 px-4 rounded-xl bg-white/[0.05] hover:bg-white/[0.09] text-alabaster-100 border border-white/15 font-medium text-xs transition duration-200 flex items-center justify-center space-x-2.5 shadow-sm disabled:opacity-50"
+              className="w-full py-3.5 px-4 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 flex items-center justify-center space-x-2.5 shadow-lg shadow-white/5 disabled:opacity-50"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path
-                  fill="#EA4335"
-                  d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"
-                />
-                <path
-                  fill="#4285F4"
-                  d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.1s.7 5.4 1.9 7.8l3.7-3.1z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16.7C3.7 20.4 7.5 23.5 12 23.5z"
-                />
-              </svg>
-              <span>Vincular con 1-Click vía Google OAuth (Recomendado)</span>
+              {isSyncing ? (
+                <RefreshCw className="w-4 h-4 animate-spin text-titanium-950" />
+              ) : (
+                <>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path
+                      fill="#EA4335"
+                      d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"
+                    />
+                    <path
+                      fill="#4285F4"
+                      d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.1s.7 5.4 1.9 7.8l3.7-3.1z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16.7C3.7 20.4 7.5 23.5 12 23.5z"
+                    />
+                  </svg>
+                  <span>Conectar Gmail con 1-Click (Google OAuth)</span>
+                </>
+              )}
             </button>
-
-            <div className="flex items-center space-x-3 my-2">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-[10px] text-zinc-500 font-mono uppercase">o vía IMAP con App Password</span>
-              <div className="flex-1 h-px bg-white/10" />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-alabaster-300 mb-1.5 uppercase tracking-wider">
-                Correo Electrónico a Monitorear
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3.5" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="ej. mi.empresa@gmail.com"
-                  className="w-full liquid-glass-input pl-10 pr-4 py-2.5 rounded-xl text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium text-alabaster-300 uppercase tracking-wider">
-                  Contraseña de Aplicación (Gmail App Password)
-                </label>
-                <a
-                  href="https://myaccount.google.com/apppasswords"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[10px] text-zinc-400 hover:text-white underline font-mono"
-                >
-                  ¿Cómo generar una?
-                </a>
-              </div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="xxxx xxxx xxxx xxxx"
-                className="w-full liquid-glass-input px-4 py-2.5 rounded-xl text-sm"
-              />
-            </div>
 
             {/* Error Message */}
             {errorMessage && (
@@ -213,41 +122,26 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
             )}
 
             {/* Feature Note */}
-            <div className="liquid-glass-card rounded-2xl p-3.5 text-xs text-zinc-400 border border-white/5 space-y-1">
+            <div className="liquid-glass-card rounded-2xl p-4 text-xs text-zinc-400 border border-white/5 space-y-1.5">
               <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
                 <Sparkles className="w-3.5 h-3.5 text-kono-silver" />
-                <span>Escaneo histórico y etiquetado nativo</span>
+                <span>Escaneo histórico y etiquetado nativo automático</span>
               </div>
               <p className="text-[11px] leading-relaxed">
-                Al conectar, Kono analizará los correos con adjuntos PDF e imágenes y les colocará la etiqueta <strong className="text-zinc-300">KONO_INVOICE</strong> en tu correo.
+                Kono se conectará de forma segura vía Google OAuth, analizará tus correos con facturas y les colocará automáticamente la etiqueta <strong className="text-zinc-300 font-mono">KONO_INVOICE</strong>.
               </p>
             </div>
 
-            <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
-              <button
-                type="submit"
-                disabled={isSyncing || !email.trim()}
-                className="w-full sm:flex-1 py-3 rounded-xl bg-gradient-to-r from-slate-200 via-alabaster-100 to-zinc-300 text-titanium-950 font-semibold text-xs hover:opacity-95 transition shadow flex items-center justify-center space-x-2 disabled:opacity-50"
-              >
-                {isSyncing ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <span>Conectar y Escanear Facturas</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-
+            <div className="pt-2 flex items-center justify-end">
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full sm:w-auto px-4 py-3 rounded-xl liquid-glass-card text-xs text-zinc-400 hover:text-white transition"
+                className="w-full py-2.5 rounded-xl liquid-glass-card text-xs text-zinc-400 hover:text-white transition"
               >
                 Configurar más tarde
               </button>
             </div>
-          </form>
+          </div>
         )}
       </div>
     </div>
