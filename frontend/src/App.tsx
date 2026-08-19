@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
@@ -9,8 +9,27 @@ import { DashboardPage } from './pages/DashboardPage';
 import { TemplatesPage } from './pages/TemplatesPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { useAuthStore } from './store/authStore';
+import { supabase } from './lib/supabaseClient';
 
 export const App: React.FC = () => {
+  const { checkSession } = useAuthStore();
+
+  useEffect(() => {
+    // 1. Initial session check on mount
+    checkSession();
+
+    // 2. Listen for OAuth redirects and token updates
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        checkSession();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [checkSession]);
   return (
     <BrowserRouter>
       <Routes>
