@@ -22,14 +22,6 @@ export const ConnectGmailModal: React.FC<ConnectGmailModalProps> = ({ isOpen, on
         {/* Glow Accent */}
         <div className="absolute -top-12 -left-12 w-40 h-40 bg-slate-400/20 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Close */}
-        <button
-          onClick={onClose}
-          className="absolute top-5 right-5 p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
         {/* Header with Animated Silver Mascot */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-200 via-slate-400 to-zinc-600 p-0.5 mb-3 shadow-lg">

@@ -36,3 +36,4 @@
 - [Wednesday]-[19/08/2026]-[12:50] : Implemented Google OAuth 2.0 1-Click integration in authStore.ts, LoginPage.tsx and ConnectGmailModal.tsx requesting Gmail scopes (gmail.readonly, gmail.modify, gmail.labels) with offline access for unattended invoice auto-sync.
 - [Wednesday]-[19/08/2026]-[12:55] : Configured Google OAuth 2.0 credentials (Client ID and Client Secret) in .env, implemented GmailOAuthService (fetching messages, downloading attachments, and applying KONO_INVOICE label via Gmail REST API), added POST /api/v1/integrations/email/oauth-sync endpoint, and enabled automated background sync upon Google login.
 - [Wednesday]-[19/08/2026]-[12:59] : Streamlined ConnectGmailModal.tsx to purely use 1-Click Google OAuth 2.0 and removed manual App Password input fields.
+- [Wednesday]-[19/08/2026]-[13:01] : Removed the 'X' close button from ConnectGmailModal.tsx to guide user actions exclusively through 'Conectar Gmail con 1-Click' or 'Configurar más tarde'.
