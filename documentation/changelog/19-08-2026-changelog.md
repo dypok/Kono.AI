@@ -21,3 +21,4 @@
 - [Wednesday]-[19/08/2026]-[11:34] : Installed official Supabase agent skills (supabase & supabase-postgres-best-practices) under .agents/skills/.
 - [Wednesday]-[19/08/2026]-[11:34] : Connected to Supabase project avkxhplapmibhyleywzd via MCP, retrieved project URL and API keys, and injected credentials into .env.
 - [Wednesday]-[19/08/2026]-[11:38] : Created database schema in Supabase PostgreSQL (vendors, invoices, invoice_line_items, audit_logs with RLS policies), connected frontend client with @supabase/supabase-js in frontend/src/lib/supabaseClient.ts and frontend/src/store/authStore.ts, and verified live deployment on port 80.
+- [Wednesday]-[19/08/2026]-[11:40] : Created public.profiles table in Supabase with RLS policies, trigger on_auth_user_created to auto-populate profile on signup, and integrated profile fetching (avatar_url, full_name, role) in frontend authStore.ts.

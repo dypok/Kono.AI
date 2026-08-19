@@ -35,11 +35,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         });
 
         if (!error && data?.user) {
+          // Fetch extended profile data from public.profiles
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+
           const u: User = {
             id: data.user.id,
-            name: data.user.user_metadata?.name || email.split('@')[0].toUpperCase(),
+            name: profile?.full_name || data.user.user_metadata?.name || email.split('@')[0].toUpperCase(),
             email: data.user.email || email,
-            role: data.user.user_metadata?.role || 'Lead Financial Auditor',
+            role: profile?.role || 'Lead Financial Auditor',
+            avatarUrl: profile?.avatar_url,
           };
           localStorage.setItem('kono_auth', 'true');
           set({ isAuthenticated: true, user: u });
@@ -75,11 +83,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const { data } = await supabase.auth.getSession();
       if (data?.session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+
         const u: User = {
           id: data.session.user.id,
-          name: data.session.user.user_metadata?.name || data.session.user.email?.split('@')[0].toUpperCase() || 'User',
+          name: profile?.full_name || data.session.user.user_metadata?.name || data.session.user.email?.split('@')[0].toUpperCase() || 'User',
           email: data.session.user.email || '',
-          role: data.session.user.user_metadata?.role || 'Lead Financial Auditor',
+          role: profile?.role || 'Lead Financial Auditor',
+          avatarUrl: profile?.avatar_url,
         };
         localStorage.setItem('kono_auth', 'true');
         set({ isAuthenticated: true, user: u });
