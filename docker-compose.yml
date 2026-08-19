@@ -95,6 +95,29 @@ services:
     networks:
       - kono-network
 
+  # ----------------------------------------------------------------------------
+  # 5. 🤖 n8n Workflow Automation Platform (Inbound & ERP Orchestration)
+  # ----------------------------------------------------------------------------
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: kono-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=America/Bogota
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - shared_storage:/data/storage
+    depends_on:
+      - python-api
+    networks:
+      - kono-network
+
 # ------------------------------------------------------------------------------
 # Volumes & Networks
 # ------------------------------------------------------------------------------
@@ -102,6 +125,8 @@ volumes:
   shared_storage:
     driver: local
   redis_data:
+    driver: local
+  n8n_data:
     driver: local
 
 networks:
