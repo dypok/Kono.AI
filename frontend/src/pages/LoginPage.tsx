@@ -5,9 +5,9 @@ import { ShieldCheck, ArrowRight, Lock, Mail, Sparkles } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('dylan@kono.ai');
-  const [password, setPassword] = useState('••••••••••••');
-  const [fullName, setFullName] = useState('Dylan P.');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { login } = useAuthStore();
@@ -45,7 +45,7 @@ export const LoginPage: React.FC = () => {
       setIsLoading(false);
       navigate('/dashboard');
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Error al autenticar');
+      setErrorMessage(err?.message || 'Error al autenticar con Supabase');
       setIsLoading(false);
     }
   };
@@ -160,17 +160,10 @@ export const LoginPage: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full liquid-glass-input pl-10 pr-4 py-2.5 rounded-xl text-sm"
-                placeholder="••••••••••••"
+                placeholder="Tu contraseña secreta"
               />
             </div>
           </div>
-
-          {!isSignUp && (
-            <div className="liquid-glass-card rounded-xl p-3 flex items-center space-x-2.5 text-xs text-alabaster-300 border border-white/5">
-              <Sparkles className="w-4 h-4 text-kono-silver shrink-0" />
-              <span>Acceso Demo precargado listo para ingresar con 1-Click.</span>
-            </div>
-          )}
 
           <button
             type="submit"

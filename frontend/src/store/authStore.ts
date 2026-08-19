@@ -27,47 +27,35 @@ export const useAuthStore = create<AuthState>((set) => ({
   } : null,
 
   login: async (email: string, password?: string) => {
-    try {
-      if (password && password !== '••••••••••••') {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (!error && data?.user) {
-          // Fetch extended profile data from public.profiles
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-
-          const u: User = {
-            id: data.user.id,
-            name: profile?.full_name || data.user.user_metadata?.name || email.split('@')[0].toUpperCase(),
-            email: data.user.email || email,
-            role: profile?.role || 'Lead Financial Auditor',
-            avatarUrl: profile?.avatar_url,
-          };
-          localStorage.setItem('kono_auth', 'true');
-          set({ isAuthenticated: true, user: u });
-          return true;
-        }
-      }
-    } catch (e) {
-      console.warn('Supabase online auth bypassed; using fast demo session:', e);
+    if (!password) {
+      throw new Error('Debes ingresar tu contraseña.');
     }
 
-    // Fast fallback demo session
-    await new Promise((r) => setTimeout(r, 400));
-    const mockUser: User = {
-      id: 'usr_1',
-      name: email.split('@')[0].toUpperCase(),
-      email: email,
-      role: 'Lead Financial Auditor',
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error || !data?.user) {
+      throw new Error(error?.message || 'Credenciales incorrectas en Supabase.');
+    }
+
+    // Fetch extended profile data from public.profiles
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+
+    const u: User = {
+      id: data.user.id,
+      name: profile?.full_name || data.user.user_metadata?.name || email.split('@')[0].toUpperCase(),
+      email: data.user.email || email,
+      role: profile?.role || 'Lead Financial Auditor',
+      avatarUrl: profile?.avatar_url,
     };
     localStorage.setItem('kono_auth', 'true');
-    set({ isAuthenticated: true, user: mockUser });
+    set({ isAuthenticated: true, user: u });
     return true;
   },
 
