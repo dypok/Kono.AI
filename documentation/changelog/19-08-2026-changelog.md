@@ -27,3 +27,4 @@
 - [Wednesday]-[19/08/2026]-[11:59] : Added custom email modal dialog in frontend SettingsPage.tsx allowing users to customize email address and select email provider (Gmail, Outlook, IMAP Corp).
 - [Wednesday]-[19/08/2026]-[12:33] : Completed Native Gmail Sync & Onboarding modal (Zero n8n): implemented GmailSyncService with historical scanning and KONO_INVOICE tagging, POST /api/v1/integrations/email/connect endpoint, and ConnectGmailModal in frontend.
 - [Wednesday]-[19/08/2026]-[12:35] : Fixed full-screen layout sizing bug on login by setting explicit 100% height, width and overflow controls on html, body, and #root in index.html, index.css, and AppLayout.tsx.
+- [Wednesday]-[19/08/2026]-[12:37] : Implemented full authentication lifecycle in frontend/src/pages/LoginPage.tsx and authStore.ts (Sign In, Sign Up via Supabase Auth, instant Demo access, and secure logout in LiquidSidebar).
