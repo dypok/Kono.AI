@@ -484,6 +484,53 @@ export const documentsApi = {
     return res.json();
   },
 
+  /** Estima el costo total de analizar un lote de facturas no leídas con IA */
+  async estimateBatchAiCost(documentIds: string[]): Promise<{
+    document_ids: string[];
+    count: number;
+    total_estimated_cost_usd: number;
+    total_tokens: number;
+    message: string;
+  }> {
+    const headers = await getAuthHeader();
+    const res = await fetch('/api/v1/ai/cost-estimate/batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ document_ids: documentIds }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al estimar costo de lote IA' }));
+      throw new Error(err.detail || 'Fallo en la estimación de lote IA');
+    }
+    return res.json();
+  },
+
+  /** Ejecuta el análisis por lote con IA para los documentos que no se pudieron leer */
+  async analyzeBatchWithAi(documentIds: string[]): Promise<{
+    processed_count: number;
+    total_estimated_cost_usd: number;
+    total_tokens: number;
+    message: string;
+  }> {
+    const headers = await getAuthHeader();
+    const res = await fetch('/api/v1/ai/analyze/batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ document_ids: documentIds }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al analizar lote con IA' }));
+      throw new Error(err.detail || 'Fallo al analizar lote con IA');
+    }
+    return res.json();
+  },
+
   /** Ejecuta el análisis bajo demanda con IA para extraer datos de un documento sin ítems */
   async analyzeWithAi(documentId: string, force = true): Promise<{
     document_id: string;
@@ -505,6 +552,32 @@ export const documentsApi = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Error al analizar con IA' }));
       throw new Error(err.detail || 'Fallo en el análisis con IA');
+    }
+    return res.json();
+  },
+
+  /** Exporta un documento al correo con clasificación Empresa→Tipo (US-REQ-006) */
+  async exportDocumentToEmail(documentId: string, email?: string): Promise<{
+    status: string;
+    document_id: string;
+    exported_to: string;
+    label: string;
+    empresa: string;
+    tipo: string;
+    message: string;
+  }> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/documents/${documentId}/export-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al exportar por correo' }));
+      throw new Error(err.detail || 'Fallo en la exportación al correo');
     }
     return res.json();
   },

@@ -17,3 +17,9 @@
 - [Thursday]-[20/08/2026]-[12:21] : Applied missing Supabase schema columns (`document_type`, `classifier_score`, `needs_ai_fallback`, `ai_tokens`, `ai_cost_usd`, `ai_model`) directly via Supabase MCP migration executor. Verified HTTP `/api/v1/documents/?scope=inbox` returning all 14 records immediately.
 - [Thursday]-[20/08/2026]-[13:43] : Generated and ingested 10 new synthetic Colombian invoices (`factura_col_7520.pdf` to `factura_col_7529.pdf`) with authentic layout and line items into PostgreSQL Supabase DB. Verified HTTP endpoint returning all 10 invoices in GREEN status (100% auditted and squared).
 - [Thursday]-[20/08/2026]-[13:52] : Removed hardcoded `baseInvoice` item fallbacks from `AuditorPage.tsx`. Implemented empty state in `LineItemsTable.tsx` with dedicated 'Escanear con IA' manual fallback button and cost estimation confirmation modal (USD/tokens) matching US-REQ-002.
+- [Thursday]-[20/08/2026]-[13:55] : Completed full Frontend User Stories:
+  * US-REQ-002 & US-REQ-003: Integrated batch failure count and 'Analizar con IA por lote' button with total cost estimation modal (`POST /api/v1/ai/cost-estimate/batch` & `/api/v1/ai/analyze/batch`).
+  * US-REQ-006: Added 'Exportar Correo' action button with automatic hierarchical categorization (`KONO_INVOICE/{Empresa}/{Debito|Credito}`) in `AuditForm.tsx`.
+  * US-REQ-007: Completed multi-selection checkboxes, optimistic bulk delete, accounting year filtering (2024-2026), 250ms search debounce, and paginated table.
+  * US-REQ-008: Dynamic optional split-screen layout with 'Mostrar/Ocultar Visor PDF' and external tab opener.
+  * Frontend production bundle built cleanly with 0 TypeScript errors.

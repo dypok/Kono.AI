@@ -210,3 +210,69 @@ async def analyze_with_ai(
         },
         **estimate,
     }
+
+
+@router.post("/analyze/batch")
+async def analyze_batch_with_ai(
+    body: BatchCostEstimateRequest,
+    current_user: SupabaseUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger AI fallback for a batch of documents under user demand."""
+    if not body.document_ids:
+        raise HTTPException(status_code=400, detail="No document_ids provided")
+
+    results = []
+    total_tokens = 0
+    total_cost = 0.0
+    fallback = AiFallback()
+    fields = body.conflicting_fields or ["invoice_number", "subtotal", "total", "tax_id", "issue_date"]
+
+    for doc_id in body.document_ids:
+        doc = await db.get(Document, doc_id)
+        if not doc:
+            continue
+
+        invoice = _doc_to_invoice(doc)
+        estimate = fallback.estimate_cost(invoice, fields)
+        total_tokens += estimate["total_tokens"]
+        total_cost += estimate["estimated_cost_usd"]
+
+        result = fallback.request_fallback(invoice, fields)
+        if result is not None:
+            if result.invoice_number:
+                doc.invoice_number = result.invoice_number
+            if result.tax_id:
+                doc.vendor_tax_id = result.tax_id
+            if result.subtotal is not None:
+                doc.subtotal = result.subtotal
+            if result.tax_total is not None:
+                doc.tax_total = result.tax_total
+            if result.total is not None:
+                doc.grand_total = result.total
+            if result.issue_date:
+                doc.issue_date = result.issue_date
+
+            doc.needs_ai_fallback = False
+            doc.ai_tokens = estimate["total_tokens"]
+            doc.ai_cost_usd = estimate["estimated_cost_usd"]
+            doc.ai_model = fallback.MODEL
+            doc.extraction_method = "AI_FALLBACK"
+            doc.document_type = "INVOICE"
+            doc.kono_state = "YELLOW"
+            await db.commit()
+
+        results.append({
+            "document_id": doc_id,
+            "status": "SUCCESS" if result is not None else "ESTIMATE_ONLY",
+            "invoice_number": doc.invoice_number,
+            "estimated_cost_usd": estimate["estimated_cost_usd"],
+        })
+
+    return {
+        "processed_count": len(results),
+        "total_estimated_cost_usd": round(total_cost, 6),
+        "total_tokens": total_tokens,
+        "results": results,
+        "message": f"Se procesaron {len(results)} comprobantes con IA.",
+    }

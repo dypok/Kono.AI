@@ -11,6 +11,7 @@ import {
   IconInbox,
   IconCheck,
   IconTrash,
+  IconSparkles,
 } from '@tabler/icons-react';
 import { documentsApi, DocumentListItem } from '../services/documentsApi';
 import { useAuthStore } from '../store/authStore';
@@ -124,6 +125,15 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  const [batchFailedIds, setBatchFailedIds] = useState<string[]>([]);
+  const [batchAiEstimate, setBatchAiEstimate] = useState<{
+    total_estimated_cost_usd: number;
+    total_tokens: number;
+    count: number;
+  } | null>(null);
+  const [showBatchAiModal, setShowBatchAiModal] = useState(false);
+  const [isAnalyzingBatch, setIsAnalyzingBatch] = useState(false);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -137,16 +147,53 @@ export const DashboardPage: React.FC = () => {
         setUploadSuccessMsg(`Comprobante ${res.invoice_number || fileList[0].name} extraído y procesado con éxito.`);
       } else {
         const res = await documentsApi.batchUploadDocuments(fileList);
-        setUploadSuccessMsg(`Lote procesado: ${res.processed_count || fileList.length} facturas extraídas exitosamente.`);
+        const failedDocs = (res.items || []).filter((it: any) => it.document_type === 'OTHER').map((it: any) => it.id);
+        setBatchFailedIds(failedDocs);
+        
+        if (res.failed_count > 0) {
+          setUploadSuccessMsg(`Lote procesado: ${res.success_count} correctas, ${res.failed_count} no pudieron leerse.`);
+        } else {
+          setUploadSuccessMsg(`Lote procesado: ${res.processed_count || fileList.length} facturas extraídas exitosamente.`);
+        }
       }
       fetchDocuments();
-      setTimeout(() => setUploadSuccessMsg(null), 4500);
+      setTimeout(() => setUploadSuccessMsg(null), 6000);
     } catch (err: any) {
       alert(`Error al procesar lote: ${err.message}`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (folderInputRef.current) folderInputRef.current.value = '';
+    }
+  };
+
+  const handleOpenBatchAiModal = async () => {
+    if (batchFailedIds.length === 0) return;
+    try {
+      const est = await documentsApi.estimateBatchAiCost(batchFailedIds);
+      setBatchAiEstimate({
+        total_estimated_cost_usd: est.total_estimated_cost_usd,
+        total_tokens: est.total_tokens,
+        count: est.count,
+      });
+      setShowBatchAiModal(true);
+    } catch (err: any) {
+      alert(`Error calculando costo de lote: ${err.message}`);
+    }
+  };
+
+  const handleConfirmBatchAi = async () => {
+    try {
+      setIsAnalyzingBatch(true);
+      const res = await documentsApi.analyzeBatchWithAi(batchFailedIds);
+      setToastMsg(`✅ ${res.message}`);
+      setShowBatchAiModal(false);
+      setBatchFailedIds([]);
+      fetchDocuments();
+    } catch (err: any) {
+      alert(`Error en análisis de lote con IA: ${err.message}`);
+    } finally {
+      setIsAnalyzingBatch(false);
     }
   };
 
@@ -271,11 +318,23 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Success Notification Banner */}
+      {/* Success / Batch Status Notification Banner */}
       {uploadSuccessMsg && (
-        <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs flex items-center space-x-2 animate-fade-in">
-          <IconCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{uploadSuccessMsg}</span>
+        <div className="p-4 rounded-2xl bg-titanium-900/90 border border-white/15 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in shadow-xl">
+          <div className="flex items-center space-x-2 text-alabaster-200">
+            <IconCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{uploadSuccessMsg}</span>
+          </div>
+
+          {batchFailedIds.length > 0 && (
+            <button
+              onClick={handleOpenBatchAiModal}
+              className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-500/20 transition flex items-center space-x-1.5 shrink-0"
+            >
+              <IconSparkles className="w-4 h-4 text-purple-200" />
+              <span>Analizar {batchFailedIds.length} fallidas con IA</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -555,6 +614,67 @@ export const DashboardPage: React.FC = () => {
         description="Esta acción eliminará permanentemente todos los comprobantes seleccionados de la base de datos."
         isDeleting={isBulkDeleting}
       />
+
+      {/* Batch AI Analysis Modal (US-REQ-003) */}
+      {showBatchAiModal && batchAiEstimate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-titanium-950/80 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md liquid-glass rounded-3xl p-6 border border-purple-500/30 shadow-2xl space-y-4">
+            <div className="flex items-center space-x-3 text-purple-400">
+              <div className="w-10 h-10 rounded-2xl bg-purple-500/20 flex items-center justify-center">
+                <IconSparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-alabaster-100">Análisis con IA por Lote</h3>
+                <p className="text-[11px] text-zinc-400 font-mono">Modelo: gpt-4o-mini</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2 text-xs">
+              <div className="flex justify-between text-zinc-300">
+                <span>Comprobantes a Procesar:</span>
+                <strong className="font-mono text-alabaster-100">{batchAiEstimate.count} archivos</strong>
+              </div>
+              <div className="flex justify-between text-zinc-300">
+                <span>Tokens Totales Estimados:</span>
+                <strong className="font-mono text-alabaster-100">{batchAiEstimate.total_tokens} tokens</strong>
+              </div>
+              <div className="flex justify-between text-zinc-300">
+                <span>Costo Total Estimado:</span>
+                <strong className="font-mono text-emerald-400 text-sm">
+                  ${batchAiEstimate.total_estimated_cost_usd.toFixed(5)} USD
+                </strong>
+              </div>
+              <p className="text-[10px] text-zinc-400 pt-1 border-t border-white/5">
+                La IA extraerá campos clave y tablas de los documentos que no pudieron leerse determinísticamente.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowBatchAiModal(false)}
+                disabled={isAnalyzingBatch}
+                className="flex-1 px-4 py-2.5 rounded-xl liquid-glass-card hover:bg-white/5 border border-white/10 text-xs text-zinc-300 font-medium transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBatchAi}
+                disabled={isAnalyzingBatch}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg shadow-purple-500/25 transition flex items-center justify-center space-x-1.5 disabled:opacity-50"
+              >
+                {isAnalyzingBatch ? (
+                  <IconLoader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <IconSparkles className="w-4 h-4 text-white" />
+                )}
+                <span>{isAnalyzingBatch ? 'Analizando Lote...' : 'Confirmar & Analizar'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
