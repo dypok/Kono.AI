@@ -27,7 +27,7 @@ export const DashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isApprovingBulk, setIsApprovingBulk] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string | null>(null);
 
   // Modal State
@@ -45,11 +45,9 @@ export const DashboardPage: React.FC = () => {
         q: searchQuery.trim() || undefined,
       });
       setDocuments(res.items || []);
-      if (res.counts) {
-        setCounts(res.counts);
-      }
+      setCounts(res.counts || { all: 0, green: 0, yellow: 0, red: 0 });
     } catch (err) {
-      console.error('Error fetching real documents:', err);
+      console.error('Error fetching documents:', err);
     } finally {
       setIsLoading(false);
     }
@@ -65,18 +63,14 @@ export const DashboardPage: React.FC = () => {
 
     try {
       setIsUploading(true);
-      if (files.length === 1) {
-        const file = files[0];
-        await documentsApi.uploadDocument(file);
-        setUploadSuccessMsg(`Comprobante "${file.name}" cargado y procesado.`);
+      setUploadSuccessMsg(null);
+      const fileList = Array.from(files);
+      if (fileList.length === 1) {
+        const res = await documentsApi.uploadDocument(fileList[0]);
+        setUploadSuccessMsg(`Comprobante ${res.invoice_number || fileList[0].name} extraído y procesado con éxito.`);
       } else {
-        const fileList = Array.from(files).filter((f) => {
-          const name = f.name.toLowerCase();
-          return name.endsWith('.pdf') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg');
-        });
-        if (fileList.length === 0) return;
-        const res = await documentsApi.batchUploadDocuments(fileList);
-        setUploadSuccessMsg(`🎉 Se procesaron ${res.total_processed || res.processed_count || fileList.length} factura(s) con éxito.`);
+        const res = await documentsApi.uploadBatchDocuments(fileList);
+        setUploadSuccessMsg(`Lote procesado: ${res.total_processed} facturas extraídas exitosamente.`);
       }
       fetchDocuments();
       setTimeout(() => setUploadSuccessMsg(null), 4500);
@@ -93,7 +87,7 @@ export const DashboardPage: React.FC = () => {
     if (!docToDelete) return;
     const toDeleteId = docToDelete.id;
 
-    // ⚡ Optimistic UI Update: Remover inmediatamente de la lista local en 0ms
+    // ⚡ Optimistic UI: Cierra el modal de inmediato y remueve de la vista en 0ms
     setDocToDelete(null);
     setDocuments((prev) => prev.filter((d) => d.id !== toDeleteId));
     setCounts((prev) => ({
@@ -101,15 +95,18 @@ export const DashboardPage: React.FC = () => {
       all: Math.max(0, prev.all - 1),
     }));
 
+    setDeletingIds((prev) => new Set(prev).add(toDeleteId));
     try {
-      setDeletingId(toDeleteId);
       await documentsApi.deleteDocument(toDeleteId);
     } catch (err: any) {
       alert(`Error al eliminar: ${err.message}`);
-      // Revertir en caso de falla
       fetchDocuments();
     } finally {
-      setDeletingId(null);
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(toDeleteId);
+        return next;
+      });
     }
   };
 
@@ -341,11 +338,11 @@ export const DashboardPage: React.FC = () => {
                             name: doc.invoice_number || doc.file_name || 'Comprobante',
                           });
                         }}
-                        disabled={deletingId === doc.id}
+                        disabled={deletingIds.has(doc.id)}
                         className="p-1.5 rounded-xl hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 border border-transparent hover:border-rose-500/20 transition disabled:opacity-40"
                         title="Eliminar factura"
                       >
-                        {deletingId === doc.id ? (
+                        {deletingIds.has(doc.id) ? (
                           <IconLoader2 className="w-4 h-4 animate-spin text-rose-400" />
                         ) : (
                           <IconTrash className="w-4 h-4" />
@@ -368,7 +365,7 @@ export const DashboardPage: React.FC = () => {
         title="¿Eliminar comprobante?"
         itemIdentifier={docToDelete?.name}
         description="Esta acción es irreversible y eliminará permanentemente el comprobante y todos sus registros."
-        isDeleting={Boolean(deletingId)}
+        isDeleting={Boolean(docToDelete && deletingIds.has(docToDelete.id))}
       />
     </div>
   );

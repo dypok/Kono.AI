@@ -17,7 +17,7 @@ export const TemplatesPage: React.FC = () => {
   const navigate = useNavigate();
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<{ id: string; name: string } | null>(null);
 
@@ -53,14 +53,18 @@ export const TemplatesPage: React.FC = () => {
     setToastMsg(`🗑️ Plantilla de "${toDeleteName}" eliminada.`);
     setTimeout(() => setToastMsg(null), 3000);
 
+    setDeletingIds((prev) => new Set(prev).add(toDeleteId));
     try {
-      setDeletingId(toDeleteId);
       await documentsApi.deleteVendorTemplate(toDeleteId);
     } catch (err: any) {
       alert(`Error al eliminar: ${err.message}`);
       fetchTemplates();
     } finally {
-      setDeletingId(null);
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(toDeleteId);
+        return next;
+      });
     }
   };
 
@@ -145,11 +149,11 @@ export const TemplatesPage: React.FC = () => {
                     id: t.id,
                     name: t.vendor_name || t.vendor_tax_id,
                   })}
-                  disabled={deletingId === t.id}
+                  disabled={deletingIds.has(t.id)}
                   className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition disabled:opacity-40"
                   title="Eliminar plantilla"
                 >
-                  {deletingId === t.id ? (
+                  {deletingIds.has(t.id) ? (
                     <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
                   ) : (
                     <Trash2 className="w-4 h-4" />
@@ -169,9 +173,8 @@ export const TemplatesPage: React.FC = () => {
         title="¿Eliminar plantilla de extracción?"
         itemIdentifier={templateToDelete?.name}
         description="Esta acción eliminará permanentemente las reglas de auto-aprendizaje y los vectores espaciales de este proveedor."
-        isDeleting={Boolean(deletingId)}
+        isDeleting={Boolean(templateToDelete && deletingIds.has(templateToDelete.id))}
       />
     </div>
   );
 };
-
