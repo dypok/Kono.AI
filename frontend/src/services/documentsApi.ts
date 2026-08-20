@@ -41,14 +41,18 @@ async function getAuthHeader(): Promise<Record<string, string>> {
 }
 
 export const documentsApi = {
-  /** Obtiene la lista paginada de facturas procesadas con filtros */
+  /** Obtiene la lista paginada de facturas procesadas con filtros y ámbito (inbox / history / all) */
   async listDocuments(params?: {
     kono_state?: string;
+    scope?: 'inbox' | 'history' | 'all';
     q?: string;
     page?: number;
     pageSize?: number;
   }): Promise<DocumentsResponse> {
     const searchParams = new URLSearchParams();
+    if (params?.scope) {
+      searchParams.append('scope', params.scope);
+    }
     if (params?.kono_state && params.kono_state !== 'all') {
       searchParams.append('kono_state', params.kono_state.toUpperCase());
     }

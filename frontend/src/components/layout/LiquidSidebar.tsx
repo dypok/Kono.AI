@@ -11,6 +11,7 @@ import {
   IconChevronRight,
   IconBroadcast,
   IconBuildingSkyscraper,
+  IconHistory,
 } from '@tabler/icons-react';
 
 export const LiquidSidebar: React.FC = () => {
@@ -25,6 +26,7 @@ export const LiquidSidebar: React.FC = () => {
 
   const navItems = [
     { name: 'Auditoría & Facturas', path: '/dashboard', icon: IconFileSearch, badge: 'Live' },
+    { name: 'Historial ERP', path: '/history', icon: IconHistory, badge: 'ERP' },
     { name: 'Plantillas Proveedor', path: '/templates', icon: IconLayersLinked, badge: 'Auto' },
     { name: 'Conciliación & ERP', path: '/analytics', icon: IconChartBar },
     { name: 'Configuración', path: '/settings', icon: IconSettings },

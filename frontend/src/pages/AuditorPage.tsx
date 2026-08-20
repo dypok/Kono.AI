@@ -151,18 +151,32 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
   }
 
   async function handleApproveAndExport() {
-    if (invoice.auditState === 'critical') return;
+    if (!invoice || invoice.auditState === 'critical') return;
     try {
       setIsApproving(true);
-      if (invoice.id && invoice.id !== 'inv-001') {
-        await documentsApi.approveDocument(invoice.id);
-        await documentsApi.exportToErp(invoice.id, 'generic');
+      const currentDocId = invoice.id;
+      if (currentDocId && currentDocId !== 'inv-001') {
+        await documentsApi.approveDocument(currentDocId);
+        await documentsApi.exportToErp(currentDocId, 'generic');
       }
-      showToast(`✅ Factura ${invoice.invoiceNumber} aprobada y exportada al ERP contable.`);
-      setTimeout(() => {
-        if (onBackToSite) onBackToSite();
-        else navigate('/dashboard');
-      }, 1200);
+
+      showToast(`✅ Factura ${invoice.invoiceNumber || currentDocId} aprobada y exportada al ERP.`);
+
+      // 🔄 Flujo continuo: Consultar la siguiente factura pendiente de la bandeja de entrada
+      const nextPendingRes = await documentsApi.listDocuments({ scope: 'inbox', page: 1, pageSize: 5 });
+      const nextDocs = (nextPendingRes.items || []).filter((d) => d.id !== currentDocId);
+
+      if (nextDocs.length > 0) {
+        const nextDoc = nextDocs[0];
+        showToast(`⚡ Factura exportada. Cargando siguiente comprobante: ${nextDoc.invoice_number || 'Siguiente'}...`);
+        navigate(`/audit/${nextDoc.id}`, { replace: true });
+      } else {
+        showToast(`🎉 ¡Todas las facturas han sido auditadas y exportadas al ERP!`);
+        setTimeout(() => {
+          if (onBackToSite) onBackToSite();
+          else navigate('/dashboard');
+        }, 1500);
+      }
     } catch (err: any) {
       showToast(`Error al aprobar: ${err.message}`);
     } finally {
@@ -181,7 +195,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
               if (onBackToSite) onBackToSite();
               else navigate('/dashboard');
             }}
-            className="p-2 rounded-xl liquid-glass-card hover:bg-white/10 text-alabaster-200 border border-white/10 transition flex items-center space-x-1.5 text-xs"
+            className="p-2 rounded-xl liquid-glass-card hover:bg-white/10 text-alabaster-200 border border-white/10 transition flex items-center space-x-1.5 text-xs shadow-sm"
           >
             <IconArrowLeft className="w-4 h-4 text-kono-silver" />
             <span>Volver a Facturas</span>
@@ -200,21 +214,6 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
               Comprobante: <strong className="text-zinc-200">{invoice?.issuerName || 'Factura'}</strong> • {invoice?.issuerTaxId || ''}
             </p>
           </div>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={handleApproveAndExport}
-            disabled={isApproving || !invoice || invoice.auditState === 'critical'}
-            className="px-4 py-2 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition shadow flex items-center space-x-1.5 disabled:opacity-50"
-          >
-            {isApproving ? (
-              <IconLoader2 className="w-4 h-4 text-titanium-950 animate-spin" />
-            ) : (
-              <IconCircleCheck className="w-4 h-4 text-titanium-950" />
-            )}
-            <span>Aprobar Comprobante</span>
-          </button>
         </div>
       </div>
 

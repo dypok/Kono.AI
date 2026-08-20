@@ -40,6 +40,7 @@ export const DashboardPage: React.FC = () => {
     try {
       setIsLoading(true);
       const res = await documentsApi.listDocuments({
+        scope: 'inbox',
         kono_state: activeTab === 'all' ? undefined : activeTab,
         q: searchQuery.trim() || undefined,
       });
@@ -73,30 +74,18 @@ export const DashboardPage: React.FC = () => {
           const name = f.name.toLowerCase();
           return name.endsWith('.pdf') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg');
         });
-        const res = await documentsApi.batchUploadDocuments(fileList);
-        setUploadSuccessMsg(`Lote completado: ${res.processed_count || fileList.length} facturas extraídas con éxito.`);
+        if (fileList.length === 0) return;
+        const res = await documentsApi.uploadBatch(fileList);
+        setUploadSuccessMsg(`🎉 Se procesaron ${res.total_processed} factura(s) con éxito.`);
       }
-      setTimeout(() => setUploadSuccessMsg(null), 4000);
       fetchDocuments();
+      setTimeout(() => setUploadSuccessMsg(null), 4500);
     } catch (err: any) {
-      alert(`Error al subir: ${err.message || 'Error desconocido'}`);
+      alert(`Error al procesar lote: ${err.message}`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (folderInputRef.current) folderInputRef.current.value = '';
-    }
-  };
-
-  const handleBulkApprove = async () => {
-    try {
-      setIsApprovingBulk(true);
-      const res = await documentsApi.bulkApprove();
-      alert(res.message);
-      fetchDocuments();
-    } catch (err: any) {
-      alert(`Error al aprobar: ${err.message}`);
-    } finally {
-      setIsApprovingBulk(false);
     }
   };
 
@@ -164,11 +153,11 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-center space-x-2">
             <h1 className="text-xl font-bold text-alabaster-100">Bandeja de Auditoría Financiera</h1>
             <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono">
-              Motor Activo
+              Bandeja Activa
             </span>
           </div>
           <p className="text-xs text-zinc-400 mt-1">
-            Comprobantes de {user?.email || 'tu cuenta'} auditados en tiempo real con motor determinista y Supabase.
+            Comprobantes de {user?.email || 'tu cuenta'} pendientes de revisión y exportación contable.
           </p>
         </div>
 
@@ -191,24 +180,11 @@ export const DashboardPage: React.FC = () => {
           <button
             onClick={() => folderInputRef.current?.click()}
             disabled={isUploading}
-            className="px-4 py-2.5 rounded-xl liquid-glass-card hover:bg-white/5 border border-white/10 text-xs text-alabaster-200 flex items-center space-x-2 transition disabled:opacity-50"
+            className="px-4 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs flex items-center space-x-2 transition shadow disabled:opacity-50"
             title="Escanea una carpeta completa con facturas"
           >
-            <IconInbox className="w-4 h-4 text-cyan-400" />
+            <IconInbox className="w-4 h-4 text-titanium-950" />
             <span>Escanear Carpeta</span>
-          </button>
-
-          <button
-            onClick={handleBulkApprove}
-            disabled={isApprovingBulk || counts.all === 0}
-            className="px-4 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition shadow flex items-center space-x-2 disabled:opacity-40"
-          >
-            {isApprovingBulk ? (
-              <IconLoader2 className="w-4 h-4 text-titanium-950 animate-spin" />
-            ) : (
-              <IconCircleCheck className="w-4 h-4 text-titanium-950" />
-            )}
-            <span>Aprobar Todo ({counts.all})</span>
           </button>
         </div>
       </div>
