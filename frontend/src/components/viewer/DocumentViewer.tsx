@@ -21,11 +21,6 @@ export function DocumentViewer({ invoice, pdfUrl }: DocumentViewerProps) {
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-kono-silver shrink-0" />
           <span className="font-semibold text-alabaster-100 text-xs">Comprobante Fuente</span>
-          {invoice.invoiceNumber && (
-            <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              {invoice.invoiceNumber}
-            </span>
-          )}
         </div>
 
         {rawUrl && (
