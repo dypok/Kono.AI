@@ -9,6 +9,7 @@ from app.core.config import get_settings
 from app.core.database import Base, get_sync_engine, init_engine
 from app import models  # noqa: F401  (registers all ORM models on Base)
 from app.api.v1 import audit as audit_router
+from app.api.v1 import ai as ai_router
 from app.api.v1 import documents as documents_router
 from app.api.v1 import vendors as vendors_router
 from app.api.v1 import auth as auth_router
@@ -82,6 +83,7 @@ app.state.ws_manager = ws_manager
 app.include_router(documents_router.router, prefix="/api/v1")
 app.include_router(vendors_router.router, prefix="/api/v1")
 app.include_router(audit_router.router, prefix="/api/v1")
+app.include_router(ai_router.router, prefix="/api/v1")
 app.include_router(auth_router.router, prefix="/api/v1")
 app.include_router(inbound_router.router, prefix="/api/v1")
 app.include_router(integrations_router.router, prefix="/api/v1")

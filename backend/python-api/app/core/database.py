@@ -48,6 +48,37 @@ def init_engine(database_url: str | None = None) -> None:
     )
     try:
         sync_engine = create_engine(sync_url, future=True, pool_pre_ping=True)
+        # Lightweight migration for new columns (US-REQ-001/002)
+        try:
+            from sqlalchemy import text
+
+            with sync_engine.connect() as conn:
+                for ddl in [
+                    "ALTER TABLE documents ADD COLUMN IF NOT EXISTS document_type VARCHAR(20) DEFAULT 'INVOICE'",
+                    "ALTER TABLE documents ADD COLUMN IF NOT EXISTS classifier_score FLOAT",
+                    "ALTER TABLE documents ADD COLUMN IF NOT EXISTS needs_ai_fallback BOOLEAN DEFAULT FALSE",
+                    "ALTER TABLE documents ADD COLUMN IF NOT EXISTS ai_tokens INTEGER",
+                    "ALTER TABLE documents ADD COLUMN IF NOT EXISTS ai_cost_usd FLOAT",
+                    "ALTER TABLE documents ADD COLUMN IF NOT EXISTS ai_model VARCHAR(30)",
+                ]:
+                    try:
+                        conn.execute(text(ddl))
+                        conn.commit()
+                    except Exception:
+                        # Fallback for SQLite without IF NOT EXISTS
+                        try:
+                            result = conn.execute(text("PRAGMA table_info(documents)"))
+                            cols = [row[1] for row in result.fetchall()]
+                            col_name = ddl.split()[5]
+                            if col_name not in cols:
+                                # Retry without IF NOT EXISTS
+                                simple_ddl = ddl.replace(" IF NOT EXISTS", "")
+                                conn.execute(text(simple_ddl))
+                                conn.commit()
+                        except Exception:
+                            pass
+        except Exception:
+            pass
     except Exception:
         sync_engine = None
 

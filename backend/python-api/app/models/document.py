@@ -60,6 +60,10 @@ class Document(Base):
     )  # PENDING | PROCESSING | AUDITED | APPROVED | REJECTED
     document_type = Column(String(20), default="INVOICE", index=True)  # INVOICE | RECEIPT | OTHER
     classifier_score = Column(Float, nullable=True)
+    needs_ai_fallback = Column(Boolean, default=False)
+    ai_tokens = Column(Integer, nullable=True)
+    ai_cost_usd = Column(Float, nullable=True)
+    ai_model = Column(String(30), nullable=True)
     processing_time_ms = Column(Float, nullable=True)
     bounding_boxes = Column(JSON, nullable=True)
 
