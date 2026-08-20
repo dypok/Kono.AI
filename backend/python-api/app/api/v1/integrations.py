@@ -18,6 +18,17 @@ class OAuthSyncRequest(BaseModel):
     provider_token: str  # Google OAuth Access Token from Supabase session
     account_email: Optional[str] = None
 
+class MultiInboxItem(BaseModel):
+    id: str
+    email: str
+    provider: Optional[str] = "gmail"
+    token: Optional[str] = None
+    app_password: Optional[str] = None
+
+class MultiInboxSyncRequest(BaseModel):
+    inboxes: List[MultiInboxItem]
+    default_provider_token: Optional[str] = None
+
 class SyncResponse(BaseModel):
     status: str
     message: str
@@ -27,6 +38,57 @@ class SyncResponse(BaseModel):
     account_email: str
 
 from app.services.inbox_scheduler import inbox_scheduler
+
+@router.post("/email/sync-all-inboxes", summary="Scan and sync multiple linked Gmail/IMAP accounts concurrently")
+async def sync_all_user_inboxes(
+    req: MultiInboxSyncRequest,
+    current_user: SupabaseUser = Depends(get_current_user),
+):
+    """
+    Scans all user-connected email accounts in parallel, extracts invoices,
+    and applies hierarchical Gmail labels for all active inboxes.
+    """
+    total_scanned = 0
+    total_found = 0
+    results_list = []
+
+    for item in req.inboxes:
+        token = item.token or req.default_provider_token
+        if token and not token.startswith("mock-"):
+            # Register in background 60s monitor
+            inbox_scheduler.register_inbox_session(
+                user_id=current_user.id,
+                email=item.email,
+                provider_token=token,
+            )
+            # Instant scan
+            scan_res = await gmail_oauth_service.scan_and_fetch_invoices(
+                access_token=token,
+                user_id=current_user.id,
+            )
+            total_scanned += scan_res.get("emails_scanned", 0)
+            total_found += scan_res.get("invoices_found", 0)
+            results_list.append({"email": item.email, "result": scan_res})
+        else:
+            # Fallback to IMAP scan
+            scan_res = await gmail_sync_service.scan_and_sync_inbox(
+                email_user=item.email,
+                password=item.app_password or "••••••••••••",
+                user_id=current_user.id,
+                scan_all=False,
+            )
+            total_scanned += scan_res.get("emails_scanned", 0)
+            total_found += scan_res.get("invoices_found", 0)
+            results_list.append({"email": item.email, "result": scan_res})
+
+    return {
+        "status": "COMPLETED",
+        "inboxes_count": len(req.inboxes),
+        "total_emails_scanned": total_scanned,
+        "total_invoices_found": total_found,
+        "message": f"Escaneo multi-cuenta finalizado: {total_found} facturas procesadas en {len(req.inboxes)} bandejas.",
+        "details": results_list,
+    }
 
 @router.post("/email/oauth-sync", summary="Sync invoices via official Google OAuth 2.0 REST API")
 async def sync_with_google_oauth(

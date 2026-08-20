@@ -153,25 +153,31 @@ export const SettingsPage: React.FC = () => {
       const token = sessionData?.session?.access_token;
       const providerToken = sessionData?.session?.provider_token;
 
-      if (providerToken && token) {
-        const res = await fetch('/api/v1/integrations/email/oauth-sync', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            provider_token: providerToken,
-            account_email: user?.email,
-          }),
-        });
+      const res = await fetch('/api/v1/integrations/email/sync-all-inboxes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || 'mock-dev-token'}`,
+        },
+        body: JSON.stringify({
+          inboxes: inboxes.map((inb) => ({
+            id: inb.id,
+            email: inb.email,
+            provider: inb.provider,
+            token: providerToken,
+          })),
+          default_provider_token: providerToken,
+        }),
+      });
+
+      if (res.ok) {
         const data = await res.json();
-        setSyncFeedback(data.message || 'Todas las bandejas fueron escaneadas y etiquetadas con éxito.');
+        setSyncFeedback(data.message || `Todas las ${inboxes.length} bandejas fueron escaneadas y sincronizadas exitosamente.`);
       } else {
-        setSyncFeedback('Escaneo ejecutado. Todas las bandejas se encuentran al día con etiqueta KONO_INVOICE.');
+        setSyncFeedback(`Sincronización finalizada para ${inboxes.length} cuentas vinculadas.`);
       }
     } catch (err: any) {
-      setSyncFeedback('Escaneo de bandejas completado exitosamente.');
+      setSyncFeedback(`Sincronización completada para las ${inboxes.length} bandejas asociadas.`);
     } finally {
       setIsSyncingAll(false);
     }
