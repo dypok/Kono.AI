@@ -66,6 +66,11 @@ class Settings:
         default_factory=lambda: int(os.environ.get("IMAP_POLL_INTERVAL_SEC", "60"))
     )
 
+    # ---- AI Fallback (OpenAI API Key) ----
+    openai_api_key: str = field(
+        default_factory=lambda: os.environ.get("OPENAI_API_KEY", "")
+    )
+
     @property
     def cors_origins(self) -> list:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]

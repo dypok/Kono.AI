@@ -23,3 +23,4 @@
   * US-REQ-007: Completed multi-selection checkboxes, optimistic bulk delete, accounting year filtering (2024-2026), 250ms search debounce, and paginated table.
   * US-REQ-008: Dynamic optional split-screen layout with 'Mostrar/Ocultar Visor PDF' and external tab opener.
   * Frontend production bundle built cleanly with 0 TypeScript errors.
+- [Thursday]-[20/08/2026]-[14:02] : Added OpenAI API Key management in `SettingsPage.tsx` with secure `localStorage` persistence (localhost). Updated backend `app/api/v1/ai.py` and `documentsApi.ts` to dynamically inject and use the configured API key via `X-OpenAI-Api-Key` headers for individual and batch AI fallback runs.

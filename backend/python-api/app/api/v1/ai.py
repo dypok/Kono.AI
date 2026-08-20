@@ -1,11 +1,12 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.supabase_auth import get_current_user, SupabaseUser
 from app.engine.ai_fallback import AiFallback
@@ -18,6 +19,18 @@ logger = logging.getLogger("kono.api.ai")
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
+def _get_ai_fallback_client(provided_key: Optional[str] = None) -> AiFallback:
+    key = provided_key or get_settings().openai_api_key
+    if not key:
+        return AiFallback(client=None)
+    try:
+        from openai import OpenAI
+        return AiFallback(client=OpenAI(api_key=key))
+    except Exception as e:
+        logger.warning(f"No se pudo inicializar OpenAI client: {e}")
+        return AiFallback(client=None)
+
+
 class CostEstimateRequest(BaseModel):
     document_id: str
     conflicting_fields: Optional[List[str]] = None
@@ -26,11 +39,13 @@ class CostEstimateRequest(BaseModel):
 class BatchCostEstimateRequest(BaseModel):
     document_ids: List[str]
     conflicting_fields: Optional[List[str]] = None
+    api_key: Optional[str] = None
 
 
 class AnalyzeRequest(BaseModel):
     conflicting_fields: Optional[List[str]] = None
     force: bool = False
+    api_key: Optional[str] = None
 
 
 def _doc_to_invoice(doc: Document) -> ExtractedInvoice:
@@ -136,6 +151,7 @@ async def analyze_with_ai(
     body: AnalyzeRequest,
     current_user: SupabaseUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    x_openai_key: Optional[str] = Header(None, alias="X-OpenAI-Api-Key"),
 ):
     """Trigger AI fallback for a document that had no data.
 
@@ -155,20 +171,17 @@ async def analyze_with_ai(
 
     invoice = _doc_to_invoice(doc)
     fields = body.conflicting_fields or ["invoice_number", "subtotal", "total", "tax_id", "issue_date"]
-    fallback = AiFallback()
-    # In production, inject real OpenAI client here via env
-    # For now, estimate cost and return it, but don't call AI if no client
+    api_key_to_use = body.api_key or x_openai_key
+    fallback = _get_ai_fallback_client(api_key_to_use)
     estimate = fallback.estimate_cost(invoice, fields)
 
     # Try to call AI if client is configured (will return None if no client)
     result = fallback.request_fallback(invoice, fields)
     if result is None:
-        # No AI client configured or AI failed - return estimate and keep as OTHER
-        # Frontend should show cost and allow user to provide API key
         return {
             "document_id": document_id,
             "status": "NO_AI_CLIENT",
-            "message": "No se encontró API key configurada. Configure OPENAI_API_KEY para habilitar IA.",
+            "message": "No se encontró API key configurada. Configure su OpenAI API Key en Ajustes para habilitar IA.",
             **estimate,
         }
 
@@ -191,9 +204,8 @@ async def analyze_with_ai(
     doc.ai_cost_usd = estimate["estimated_cost_usd"]
     doc.ai_model = fallback.MODEL
     doc.extraction_method = "AI_FALLBACK"
-    # Re-evaluate type after AI
     doc.document_type = "INVOICE"
-    doc.kono_state = "YELLOW"  # Needs review after AI
+    doc.kono_state = "YELLOW"
 
     await db.commit()
     await db.refresh(doc)
@@ -217,6 +229,7 @@ async def analyze_batch_with_ai(
     body: BatchCostEstimateRequest,
     current_user: SupabaseUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    x_openai_key: Optional[str] = Header(None, alias="X-OpenAI-Api-Key"),
 ):
     """Trigger AI fallback for a batch of documents under user demand."""
     if not body.document_ids:
@@ -225,7 +238,8 @@ async def analyze_batch_with_ai(
     results = []
     total_tokens = 0
     total_cost = 0.0
-    fallback = AiFallback()
+    api_key_to_use = body.api_key or x_openai_key
+    fallback = _get_ai_fallback_client(api_key_to_use)
     fields = body.conflicting_fields or ["invoice_number", "subtotal", "total", "tax_id", "issue_date"]
 
     for doc_id in body.document_ids:

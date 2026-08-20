@@ -11,6 +11,10 @@ import {
   IconX,
   IconAlertCircle,
   IconBrandGoogle,
+  IconKey,
+  IconEye,
+  IconEyeOff,
+  IconCheck,
 } from '@tabler/icons-react';
 import { useAuthStore } from '../store/authStore';
 import { documentsApi } from '../services/documentsApi';
@@ -26,6 +30,11 @@ interface ConnectedInbox {
 
 export const SettingsPage: React.FC = () => {
   const { user, signInWithGoogle } = useAuthStore();
+  const [openaiApiKey, setOpenaiApiKey] = useState<string>(() => {
+    return localStorage.getItem('kono_openai_api_key') || '';
+  });
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeySavedFeedback, setApiKeySavedFeedback] = useState<string | null>(null);
   const [inboxes, setInboxes] = useState<ConnectedInbox[]>(() => {
     const saved = localStorage.getItem('kono_inboxes_global');
     if (saved) {
@@ -472,6 +481,91 @@ export const SettingsPage: React.FC = () => {
             Puedes conectar las cuentas de correo donde tus proveedores envían facturas (ej. facturacion@, compras@, recepcion@). Cada vez que tu sesión esté activa, Kono revisará los correos entrantes, extraerá los comprobantes hacia tu bandeja de auditoría y les aplicará la etiqueta <strong className="text-zinc-300 font-mono">KONO_INVOICE</strong> en Gmail.
           </p>
         </div>
+      </div>
+
+      {/* 🤖 Card 3: Motor de Inteligencia Artificial & OpenAI API Key */}
+      <div className="liquid-glass rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-600/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+              <IconKey className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-alabaster-100">Motor de Inteligencia Artificial (OpenAI)</h2>
+              <p className="text-xs text-zinc-400">
+                Configura tu clave de API privada para el escaneo bajo demanda de comprobantes complejos o sin tabla.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (openaiApiKey.trim()) {
+              localStorage.setItem('kono_openai_api_key', openaiApiKey.trim());
+              setApiKeySavedFeedback('✓ API Key guardada de forma segura en tu navegador local (localhost).');
+            } else {
+              localStorage.removeItem('kono_openai_api_key');
+              setApiKeySavedFeedback('✓ API Key removida del almacenamiento local.');
+            }
+            setTimeout(() => setApiKeySavedFeedback(null), 4000);
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-[11px] font-medium text-alabaster-300 mb-1.5 uppercase tracking-wider">
+              OpenAI API Key (sk-...)
+            </label>
+            <div className="relative">
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={openaiApiKey}
+                onChange={(e) => setOpenaiApiKey(e.target.value)}
+                placeholder="sk-proj-..."
+                className="w-full liquid-glass-input px-3.5 py-2.5 pr-10 rounded-xl text-xs font-mono text-alabaster-100 placeholder:text-zinc-600"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition"
+                title={showApiKey ? 'Ocultar clave' : 'Mostrar clave'}
+              >
+                {showApiKey ? <IconEyeOff className="w-4 h-4" /> : <IconEye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1.5 text-xs text-zinc-400">
+            <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
+              <IconSparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>Privacidad &amp; Seguridad de tu Clave</span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-zinc-300">
+              Tu API Key se almacena de forma inmutable y aislada en el <strong className="text-alabaster-100 font-mono">localStorage de tu navegador</strong> (localhost). Kono nunca expone ni comparte tu saldo con terceros; solo se utiliza cuando autorizas explícitamente una extracción por IA con <span className="text-purple-300 font-mono">gpt-4o-mini</span>.
+            </p>
+          </div>
+
+          {apiKeySavedFeedback && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center space-x-2 animate-fade-in">
+              <IconCheck className="w-4 h-4 shrink-0" />
+              <span>{apiKeySavedFeedback}</span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-[11px] text-zinc-500 font-mono">
+              {openaiApiKey ? '● Clave activa en memoria local' : '○ Sin clave configurada'}
+            </span>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition duration-200 shadow-lg shadow-purple-500/20 flex items-center space-x-2"
+            >
+              <IconCheck className="w-4 h-4 text-white" />
+              <span>Guardar API Key</span>
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* 🪄 Modal 1: Añadir Nuevo Correo */}

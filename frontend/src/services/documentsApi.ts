@@ -516,13 +516,18 @@ export const documentsApi = {
     message: string;
   }> {
     const headers = await getAuthHeader();
+    const apiKey = localStorage.getItem('kono_openai_api_key') || undefined;
     const res = await fetch('/api/v1/ai/analyze/batch', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(apiKey ? { 'X-OpenAI-Api-Key': apiKey } : {}),
         ...headers,
       },
-      body: JSON.stringify({ document_ids: documentIds }),
+      body: JSON.stringify({
+        document_ids: documentIds,
+        api_key: apiKey,
+      }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Error al analizar lote con IA' }));
@@ -541,13 +546,18 @@ export const documentsApi = {
     document?: any;
   }> {
     const headers = await getAuthHeader();
+    const apiKey = localStorage.getItem('kono_openai_api_key') || undefined;
     const res = await fetch(`/api/v1/ai/analyze/${documentId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(apiKey ? { 'X-OpenAI-Api-Key': apiKey } : {}),
         ...headers,
       },
-      body: JSON.stringify({ force }),
+      body: JSON.stringify({
+        force,
+        api_key: apiKey,
+      }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Error al analizar con IA' }));
