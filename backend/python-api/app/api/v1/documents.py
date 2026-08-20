@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -405,12 +405,19 @@ async def stream_file(document_id: str, db: AsyncSession = Depends(get_db)):
     if not path or not path.exists():
         settings = get_settings()
         candidates = [
+            Path(settings.storage_dir) / "processed" / f"{doc.id}.pdf",
+            Path(settings.storage_dir) / "processed" / f"{doc.id}.png",
+            Path(settings.storage_dir) / "processed" / f"{doc.id}.jpg",
+            Path("/data/storage/processed") / f"{doc.id}.pdf",
+            Path("/data/storage/processed") / f"{doc.id}.png",
+            Path("/data/storage/processed") / f"{doc.id}.jpg",
             Path(settings.storage_dir) / "inbound" / f"{doc.id}.pdf",
             Path(settings.storage_dir) / "inbound" / f"{doc.id}.png",
             Path(settings.storage_dir) / "inbound" / f"{doc.id}.jpg",
             Path("/data/storage/inbound") / f"{doc.id}.pdf",
             Path("/app/data/storage/inbound") / f"{doc.id}.pdf",
             Path("/app/scripts/facturas_pdf") / (doc.file_name or ""),
+            Path("scripts/facturas_pdf") / (doc.file_name or ""),
         ]
         found = False
         for c in candidates:
@@ -428,6 +435,39 @@ async def stream_file(document_id: str, db: AsyncSession = Depends(get_db)):
             yield from fh
 
     return StreamingResponse(iter_file(), media_type=media_type)
+
+
+# -------------------------------------------------------------------------- #
+# DELETE /api/v1/documents/{id} (Delete document and associated records/files)
+# -------------------------------------------------------------------------- #
+@router.delete("/{document_id}")
+async def delete_document(
+    document_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: SupabaseUser = Depends(get_current_user),
+):
+    """Deletes a document, its line items, discrepancies, and binary file."""
+    doc = await db.get(Document, document_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Optional: Delete binary file from disk if present
+    if doc.file_path:
+        try:
+            p = Path(doc.file_path)
+            if p.exists() and p.is_file():
+                p.unlink()
+        except Exception:
+            pass
+
+    # Delete related records
+    await db.execute(delete(InvoiceItem).where(InvoiceItem.document_id == document_id))
+    await db.execute(delete(Discrepancy).where(Discrepancy.document_id == document_id))
+    await db.execute(delete(AuditLog).where(AuditLog.document_id == document_id))
+    await db.delete(doc)
+    await db.commit()
+
+    return {"status": "SUCCESS", "message": "Document deleted successfully", "id": document_id}
 
 
 def _state_snapshot(doc: Document) -> dict:

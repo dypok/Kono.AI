@@ -10,6 +10,7 @@ import {
   IconLoader2,
   IconInbox,
   IconCheck,
+  IconTrash,
 } from '@tabler/icons-react';
 import { documentsApi, DocumentListItem } from '../services/documentsApi';
 import { useAuthStore } from '../store/authStore';
@@ -24,6 +25,7 @@ export const DashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isApprovingBulk, setIsApprovingBulk] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +92,22 @@ export const DashboardPage: React.FC = () => {
       alert(`Error al aprobar: ${err.message}`);
     } finally {
       setIsApprovingBulk(false);
+    }
+  };
+
+  const handleDeleteDocument = async (e: React.MouseEvent, docId: string, invoiceNum?: string) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(`¿Estás seguro de que deseas eliminar la factura ${invoiceNum || docId}? Esta acción no se puede deshacer.`);
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(docId);
+      await documentsApi.deleteDocument(docId);
+      fetchDocuments();
+    } catch (err: any) {
+      alert(`Error al eliminar: ${err.message}`);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -310,12 +328,26 @@ export const DashboardPage: React.FC = () => {
                     )}
                   </td>
                   <td className="py-4 px-6 text-right">
-                    <button
-                      onClick={() => navigate(`/audit/${doc.id}`)}
-                      className="px-3.5 py-1.5 rounded-xl liquid-glass-card hover:bg-white/10 text-alabaster-100 text-xs transition border border-white/10 font-medium shadow-sm flex items-center space-x-1 ml-auto"
-                    >
-                      <span>Auditar Visor</span>
-                    </button>
+                    <div className="flex items-center justify-end space-x-2">
+                      <button
+                        onClick={() => navigate(`/audit/${doc.id}`)}
+                        className="px-3.5 py-1.5 rounded-xl liquid-glass-card hover:bg-white/10 text-alabaster-100 text-xs transition border border-white/10 font-medium shadow-sm flex items-center space-x-1"
+                      >
+                        <span>Auditar Visor</span>
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteDocument(e, doc.id, doc.invoice_number || doc.file_name)}
+                        disabled={deletingId === doc.id}
+                        className="p-1.5 rounded-xl hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 border border-transparent hover:border-rose-500/20 transition disabled:opacity-40"
+                        title="Eliminar factura"
+                      >
+                        {deletingId === doc.id ? (
+                          <IconLoader2 className="w-4 h-4 animate-spin text-rose-400" />
+                        ) : (
+                          <IconTrash className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

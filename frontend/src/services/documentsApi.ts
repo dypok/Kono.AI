@@ -185,8 +185,19 @@ export const documentsApi = {
       },
     });
 
+  /** Elimina un documento y sus registros asociados */
+  async deleteDocument(documentId: string): Promise<any> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/documents/${documentId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+    });
+
     if (!res.ok) {
-      throw new Error('Error al aprobar facturas en lote');
+      throw new Error('Error al eliminar la factura');
     }
     return res.json();
   },
