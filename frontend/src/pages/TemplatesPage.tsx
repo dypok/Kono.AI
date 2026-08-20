@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layers, Trash2, CheckCircle, Loader2, UploadCloud, ArrowRight, ScanLine } from 'lucide-react';
 import { documentsApi } from '../services/documentsApi';
 import { KonoCyclingLoader } from '../components/common/KonoCyclingLoader';
+import { DeleteConfirmationModal } from '../components/common/DeleteConfirmationModal';
 
 interface TemplateItem {
   id: string;
@@ -18,6 +19,7 @@ export const TemplatesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const fetchTemplates = async () => {
     try {
@@ -40,15 +42,15 @@ export const TemplatesPage: React.FC = () => {
     fetchTemplates();
   }, []);
 
-  const handleDeleteTemplate = async (id: string, name: string) => {
-    const confirmed = window.confirm(`¿Deseas eliminar la plantilla de extracción de "${name}"?`);
-    if (!confirmed) return;
+  const handleConfirmDeleteTemplate = async () => {
+    if (!templateToDelete) return;
 
     try {
-      setDeletingId(id);
-      await documentsApi.deleteVendorTemplate(id);
+      setDeletingId(templateToDelete.id);
+      await documentsApi.deleteVendorTemplate(templateToDelete.id);
+      setToastMsg(`🗑️ Plantilla de "${templateToDelete.name}" eliminada.`);
+      setTemplateToDelete(null);
       fetchTemplates();
-      setToastMsg(`🗑️ Plantilla de "${name}" eliminada.`);
       setTimeout(() => setToastMsg(null), 3000);
     } catch (err: any) {
       alert(`Error al eliminar: ${err.message}`);
@@ -134,7 +136,10 @@ export const TemplatesPage: React.FC = () => {
               <div className="pt-3 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400">
                 <span className="font-mono">{t.total_matched_count || 1} comprobante(s) pareados</span>
                 <button
-                  onClick={() => handleDeleteTemplate(t.id, t.vendor_name || t.vendor_tax_id)}
+                  onClick={() => setTemplateToDelete({
+                    id: t.id,
+                    name: t.vendor_name || t.vendor_tax_id,
+                  })}
                   disabled={deletingId === t.id}
                   className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition disabled:opacity-40"
                   title="Eliminar plantilla"
@@ -150,6 +155,17 @@ export const TemplatesPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Liquid Glass Modal */}
+      <DeleteConfirmationModal
+        isOpen={Boolean(templateToDelete)}
+        onClose={() => setTemplateToDelete(null)}
+        onConfirm={handleConfirmDeleteTemplate}
+        title="¿Eliminar plantilla de extracción?"
+        itemIdentifier={templateToDelete?.name}
+        description="Esta acción eliminará las reglas de auto-aprendizaje y los vectores espaciales de este proveedor en PostgreSQL."
+        isDeleting={Boolean(deletingId)}
+      />
     </div>
   );
 };

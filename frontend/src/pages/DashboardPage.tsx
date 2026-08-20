@@ -15,6 +15,7 @@ import {
 import { documentsApi, DocumentListItem } from '../services/documentsApi';
 import { useAuthStore } from '../store/authStore';
 import { KonoCyclingLoader } from '../components/common/KonoCyclingLoader';
+import { DeleteConfirmationModal } from '../components/common/DeleteConfirmationModal';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +29,9 @@ export const DashboardPage: React.FC = () => {
   const [isApprovingBulk, setIsApprovingBulk] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string | null>(null);
+
+  // Modal State
+  const [docToDelete, setDocToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -96,14 +100,13 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleDeleteDocument = async (e: React.MouseEvent, docId: string, invoiceNum?: string) => {
-    e.stopPropagation();
-    const confirmed = window.confirm(`¿Estás seguro de que deseas eliminar la factura ${invoiceNum || docId}? Esta acción no se puede deshacer.`);
-    if (!confirmed) return;
+  const handleConfirmDelete = async () => {
+    if (!docToDelete) return;
 
     try {
-      setDeletingId(docId);
-      await documentsApi.deleteDocument(docId);
+      setDeletingId(docToDelete.id);
+      await documentsApi.deleteDocument(docToDelete.id);
+      setDocToDelete(null);
       fetchDocuments();
     } catch (err: any) {
       alert(`Error al eliminar: ${err.message}`);
@@ -337,7 +340,13 @@ export const DashboardPage: React.FC = () => {
                         <span>Auditar Visor</span>
                       </button>
                       <button
-                        onClick={(e) => handleDeleteDocument(e, doc.id, doc.invoice_number || doc.file_name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDocToDelete({
+                            id: doc.id,
+                            name: doc.invoice_number || doc.file_name || 'Comprobante',
+                          });
+                        }}
                         disabled={deletingId === doc.id}
                         className="p-1.5 rounded-xl hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 border border-transparent hover:border-rose-500/20 transition disabled:opacity-40"
                         title="Eliminar factura"
@@ -356,6 +365,17 @@ export const DashboardPage: React.FC = () => {
           </table>
         )}
       </div>
+
+      {/* Delete Confirmation Liquid Glass Modal */}
+      <DeleteConfirmationModal
+        isOpen={Boolean(docToDelete)}
+        onClose={() => setDocToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="¿Eliminar comprobante?"
+        itemIdentifier={docToDelete?.name}
+        description="Esta acción eliminará el archivo PDF original, las tablas de partidas y los registros de auditoría de la base de datos de PostgreSQL."
+        isDeleting={Boolean(deletingId)}
+      />
     </div>
   );
 };

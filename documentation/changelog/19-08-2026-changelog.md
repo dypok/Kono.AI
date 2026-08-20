@@ -103,4 +103,5 @@
 - [Wednesday]-[19/08/2026]-[20:07] : Enhanced visual hierarchy, contrast, and responsive layout for the "Aprobar & Exportar ERP" action button (`bg-emerald-400`, bold typography, no clipping) in `AuditForm.tsx`.
 - [Wednesday]-[19/08/2026]-[20:08] : Resolved black screen issue in `DocumentViewer.tsx` by wrapping the binary PDF stream with native `<object>` and `<embed>` on a neutral white background canvas (`bg-white`) avoiding browser PDF dark-mode masking.
 - [Wednesday]-[19/08/2026]-[20:09] : Fixed "Document not found" error by updating `get_document` and `stream_file` endpoints in `documents.py` to match both document UUIDs and `invoice_number` identifiers, and eliminated stale hardcoded mock ID initializers in `AuditorPage.tsx`.
+- [Wednesday]-[19/08/2026]-[20:10] : Created `DeleteConfirmationModal.tsx` reusable Liquid Glass modal component. Replaced all native browser `window.confirm` prompts across `DashboardPage.tsx` and `TemplatesPage.tsx` with elegant styled deletion dialogs.
 
