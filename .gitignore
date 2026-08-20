@@ -126,3 +126,6 @@ Thumbs.db
 logs/
 *.pid
 *.seed
+
+
+.freebuff

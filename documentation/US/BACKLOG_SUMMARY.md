@@ -38,13 +38,25 @@ Antes de mover cualquier Story a **"Done"** en Jira, se deben cumplir TODOS esto
 | **[US-FRONT-003](frontend/US-FRONT-003.md)** | Editor Interactivo de Plantillas (Point & Click Template Builder) | `feature/front-vendor-template-builder` | 5 | **Sayder** | ⚛️ Frontend React |
 | **[US-FRONT-004](frontend/US-FRONT-004.md)** | Rediseño Global Liquid Glass, Enrutamiento SPA, Login Mock & Sidebar | `feature/front-liquid-glass-routing-layout` | 8 | **Sayder & Dylan** | ⚛️ Frontend React |
 
+> **Sprint 3 (Mejoras conversadas con Team Lead):**
+
+| **[US-REQ-001](requirements/US-REQ-001.md)** | Identificación y Clasificación de Documentos no-Factura | `feature/backend-document-classifier` | 8 | **Daniel** | 🐍 Python |
+| **[US-REQ-002](requirements/US-REQ-002.md)** | Costo Estimado de Operación IA (Botón Manual) | `feature/backend-ai-cost-estimate` | 8 | **Daniel** | 🐍 Python |
+| **[US-REQ-003](requirements/US-REQ-003.md)** | Lote: Resumen de Fallos + Análisis IA con Costo Total | `feature/ai-batch-cost-analysis` | 5 | **Daniel & Dylan** | 🐍+⚛️ |
+| **[US-REQ-004](requirements/US-REQ-004.md)** | Base de Conocimiento de Anclas/Cabeceras en JSON Extendible | `feature/backend-knowledge-base-json` | 5 | **Daniel** | 🐍 Python |
+| **[US-REQ-005](requirements/US-REQ-005.md)** | Clasificación del Correo (Gmail) por Empresa → Tipo (Débito/Crédito) | `feature/backend-gmail-empresa-tipo` | 8 | **Daniel** | 🐍 Python |
+| **[US-REQ-006](requirements/US-REQ-006.md)** | Exportar al Correo con la misma Clasificación (Empresa/Tipo) | `feature/export-correo-clasificado` | 5 | **Daniel & Dylan** | 🐍+⚛️ |
+| **[US-REQ-007](requirements/US-REQ-007.md)** | Bandeja de Auditoría: Multiselección, Delete en Lote, Filtro Año & Paginación | `feature/front-bandeja-auditoria-mejoras` | 8 | **Dylan** | ⚛️ Frontend |
+| **[US-REQ-008](requirements/US-REQ-008.md)** | UX/UI: Visor Opcional (quitar preview inline) + Mejoras Sidebar | `feature/front-viewer-opcional-sidebar` | 5 | **Dylan** | ⚛️ Frontend |
+| **[US-REQ-009](requirements/US-REQ-009.md)** | Estudio y Reducción de Latencia (1000+ ms) | `feature/backend-latency-optimization` | 8 | **Daniel** | 🐍 Python |
+
 ---
 
 ## 📊 Balance de Carga de Trabajo por Integrante
 
 | Integrante | Historias Asignadas | Total Story Points (SP) | Rol Técnico Principal |
 | :--- | :--- | :--- | :--- |
-| **Sayder** | US-FRONT-001, US-FRONT-002, US-FRONT-003, US-FRONT-004 (part) | **25 SP** | Frontend Lead, SVG Canvas & UX Mascota |
-| **Dylan** | US-RUST-001, US-RUST-003 (part), US-PY-001, US-PY-003 (part), US-INT-001, US-FRONT-004 (part) | **29.5 SP** | Rust Ingestion, Python Spatial Engine, API, n8n & UI |
-| **Daniel** | US-RUST-002, US-RUST-003 (part), US-PY-002, US-PY-003 (part), US-PY-004 | **23.5 SP** | Rust Triage/OCR, Python Validator, Fallback & Email |
-| **TOTAL** | **12 Historias de Usuario Jira-Ready** | **78 SP** | **Proyecto Completo End-to-End** |
+| **Sayder** | US-FRONT-001, US-FRONT-002, US-FRONT-003, US-FRONT-004 (part) | **25 SP** | Frontend Lead, SVG Canvas & UX Mascota (sin HU nuevas) |
+| **Dylan** | US-RUST-001, US-RUST-003 (part), US-PY-001, US-PY-003 (part), US-INT-001, US-FRONT-004 (part), US-REQ-003 (part), US-REQ-006 (part), US-REQ-007, US-REQ-008 | **45 SP** | Rust, Python Engine, API, n8n & Frontend |
+| **Daniel** | US-RUST-002, US-RUST-003 (part), US-PY-002, US-PY-003 (part), US-PY-004, US-REQ-001, US-REQ-002, US-REQ-003 (part), US-REQ-004, US-REQ-005, US-REQ-006 (part), US-REQ-009 | **68 SP** | Rust Triage/OCR, Python Validator, Fallback, Email & Optimización |
+| **TOTAL** | **21 Historias de Usuario** | **138 SP** | **Proyecto Completo End-to-End** |
