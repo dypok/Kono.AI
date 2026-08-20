@@ -27,12 +27,23 @@ app = FastAPI(
 
 settings = get_settings()
 
+@app.middleware("http")
+async def add_process_time_header(request, call_next):
+    import time
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    process_time_ms = (time.perf_counter() - start_time) * 1000.0
+    response.headers["X-Process-Time"] = f"{process_time_ms:.2f}"
+    response.headers["Server-Timing"] = f"total;dur={process_time_ms:.2f}"
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Process-Time", "Server-Timing"],
 )
 
 # Shared WebSocket connection manager + Redis bridge.

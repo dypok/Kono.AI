@@ -19,6 +19,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   onBatchApprove,
 }) => {
   const [totalProcessed, setTotalProcessed] = useState<number | null>(null);
+  const [realLatency, setRealLatency] = useState<number>(documentsApi.getLastLatency());
 
   useEffect(() => {
     async function loadRealStats() {
@@ -29,6 +30,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         } else if (res?.total !== undefined) {
           setTotalProcessed(res.total);
         }
+        setRealLatency(documentsApi.getLastLatency());
       } catch (err) {
         console.error('Error fetching live navbar stats:', err);
       }
@@ -67,7 +69,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
 
         <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl liquid-glass-card border border-white/10 text-xs text-zinc-300">
           <IconClock className="w-3.5 h-3.5 text-kono-silver" />
-          <span className="font-mono">{metrics?.avgLatencyMs || '12.4'} ms Latencia</span>
+          <span className="font-mono">{realLatency.toFixed(1)} ms Latencia</span>
         </div>
       </div>
     </header>

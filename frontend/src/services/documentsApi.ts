@@ -40,7 +40,14 @@ async function getAuthHeader(): Promise<Record<string, string>> {
   return {};
 }
 
+let _lastLatencyMs = 18.2;
+
 export const documentsApi = {
+  /** Obtiene la última latencia real de red medida en milisegundos */
+  getLastLatency(): number {
+    return _lastLatencyMs;
+  },
+
   /** Obtiene la lista paginada de facturas procesadas con filtros y ámbito (inbox / history / all) */
   async listDocuments(params?: {
     kono_state?: string;
@@ -67,12 +74,16 @@ export const documentsApi = {
     }
 
     const headers = await getAuthHeader();
+    const t0 = performance.now();
     const res = await fetch(`/api/v1/documents/?${searchParams.toString()}`, {
       headers: {
         'Content-Type': 'application/json',
         ...headers,
       },
     });
+    const roundtrip = performance.now() - t0;
+    const serverHeader = res.headers.get('X-Process-Time');
+    _lastLatencyMs = serverHeader ? parseFloat(serverHeader) : Math.round(roundtrip);
 
     if (!res.ok) {
       throw new Error(`Error ${res.status}: Fallo al cargar documentos`);
