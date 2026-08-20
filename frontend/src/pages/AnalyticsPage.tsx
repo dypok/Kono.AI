@@ -125,15 +125,15 @@ export const AnalyticsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="liquid-glass rounded-3xl p-5 border border-white/10 relative overflow-hidden">
           <div className="flex items-center justify-between text-zinc-400 text-xs">
-            <span>Total Facturado Conciliado</span>
+            <span>Total Facturado Conciliado (COP)</span>
             <DollarSign className="w-4 h-4 text-kono-silver" />
           </div>
           <p className="text-2xl font-bold text-alabaster-100 font-mono mt-2">
-            ${(summary?.total_invoiced || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${(summary?.total_invoiced || 0).toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-zinc-400 font-normal">COP</span>
           </p>
           <div className="mt-2 text-xs text-zinc-400 flex items-center justify-between font-mono">
-            <span>Base: ${(summary?.total_subtotal || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-            <span>IVA: ${(summary?.total_tax || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+            <span>Base: ${(summary?.total_subtotal || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP</span>
+            <span>IVA: ${(summary?.total_tax || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP</span>
           </div>
         </div>
 
@@ -143,11 +143,11 @@ export const AnalyticsPage: React.FC = () => {
             <Cpu className="w-4 h-4 text-emerald-400" />
           </div>
           <p className="text-2xl font-bold text-emerald-400 font-mono mt-2">
-            ${summary?.token_savings_usd || '0.00'} USD
+            ${summary?.token_savings_usd || '0.00'} <span className="text-xs text-emerald-300 font-normal">USD</span>
           </p>
           <p className="text-xs text-zinc-400 mt-2 font-mono flex items-center space-x-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 inline" />
-            <span>{summary?.zero_token_percentage || 100}% procesado determinísticamente</span>
+            <span>{summary?.zero_token_percentage || 100}% procesado determinísticamente (0 tokens gastados)</span>
           </p>
         </div>
 
