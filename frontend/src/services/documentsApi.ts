@@ -14,6 +14,7 @@ export interface DocumentListItem {
   kono_state?: 'GREEN' | 'YELLOW' | 'RED';
   processing_status?: string;
   extraction_method?: string;
+  bounding_boxes?: any;
   created_at?: string;
 }
 

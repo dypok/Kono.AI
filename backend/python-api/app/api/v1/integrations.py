@@ -183,3 +183,22 @@ async def sync_user_email(
         files_extracted=scan_result.get("files_extracted", []),
         account_email=account_email,
     )
+
+from app.services.currency_service import currency_service
+
+@router.get("/currency/usd-cop", summary="Get current daily USD to COP exchange rate")
+async def get_daily_exchange_rate(
+    current_user: SupabaseUser = Depends(get_current_user),
+):
+    """
+    Returns today's USD/COP official exchange rate (TRM) consulted once per day (cached).
+    """
+    rate = await currency_service.get_usd_to_cop_rate()
+    return {
+        "status": "SUCCESS",
+        "currency_from": "USD",
+        "currency_to": "COP",
+        "rate": rate,
+        "date": currency_service._cached_date,
+        "message": f"Tasa de cambio actual: 1 USD = ${rate:,.2f} COP",
+    }

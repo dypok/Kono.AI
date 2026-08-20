@@ -99,12 +99,17 @@ class PDFExtractorService:
             words = page.get_text("words")
 
             # Detect currency
-            if "€" in raw_text:
+            from app.services.currency_service import currency_service
+
+            is_cop = "COP" in raw_text or "Pesos" in raw_text or "NIT:" in raw_text or "DIAN" in raw_text or "IVA (19%)" in raw_text
+            if "€" in raw_text or "EUR" in raw_text:
                 result["currency"] = "EUR"
-            elif "$" in raw_text and ("COP" in raw_text or "Pesos" in raw_text):
-                result["currency"] = "COP"
-            elif "$" in raw_text:
+            elif "USD" in raw_text or "$" in raw_text and not is_cop or "TAX ID:" in raw_text or "INVOICE" in raw_text.upper() and not is_cop:
                 result["currency"] = "USD"
+            elif "$" in raw_text or is_cop:
+                result["currency"] = "COP"
+            else:
+                result["currency"] = "COP"
 
             # 1. Group words by spatial visual line (y0 tolerance ~3.5pt)
             lines_dict: Dict[float, List[Any]] = {}
@@ -404,6 +409,30 @@ class PDFExtractorService:
                 )
             else:
                 result["kono_state"] = "GREEN"
+
+            # 7. Automatic USD -> COP Currency Conversion
+            if result.get("currency") == "USD":
+                rate = currency_service.get_current_rate_sync()
+                result["original_currency"] = "USD"
+                result["original_grand_total"] = result["grand_total"]
+                result["original_subtotal"] = result["subtotal"]
+                result["original_tax_total"] = result["tax_total"]
+                result["exchange_rate_cop"] = rate
+
+                # Convert primary accounting totals to COP
+                result["subtotal_cop"] = round((result["subtotal"] or 0.0) * rate, 2)
+                result["tax_total_cop"] = round((result["tax_total"] or 0.0) * rate, 2)
+                result["grand_total_cop"] = round((result["grand_total"] or 0.0) * rate, 2)
+
+                # Store conversion details in metadata
+                if "bounding_boxes" not in result or not isinstance(result["bounding_boxes"], dict):
+                    result["bounding_boxes"] = {}
+                result["bounding_boxes"]["conversion"] = {
+                    "original_currency": "USD",
+                    "original_total_usd": result["original_grand_total"],
+                    "exchange_rate_cop": rate,
+                    "converted_total_cop": result["grand_total_cop"],
+                }
 
             doc.close()
         except Exception as e:

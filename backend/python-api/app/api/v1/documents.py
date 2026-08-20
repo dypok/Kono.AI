@@ -115,7 +115,12 @@ async def upload_document(
 
     # Handle document_type from classifier (US-REQ-001)
     doc_type = extracted.get("document_type", "INVOICE")
-    is_other = doc_type == "OTHER"
+    # Handle currency conversion (USD -> COP)
+    doc_currency = extracted.get("currency", "COP")
+    db_grand_total = extracted.get("grand_total_cop") if doc_currency == "USD" and extracted.get("grand_total_cop") else extracted.get("grand_total")
+    db_subtotal = extracted.get("subtotal_cop") if doc_currency == "USD" and extracted.get("subtotal_cop") else extracted.get("subtotal")
+    db_tax_total = extracted.get("tax_total_cop") if doc_currency == "USD" and extracted.get("tax_total_cop") else extracted.get("tax_total")
+
     doc = Document(
         id=doc_id,
         user_id=current_user.id,
@@ -128,11 +133,11 @@ async def upload_document(
         vendor_name=extracted.get("vendor_name"),
         vendor_tax_id=extracted.get("vendor_tax_id"),
         issue_date=extracted.get("issue_date"),
-        currency=extracted.get("currency", "COP"),
-        subtotal=extracted.get("subtotal") if not is_other else None,
-        tax_total=extracted.get("tax_total") if not is_other else None,
+        currency=doc_currency,
+        subtotal=db_subtotal if not is_other else None,
+        tax_total=db_tax_total if not is_other else None,
         withholding_total=extracted.get("withholding_total") if not is_other else None,
-        grand_total=extracted.get("grand_total") if not is_other else None,
+        grand_total=db_grand_total if not is_other else None,
         processing_status="REJECTED" if is_other else ("AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING"),
         kono_state=extracted.get("kono_state", "GREEN"),
         document_type=doc_type,
@@ -276,6 +281,11 @@ async def batch_upload_documents(
 
             doc_type_batch = extracted.get("document_type", "INVOICE")
             is_other_batch = doc_type_batch == "OTHER"
+            doc_currency_batch = extracted.get("currency", "COP")
+            db_grand_total_batch = extracted.get("grand_total_cop") if doc_currency_batch == "USD" and extracted.get("grand_total_cop") else extracted.get("grand_total")
+            db_subtotal_batch = extracted.get("subtotal_cop") if doc_currency_batch == "USD" and extracted.get("subtotal_cop") else extracted.get("subtotal")
+            db_tax_total_batch = extracted.get("tax_total_cop") if doc_currency_batch == "USD" and extracted.get("tax_total_cop") else extracted.get("tax_total")
+
             doc = Document(
                 id=doc_id,
                 user_id=current_user.id,
@@ -288,11 +298,11 @@ async def batch_upload_documents(
                 vendor_name=extracted.get("vendor_name"),
                 vendor_tax_id=extracted.get("vendor_tax_id"),
                 issue_date=extracted.get("issue_date"),
-                currency=extracted.get("currency", "COP"),
-                subtotal=extracted.get("subtotal") if not is_other_batch else None,
-                tax_total=extracted.get("tax_total") if not is_other_batch else None,
+                currency=doc_currency_batch,
+                subtotal=db_subtotal_batch if not is_other_batch else None,
+                tax_total=db_tax_total_batch if not is_other_batch else None,
                 withholding_total=extracted.get("withholding_total") if not is_other_batch else None,
-                grand_total=extracted.get("grand_total") if not is_other_batch else None,
+                grand_total=db_grand_total_batch if not is_other_batch else None,
                 processing_status="REJECTED" if is_other_batch else ("AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING"),
                 kono_state=extracted.get("kono_state", "GREEN"),
                 document_type=doc_type_batch,

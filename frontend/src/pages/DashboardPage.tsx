@@ -523,9 +523,21 @@ export const DashboardPage: React.FC = () => {
                           <span className="text-rose-400/80 text-[11px] italic">Fecha no detectada</span>
                         )}
                       </td>
-                      <td className="py-4 px-6 font-mono font-bold">
+                      <td className="py-4 px-6 font-mono">
                         {(doc.grand_total || 0) > 0 ? (
-                          <span className="text-alabaster-100">{formatCurrency(doc.grand_total, doc.currency)}</span>
+                          <div>
+                            <span className="font-bold text-alabaster-100">{formatCurrency(doc.grand_total || 0, 'COP')}</span>
+                            {doc.currency === 'USD' && (
+                              <div className="flex items-center space-x-1 mt-0.5">
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300 font-semibold border border-amber-500/20">
+                                  USD conv.
+                                </span>
+                                <span className="text-[10px] text-zinc-400">
+                                  ${(doc.bounding_boxes?.conversion?.original_total_usd || ((doc.grand_total || 0) / (doc.bounding_boxes?.conversion?.exchange_rate_cop || 4150))).toFixed(2)} USD
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <span className="text-rose-400 text-xs font-medium">Sin total detectado</span>
                         )}
