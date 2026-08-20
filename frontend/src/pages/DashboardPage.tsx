@@ -75,8 +75,8 @@ export const DashboardPage: React.FC = () => {
           return name.endsWith('.pdf') || name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg');
         });
         if (fileList.length === 0) return;
-        const res = await documentsApi.uploadBatch(fileList);
-        setUploadSuccessMsg(`🎉 Se procesaron ${res.total_processed} factura(s) con éxito.`);
+        const res = await documentsApi.batchUploadDocuments(fileList);
+        setUploadSuccessMsg(`🎉 Se procesaron ${res.total_processed || res.processed_count || fileList.length} factura(s) con éxito.`);
       }
       fetchDocuments();
       setTimeout(() => setUploadSuccessMsg(null), 4500);

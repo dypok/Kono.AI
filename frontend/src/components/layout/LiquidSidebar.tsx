@@ -7,10 +7,7 @@ import {
   IconChartBar,
   IconSettings,
   IconLogout,
-  IconChevronLeft,
-  IconChevronRight,
   IconBroadcast,
-  IconBuildingSkyscraper,
   IconHistory,
 } from '@tabler/icons-react';
 
@@ -36,44 +33,43 @@ export const LiquidSidebar: React.FC = () => {
     <aside
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative h-screen transition-[width] duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] z-40 p-2.5 flex flex-col will-change-[width] ${
+      className={`relative h-screen transition-[width] duration-300 ease-out z-40 p-2.5 flex flex-col will-change-[width] ${
         isHovered ? 'w-64' : 'w-20'
       }`}
     >
-      {/* Liquid Glass Container */}
-      <div className="h-full w-full liquid-glass rounded-3xl p-2.5 flex flex-col justify-between border border-white/10 shadow-2xl relative overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]">
+      {/* Liquid Glass Container with GPU Acceleration */}
+      <div className="h-full w-full liquid-glass rounded-3xl p-2.5 flex flex-col justify-between border border-white/10 shadow-2xl relative overflow-hidden transform-gpu">
         {/* Subtle Ambient Light Highlight */}
-        <div className="absolute -top-12 -left-12 w-32 h-32 bg-slate-400/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-12 -left-12 w-28 h-28 bg-slate-400/10 rounded-full blur-xl pointer-events-none" />
 
-        {/* Top: Brand & Workspace with Mascot */}
+        {/* Top: Brand & Navigation */}
         <div>
           {/* Header & Mascot */}
           <div className="flex items-center pb-3 border-b border-white/10 h-16 w-full">
-            {/* Mascot Container - Width matches button slot w-10 exactly */}
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
               <div
-                className="w-10 h-10 rounded-2xl p-0.5 bg-gradient-to-br from-slate-200 via-slate-400 to-zinc-600 shadow-lg group cursor-pointer hover:scale-105 transition-transform duration-300 shrink-0"
+                className="w-10 h-10 rounded-2xl p-0.5 bg-gradient-to-br from-slate-200 via-slate-400 to-zinc-600 shadow-md group cursor-pointer hover:scale-105 transition-transform shrink-0"
                 onClick={() => navigate('/dashboard')}
-                title="Kono AI Mascot"
+                title="Kono AI"
               >
                 <div className="w-full h-full rounded-2xl bg-titanium-900 flex flex-col items-center justify-center border border-white/40">
                   <div className="flex space-x-1 mb-0.5">
-                    <div className="w-1.5 h-1.5 bg-alabaster-100 rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 bg-alabaster-100 rounded-full animate-bounce delay-75" />
+                    <div className="w-1.5 h-1.5 bg-alabaster-100 rounded-full" />
+                    <div className="w-1.5 h-1.5 bg-alabaster-100 rounded-full" />
                   </div>
                   <div className="w-3 h-1 bg-emerald-400 rounded-full" />
                 </div>
               </div>
             </div>
 
-            {/* Brand text with smooth opacity fade */}
+            {/* Brand text */}
             <div
-              className={`flex flex-col truncate pl-3 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-                isHovered ? 'opacity-100 translate-x-0 w-auto' : 'opacity-0 -translate-x-3 w-0 pointer-events-none'
+              className={`flex flex-col truncate pl-3 transition-opacity duration-200 ${
+                isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none w-0'
               }`}
             >
               <span className="text-base font-bold tracking-tight text-alabaster-100 font-sans whitespace-nowrap">
-                Kono<span className="text-kono-chrome font-light">.ai</span>
+                Kono<span className="text-zinc-400 font-light">.ai</span>
               </span>
               <span className="text-[10px] text-zinc-400 tracking-wider uppercase font-mono whitespace-nowrap">
                 Financial Auditor
@@ -82,7 +78,7 @@ export const LiquidSidebar: React.FC = () => {
           </div>
 
           {/* Navigation Links */}
-          <nav className="mt-5 space-y-2">
+          <nav className="mt-5 space-y-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -90,7 +86,7 @@ export const LiquidSidebar: React.FC = () => {
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex items-center h-11 w-full rounded-xl text-sm font-medium transition-colors duration-200 ${
+                    `flex items-center h-11 w-full rounded-xl text-sm font-medium transition-colors duration-150 ${
                       isActive
                         ? 'bg-white/10 text-alabaster-50 border border-white/20 shadow-sm'
                         : 'text-zinc-400 hover:text-alabaster-200 hover:bg-white/[0.04]'
@@ -98,15 +94,15 @@ export const LiquidSidebar: React.FC = () => {
                   }
                   title={item.name}
                 >
-                  {/* Icon Slot - Exactly w-10 */}
+                  {/* Icon Slot */}
                   <div className="w-10 h-full flex items-center justify-center shrink-0">
                     <Icon className="w-5 h-5 shrink-0" stroke={1.8} />
                   </div>
 
                   {/* Label Slot */}
                   <div
-                    className={`flex-1 flex items-center justify-between pr-3 truncate pl-3 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-                      isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-3 pointer-events-none w-0'
+                    className={`flex-1 flex items-center justify-between pr-3 truncate pl-2 transition-opacity duration-200 ${
+                      isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none w-0'
                     }`}
                   >
                     <span className="whitespace-nowrap font-medium text-xs">{item.name}</span>
@@ -123,19 +119,18 @@ export const LiquidSidebar: React.FC = () => {
         </div>
 
         {/* Bottom: Live Connection & User Profile */}
-        <div className="pt-3 border-t border-white/10 space-y-2.5">
-          {/* Live WebSocket Status Pill */}
-          <div className="flex items-center h-10 w-full rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-xs text-emerald-400">
+        <div className="pt-3 border-t border-white/10 space-y-2">
+          {/* Live Status Pill */}
+          <div className="flex items-center h-9 w-full rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-xs text-emerald-400">
             <div className="w-10 h-full flex items-center justify-center shrink-0">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              <span className="relative flex h-2 w-2">
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
             </div>
 
             <div
-              className={`flex-1 flex items-center justify-between pr-3 pl-3 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-                isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-3 pointer-events-none w-0'
+              className={`flex-1 flex items-center justify-between pr-3 pl-2 transition-opacity duration-200 ${
+                isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none w-0'
               }`}
             >
               <span className="font-mono text-[11px] whitespace-nowrap">Stream Activo</span>
@@ -144,16 +139,16 @@ export const LiquidSidebar: React.FC = () => {
           </div>
 
           {/* User Profile & Logout */}
-          <div className="flex items-center h-11 w-full">
+          <div className="flex items-center h-10 w-full">
             <div className="w-10 h-full flex items-center justify-center shrink-0">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-zinc-700 to-slate-500 flex items-center justify-center text-xs font-bold text-alabaster-50 shadow shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-zinc-700 to-slate-500 flex items-center justify-center text-xs font-bold text-alabaster-50 shadow shrink-0">
                 {user?.name?.slice(0, 2) || 'DY'}
               </div>
             </div>
 
             <div
-              className={`flex-1 flex items-center justify-between pr-1 pl-3 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
-                isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-3 pointer-events-none w-0'
+              className={`flex-1 flex items-center justify-between pr-1 pl-2 transition-opacity duration-200 ${
+                isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none w-0'
               }`}
             >
               <div className="truncate text-xs">

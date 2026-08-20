@@ -120,12 +120,12 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
 
   async function handleSaveTemplate() {
     try {
-      if (!invoice.issuerTaxId) {
-        showToast('⚠️ No se puede guardar plantilla sin NIT del emisor.');
+      if (!invoice || !invoice.issuerTaxId) {
+        showToast('⚠️ No se puede guardar plantilla sin NIT del emisor o factura cargada.');
         return;
       }
       // Guardar anclajes espaciales y coordenadas vectoriales reales encontradas en el escaneo
-      const spatialVectors = invoice.fields.reduce((acc: any, f) => {
+      const spatialVectors = (invoice.fields || []).reduce((acc: any, f) => {
         acc[f.fieldKey] = {
           box: f.box,
           page: f.page,
@@ -139,7 +139,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
         vendor_name: invoice.issuerName,
         spatial_anchors: {
           vectors: spatialVectors,
-          fields_count: invoice.fields.length,
+          fields_count: invoice.fields?.length || 0,
           deterministic_mode: true,
           learned_from_document_id: invoice.id,
         },
