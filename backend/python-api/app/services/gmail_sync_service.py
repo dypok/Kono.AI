@@ -39,6 +39,36 @@ class GmailSyncService:
         sub_lower = subject.lower()
         return any(k in sub_lower for k in keywords)
 
+    def _classify_empresa_tipo(self, sender: str, subject: str, vendor_name: str | None = None) -> tuple[str, str]:
+        """Classify email by empresa and tipo (Debito/Credito) for renta declaration.
+
+        Empresa: extracted from vendor_name or sender domain, sanitized for label.
+        Tipo: Debito (default) vs Credito (if nota credito / credit note).
+        """
+        # Empresa: prefer vendor_name, else sender domain
+        empresa = "General"
+        if vendor_name and vendor_name.strip() and vendor_name != "Proveedor General":
+            empresa = vendor_name.strip().split()[0]
+        elif sender and "@" in sender:
+            try:
+                domain = sender.split("@")[-1].split(">")[0].strip().lower()
+                empresa = domain.split(".")[0].capitalize() if domain else "General"
+            except Exception:
+                pass
+        # Sanitize for Gmail label (no spaces, no special chars)
+        empresa = "".join(c if c.isalnum() else "_" for c in empresa)[:30] or "General"
+
+        # Tipo facturación: Credito if nota credito / credit note
+        text_lower = f"{subject} {vendor_name or ''}".lower()
+        if any(k in text_lower for k in ["nota credito", "nota crédito", "credit note", "credito"]):
+            tipo = "Credito"
+        else:
+            tipo = "Debito"
+        return empresa, tipo
+
+    def _build_label(self, empresa: str, tipo: str) -> str:
+        return f"KONO_INVOICE/{empresa}/{tipo}"
+
     async def scan_and_sync_inbox(
         self,
         email_user: str,
@@ -137,62 +167,109 @@ class GmailSyncService:
 
                                         extracted = pdf_extractor_service.extract_document(file_path)
                                         doc_id = str(uuid.uuid4())
+                                        # Classify for Empresa→Tipo (US-REQ-005)
+                                        doc_type = extracted.get("document_type", "INVOICE")
+                                        is_other = doc_type == "OTHER"
+                                        # Build hierarchical label Empresa/Tipo for renta declaration
+                                        empresa, tipo = self._classify_empresa_tipo(
+                                            sender, subject, extracted.get("vendor_name")
+                                        )
+                                        label = self._build_label(empresa, tipo)
 
                                         if AsyncSessionLocal is not None:
-                                            async with AsyncSessionLocal() as db:
-                                                file_hash = extracted.get("file_hash_sha256")
-                                                existing = None
-                                                if file_hash:
-                                                    from sqlalchemy import select
-                                                    stmt = select(Document).where(Document.file_hash_sha256 == file_hash)
-                                                    existing = (await db.execute(stmt)).scalars().first()
+                                            # Only export to app when confirmed invoice (US-REQ-001 + 005)
+                                            if not is_other:
+                                                async with AsyncSessionLocal() as db:
+                                                    file_hash = extracted.get("file_hash_sha256")
+                                                    existing = None
+                                                    if file_hash:
+                                                        from sqlalchemy import select
+                                                        stmt = select(Document).where(Document.file_hash_sha256 == file_hash)
+                                                        existing = (await db.execute(stmt)).scalars().first()
 
-                                                if not existing:
+                                                    if not existing:
+                                                        doc_obj = Document(
+                                                            id=doc_id,
+                                                            user_id=user_id or "b1a74a90-f715-4432-8e94-1a4dd43964dc",
+                                                            file_name=decoded_filename,
+                                                            file_path=file_path,
+                                                            file_hash_sha256=file_hash,
+                                                            mime_type="application/pdf" if decoded_filename.lower().endswith(".pdf") else "image/png",
+                                                            file_size_bytes=len(payload),
+                                                            invoice_number=extracted.get("invoice_number") or f"FAC-IMAP-{doc_id[:6].upper()}",
+                                                            vendor_name=extracted.get("vendor_name") or (sender.split("<")[0].strip() if sender else "Proveedor Email"),
+                                                            vendor_tax_id=extracted.get("vendor_tax_id") or "NIT-PENDIENTE",
+                                                            issue_date=extracted.get("issue_date") or datetime.utcnow().strftime("%d/%m/%Y"),
+                                                            currency=extracted.get("currency", "COP"),
+                                                            subtotal=extracted.get("subtotal") or 0.0,
+                                                            tax_total=extracted.get("tax_total") or 0.0,
+                                                            withholding_total=extracted.get("withholding_total") or 0.0,
+                                                            grand_total=extracted.get("grand_total") or 0.0,
+                                                            processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
+                                                            kono_state=extracted.get("kono_state", "GREEN"),
+                                                            document_type=doc_type,
+                                                            classifier_score=extracted.get("classifier_score"),
+                                                            extraction_method="DETERMINISTIC",
+                                                            bounding_boxes={**extracted.get("bounding_boxes", {}), "gmail_label": label},
+                                                        )
+                                                        db.add(doc_obj)
+
+                                                        for it in extracted.get("items", []):
+                                                            db.add(InvoiceItem(
+                                                                document_id=doc_id,
+                                                                line_number=it.get("line_number", 1),
+                                                                description=it.get("description", "Ítem Facturado"),
+                                                                quantity=it.get("quantity", 1.0),
+                                                                unit_price=it.get("unit_price", 0.0),
+                                                                total_price=it.get("total_price", 0.0),
+                                                                is_math_valid=it.get("is_math_valid", True),
+                                                            ))
+
+                                                        for disc in extracted.get("discrepancies", []):
+                                                            db.add(Discrepancy(
+                                                                document_id=doc_id,
+                                                                field_name=disc.get("field_name", ""),
+                                                                alert_type=disc.get("alert_type", "WARNING"),
+                                                                description=disc.get("description", ""),
+                                                            ))
+
+                                                        await db.commit()
+                                                        logger.info("Successfully ingested IMAP invoice into PostgreSQL: %s (Doc ID: %s) label=%s", decoded_filename, doc_id, label)
+                                            else:
+                                                # For OTHER, persist minimal record with REJECTED and no fabricated invoice data
+                                                async with AsyncSessionLocal() as db:
                                                     doc_obj = Document(
                                                         id=doc_id,
                                                         user_id=user_id or "b1a74a90-f715-4432-8e94-1a4dd43964dc",
                                                         file_name=decoded_filename,
                                                         file_path=file_path,
-                                                        file_hash_sha256=file_hash,
+                                                        file_hash_sha256=extracted.get("file_hash_sha256"),
                                                         mime_type="application/pdf" if decoded_filename.lower().endswith(".pdf") else "image/png",
                                                         file_size_bytes=len(payload),
-                                                        invoice_number=extracted.get("invoice_number") or f"FAC-IMAP-{doc_id[:6].upper()}",
-                                                        vendor_name=extracted.get("vendor_name") or (sender.split("<")[0].strip() if sender else "Proveedor Email"),
-                                                        vendor_tax_id=extracted.get("vendor_tax_id") or "NIT-PENDIENTE",
-                                                        issue_date=extracted.get("issue_date") or datetime.utcnow().strftime("%d/%m/%Y"),
-                                                        currency=extracted.get("currency", "COP"),
-                                                        subtotal=extracted.get("subtotal") or 0.0,
-                                                        tax_total=extracted.get("tax_total") or 0.0,
-                                                        withholding_total=extracted.get("withholding_total") or 0.0,
-                                                        grand_total=extracted.get("grand_total") or 0.0,
-                                                        processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
-                                                        kono_state=extracted.get("kono_state", "GREEN"),
+                                                        invoice_number=None,
+                                                        vendor_name=None,
+                                                        vendor_tax_id=None,
+                                                        issue_date=None,
+                                                        currency="COP",
+                                                        subtotal=None,
+                                                        tax_total=None,
+                                                        grand_total=None,
+                                                        processing_status="REJECTED",
+                                                        kono_state="YELLOW",
+                                                        document_type="OTHER",
+                                                        classifier_score=extracted.get("classifier_score"),
                                                         extraction_method="DETERMINISTIC",
-                                                        bounding_boxes=extracted.get("bounding_boxes"),
+                                                        bounding_boxes={"gmail_label": label, "reason": "No se encontraron datos de factura"},
                                                     )
                                                     db.add(doc_obj)
-
-                                                    for it in extracted.get("items", []):
-                                                        db.add(InvoiceItem(
-                                                            document_id=doc_id,
-                                                            line_number=it.get("line_number", 1),
-                                                            description=it.get("description", "Ítem Facturado"),
-                                                            quantity=it.get("quantity", 1.0),
-                                                            unit_price=it.get("unit_price", 0.0),
-                                                            total_price=it.get("total_price", 0.0),
-                                                            is_math_valid=it.get("is_math_valid", True),
-                                                        ))
-
-                                                    for disc in extracted.get("discrepancies", []):
-                                                        db.add(Discrepancy(
-                                                            document_id=doc_id,
-                                                            field_name=disc.get("field_name", ""),
-                                                            alert_type=disc.get("alert_type", "WARNING"),
-                                                            description=disc.get("description", ""),
-                                                        ))
-
+                                                    db.add(Discrepancy(
+                                                        document_id=doc_id,
+                                                        field_name="document_type",
+                                                        alert_type="NOT_INVOICE",
+                                                        description="No se encontraron datos de factura. El documento no contiene anclas de factura.",
+                                                    ))
                                                     await db.commit()
-                                                    logger.info("Successfully ingested IMAP invoice into PostgreSQL: %s (Doc ID: %s)", decoded_filename, doc_id)
+                                                    logger.info("Stored OTHER document %s as REJECTED (no invoice data)", doc_id)
                                     except Exception as db_err:
                                         logger.error("Error saving IMAP invoice to database: %s", db_err)
 
@@ -201,20 +278,26 @@ class GmailSyncService:
                                         "file_path": file_path,
                                         "subject": subject,
                                         "sender": sender,
-                                        "label": "KONO_INVOICE",
+                                        "label": label,
+                                        "document_type": doc_type,
                                     })
 
                 if has_invoice_attachment or self._is_invoice_subject(subject):
                     results["invoices_found"] += len(extracted_for_msg)
                     results["files_extracted"].extend(extracted_for_msg)
                     
-                    # 🏷️ Apply Gmail label / flags
+                    # 🏷️ Apply hierarchical Gmail label Empresa/Tipo (US-REQ-005)
+                    # Use first extracted label or fallback to General/Debito
+                    label_to_apply = extracted_for_msg[0].get("label", "KONO_INVOICE/General/Debito") if extracted_for_msg else "KONO_INVOICE/General/Debito"
                     try:
-                        # Add KONO_INVOICE label (supported by Gmail IMAP via X-GM-LABELS or STORE)
                         mail.store(msg_id, "+FLAGS", "(\\Seen)")
-                        mail.store(msg_id, "+X-GM-LABELS", "KONO_INVOICE")
+                        # Gmail supports hierarchical labels via X-GM-LABELS
+                        mail.store(msg_id, "+X-GM-LABELS", label_to_apply)
+                        # Also ensure base label for backward compat
+                        if label_to_apply != "KONO_INVOICE":
+                            mail.store(msg_id, "+X-GM-LABELS", "KONO_INVOICE")
                     except Exception as label_err:
-                        logger.warning("Could not apply Gmail X-GM-LABELS (non-Gmail IMAP?): %s", label_err)
+                        logger.warning("Could not apply Gmail X-GM-LABELS %s (non-Gmail IMAP?): %s", label_to_apply, label_err)
 
             mail.close()
             mail.logout()
