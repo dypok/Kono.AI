@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, delete
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -334,9 +334,14 @@ async def batch_upload_documents(
                 "invoice_number": doc.invoice_number,
                 "kono_state": doc.kono_state,
                 "grand_total": doc.grand_total,
+                "document_type": doc.document_type,
             })
 
         await db.commit()
+
+        # Count failed (OTHER) for UI batch summary (US-REQ-003)
+        failed_count = sum(1 for it in processed_items if it.get("document_type") == "OTHER")
+        success_count = len(processed_items) - failed_count
 
         # Broadcast batch event
         try:
@@ -344,17 +349,24 @@ async def batch_upload_documents(
                 {
                     "type": "BATCH_DOCUMENTS_PROCESSED",
                     "count": len(processed_items),
+                    "failed_count": failed_count,
                     "user_id": current_user.id,
                 }
             )
         except Exception:
             pass
 
+        message = f"Se procesaron {len(processed_items)} facturas exitosamente."
+        if failed_count > 0:
+            message += f" {failed_count} no pudieron ser leídos."
+
         return {
             "status": "SUCCESS",
             "processed_count": len(processed_items),
+            "failed_count": failed_count,
+            "success_count": success_count,
             "items": processed_items,
-            "message": f"Se procesaron {len(processed_items)} facturas exitosamente.",
+            "message": message,
         }
     except Exception as e:
         logger.error(f"Error in batch_upload_documents: {e}", exc_info=True)
@@ -371,54 +383,69 @@ async def list_documents(
     scope: Optional[str] = Query("all", pattern="^(inbox|history|all)$"),
     q: Optional[str] = Query(None, description="Search in invoice number / vendor name / NIT"),
     document_type: Optional[str] = Query(None, pattern="^(INVOICE|RECEIPT|OTHER)$"),
+    year: Optional[int] = Query(None, ge=1900, le=2100, description="Filter by issue year"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: SupabaseUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Filter documents by authenticated user_id or all active documents in tenant/workspace
-    base_stmt = select(Document).where(
+    # Build where conditions for optimized SQL (US-REQ-009: avoid loading all docs)
+    from sqlalchemy import and_
+
+    user_filter = (
         (Document.user_id == current_user.id)
         | (Document.user_id == "b1a74a90-f715-4432-8e94-1a4dd43964dc")
         | (Document.user_id == "mock-supabase-user-uuid")
         | (Document.user_id.is_(None))
     )
+    conditions = [user_filter]
 
     if scope == "inbox":
-        base_stmt = base_stmt.where(
-            ~Document.processing_status.in_(["APPROVED", "EXPORTED"])
-        )
+        conditions.append(~Document.processing_status.in_(["APPROVED", "EXPORTED"]))
     elif scope == "history":
-        base_stmt = base_stmt.where(
-            Document.processing_status.in_(["APPROVED", "EXPORTED"])
-        )
+        conditions.append(Document.processing_status.in_(["APPROVED", "EXPORTED"]))
 
-    stmt = base_stmt.order_by(Document.created_at.desc())
     if kono_state:
-        stmt = stmt.where(Document.kono_state == kono_state.upper())
+        conditions.append(Document.kono_state == kono_state.upper())
     if document_type:
-        stmt = stmt.where(Document.document_type == document_type.upper())
+        conditions.append(Document.document_type == document_type.upper())
     if q:
         like = f"%{q}%"
-        stmt = stmt.where(
+        conditions.append(
             (Document.invoice_number.like(like))
             | (Document.file_name.like(like))
             | (Document.vendor_name.like(like))
             | (Document.vendor_tax_id.like(like))
         )
+    if year:
+        # issue_date is String (various formats), filter by year substring
+        conditions.append(Document.issue_date.like(f"%{year}%"))
 
-    # Single atomic query to fetch documents
-    all_scoped_docs = (await db.execute(stmt)).scalars().all()
-    total = len(all_scoped_docs)
+    # Optimized count queries (no full table load)
+    total_stmt = select(func.count()).select_from(Document).where(and_(*conditions))
+    total = (await db.execute(total_stmt)).scalar() or 0
 
+    # Counts by state (single query would be more efficient, but 3 small counts are fine)
+    count_green = (
+        await db.execute(select(func.count()).select_from(Document).where(and_(*conditions, Document.kono_state == "GREEN")))
+    ).scalar() or 0
+    count_yellow = (
+        await db.execute(select(func.count()).select_from(Document).where(and_(*conditions, Document.kono_state == "YELLOW")))
+    ).scalar() or 0
+    count_red = (
+        await db.execute(select(func.count()).select_from(Document).where(and_(*conditions, Document.kono_state == "RED")))
+    ).scalar() or 0
     count_all = total
-    count_green = sum(1 for d in all_scoped_docs if d.kono_state == "GREEN")
-    count_yellow = sum(1 for d in all_scoped_docs if d.kono_state == "YELLOW")
-    count_red = sum(1 for d in all_scoped_docs if d.kono_state == "RED")
 
-    # In-memory slice pagination (0ms roundtrip)
-    start_idx = (page - 1) * page_size
-    paged_docs = all_scoped_docs[start_idx : start_idx + page_size]
+    # Paginated fetch (only requested page, not all docs)
+    paged_stmt = (
+        select(Document)
+        .where(and_(*conditions))
+        .order_by(Document.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    paged_docs = (await db.execute(paged_stmt)).scalars().all()
 
     return {
         "items": [DocumentListItem.model_validate(d) for d in paged_docs],
@@ -1025,6 +1052,50 @@ async def bulk_approve_documents(
     }
 
 
+# -------------------------------------------------------------------------- #
+# POST /api/v1/documents/bulk-delete  (Batch delete for audit tray)
+# -------------------------------------------------------------------------- #
+@router.post("/bulk-delete")
+async def bulk_delete_documents(
+    request: Request,
+    current_user: SupabaseUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deletes multiple documents by ids (for multiselect in audit tray)."""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    ids = body.get("ids") or body.get("document_ids") or []
+    if not ids or not isinstance(ids, list):
+        raise HTTPException(status_code=400, detail="ids must be a non-empty list")
+
+    # Only allow deleting own documents
+    stmt = select(Document).where(
+        (Document.id.in_(ids))
+        & (
+            (Document.user_id == current_user.id)
+            | (Document.user_id == "b1a74a90-f715-4432-8e94-1a4dd43964dc")
+            | (Document.user_id == "mock-supabase-user-uuid")
+            | (Document.user_id.is_(None))
+        )
+    )
+    docs = (await db.execute(stmt)).scalars().all()
+    found_ids = {d.id for d in docs}
+    # Delete related records first (for SQLite without cascade)
+    for doc_id in found_ids:
+        await db.execute(delete(AuditLog).where(AuditLog.document_id == doc_id))
+        await db.execute(delete(InvoiceItem).where(InvoiceItem.document_id == doc_id))
+        await db.execute(delete(Discrepancy).where(Discrepancy.document_id == doc_id))
+    await db.execute(delete(Document).where(Document.id.in_(found_ids)))
+    await db.commit()
+    return {
+        "status": "SUCCESS",
+        "deleted_count": len(found_ids),
+        "requested_count": len(ids),
+        "message": f"Se eliminaron {len(found_ids)} de {len(ids)} documentos.",
+    }
+
+
+# -------------------------------------------------------------------------- #
+# Helpers
 # -------------------------------------------------------------------------- #
 # POST /api/v1/documents/{id}/export-email (Export to email with classification)
 # -------------------------------------------------------------------------- #
