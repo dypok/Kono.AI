@@ -105,4 +105,5 @@
 - [Wednesday]-[19/08/2026]-[20:09] : Fixed "Document not found" error by updating `get_document` and `stream_file` endpoints in `documents.py` to match both document UUIDs and `invoice_number` identifiers, and eliminated stale hardcoded mock ID initializers in `AuditorPage.tsx`.
 - [Wednesday]-[19/08/2026]-[20:10] : Created `DeleteConfirmationModal.tsx` reusable Liquid Glass modal component. Replaced all native browser `window.confirm` prompts across `DashboardPage.tsx` and `TemplatesPage.tsx` with elegant styled deletion dialogs.
 - [Wednesday]-[19/08/2026]-[20:13] : Fixed HTTP 500 Internal Server Error on `GET /api/v1/documents/{id}` by aligning schema types (`Discrepancy.expected_value` / `extracted_value` to `String(255)` for PG OID 1043), adding missing `bbox_coordinates` on `invoice_items` and missing relational columns on `audit_logs` in Supabase PostgreSQL.
+- [Wednesday]-[19/08/2026]-[20:15] : Streamlined `DocumentViewer.tsx` to provide 100% full-area coverage of the invoice document with all browser PDF controls, sidebars and extraneous chrome hidden (`#toolbar=0&navpanes=0&scrollbar=0&view=FitH&zoom=page-width`).
 
