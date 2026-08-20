@@ -50,6 +50,7 @@ export interface InvoiceRecord {
   deltaAmount: number;
   auditMessage: string;
   duplicateFlag?: string;
+  processingStatus?: string;
 }
 
 export interface LiveMetrics {

@@ -98,6 +98,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
             lineItems: lineItems.length > 0 ? lineItems : baseInvoice.lineItems,
             fields: fields.length > 0 ? fields : baseInvoice.fields,
             auditState: mappedAuditState,
+            processingStatus: doc.processing_status || 'PENDING',
             deltaAmount: 0,
             auditMessage:
               mappedAuditState === 'ok'
@@ -193,6 +194,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
       lineItems: lineItems.length > 0 ? lineItems : baseInvoice.lineItems,
       fields: fields.length > 0 ? fields : baseInvoice.fields,
       auditState: mappedAuditState,
+      processingStatus: doc.processing_status || 'PENDING',
       deltaAmount: 0,
       auditMessage:
         mappedAuditState === 'ok'

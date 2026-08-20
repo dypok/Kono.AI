@@ -18,11 +18,12 @@ interface AuditFormProps {
 /** Right panel: structured financial audit form with direct top action controls next to Kono mascot. */
 export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvoice, onSaveTemplate, onApproveAndExport }: AuditFormProps) {
   const isCritical = invoice.auditState === 'critical';
+  const isExported = invoice.processingStatus === 'EXPORTED' || invoice.processingStatus === 'APPROVED';
 
   return (
-    <div className="flex h-full flex-col space-y-5 overflow-y-auto rounded-3xl border border-white/10 liquid-glass p-5 shadow-glass backdrop-blur-2xl">
+    <div className="flex h-full flex-col space-y-5 overflow-y-auto rounded-xl border border-white/10 liquid-glass p-5 shadow-glass backdrop-blur-2xl">
       {/* Top Header Card: Kono Mascot + Primary Execution Buttons */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-inner">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 shadow-inner">
         <div className="flex items-center space-x-3.5 shrink-0">
           <KonoCoin state={invoice.auditState} size="md" pulse={true} />
           <div>
@@ -32,11 +33,14 @@ export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvo
               </h3>
               <span className={cn(
                 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono border',
-                invoice.auditState === 'ok' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                invoice.auditState === 'warning' && 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                invoice.auditState === 'critical' && 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                isExported && 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+                !isExported && invoice.auditState === 'ok' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                !isExported && invoice.auditState === 'warning' && 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                !isExported && invoice.auditState === 'critical' && 'bg-rose-500/10 text-rose-400 border-rose-500/20',
               )}>
-                {invoice.auditState === 'ok' ? (
+                {isExported ? (
+                  <span className="flex items-center space-x-1"><ShieldCheck className="w-3 h-3 text-cyan-400" /><span>Sincronizada ERP</span></span>
+                ) : invoice.auditState === 'ok' ? (
                   <span className="flex items-center space-x-1"><ShieldCheck className="w-3 h-3" /><span>Cuadrada</span></span>
                 ) : invoice.auditState === 'warning' ? (
                   <span className="flex items-center space-x-1"><AlertCircle className="w-3 h-3" /><span>Revisión</span></span>
@@ -46,7 +50,9 @@ export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvo
               </span>
             </div>
             <p className="text-xs text-zinc-400 font-mono mt-0.5">
-              {invoice.issuerName || 'Proveedor General'}
+              {isExported 
+                ? '✓ Asiento contable generado y registrado inmutablemente en el historial.' 
+                : '1-Click Accounting Reconciler'}
             </p>
           </div>
         </div>
@@ -63,21 +69,31 @@ export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvo
             <span>Guardar Plantilla</span>
           </button>
 
-          <button
-            type="button"
-            onClick={onApproveAndExport}
-            disabled={isCritical}
-            className={cn(
-              'px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition flex items-center space-x-2 active:scale-95 shrink-0',
-              isCritical
-                ? 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'
-                : 'bg-emerald-400 hover:bg-emerald-300 text-titanium-950 shadow-emerald-500/20 cursor-pointer'
-            )}
-          >
-            <CheckCircle2 className="w-4 h-4 text-titanium-950 shrink-0" />
-            <span>Aprobar &amp; Exportar ERP</span>
-            <ArrowRight className="w-3.5 h-3.5 text-titanium-950 shrink-0" />
-          </button>
+          {isExported ? (
+            <div
+              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/5 text-zinc-400 border border-white/10 flex items-center space-x-2 shrink-0 cursor-default select-none shadow-sm"
+              title="Este comprobante ya fue auditado, aprobado y archivado en el Historial ERP"
+            >
+              <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+              <span>Exportada a ERP (Bloqueada)</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onApproveAndExport}
+              disabled={isCritical}
+              className={cn(
+                'px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition flex items-center space-x-2 active:scale-95 shrink-0',
+                isCritical
+                  ? 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'
+                  : 'bg-emerald-400 hover:bg-emerald-300 text-titanium-950 shadow-emerald-500/20 cursor-pointer'
+              )}
+            >
+              <CheckCircle2 className="w-4 h-4 text-titanium-950 shrink-0" />
+              <span>Aprobar &amp; Exportar ERP</span>
+              <ArrowRight className="w-3.5 h-3.5 text-titanium-950 shrink-0" />
+            </button>
+          )}
         </div>
       </div>
 
