@@ -24,3 +24,4 @@
   * US-REQ-008: Dynamic optional split-screen layout with 'Mostrar/Ocultar Visor PDF' and external tab opener.
   * Frontend production bundle built cleanly with 0 TypeScript errors.
 - [Thursday]-[20/08/2026]-[14:02] : Added OpenAI API Key management in `SettingsPage.tsx` with secure `localStorage` persistence (localhost). Updated backend `app/api/v1/ai.py` and `documentsApi.ts` to dynamically inject and use the configured API key via `X-OpenAI-Api-Key` headers for individual and batch AI fallback runs.
+- [Thursday]-[20/08/2026]-[14:10] : Updated `AuditorPage.tsx` per US-REQ-008: Removed inline split-screen PDF preview to keep focus on the structured audit form. Added dedicated 'Mostrar Factura' action button that opens an immersive modal overlay with the document viewer, auto-unlocker, and external tab options.

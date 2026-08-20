@@ -233,10 +233,10 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
     }
   }
 
-  const [showPdfViewer, setShowPdfViewer] = useState(true);
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto h-[calc(100vh-100px)] flex flex-col pb-4">
+    <div className="space-y-4 max-w-5xl mx-auto h-[calc(100vh-100px)] flex flex-col pb-4">
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center space-x-3">
@@ -262,29 +262,26 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
           </div>
         </div>
 
-        {/* View Document Option Toggle */}
+        {/* View Document Action Buttons */}
         <div className="flex items-center space-x-2">
           {pdfUrl && (
             <a
               href={pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3.5 py-1.5 rounded-xl liquid-glass-card hover:bg-white/10 text-xs text-alabaster-200 border border-white/10 transition flex items-center space-x-1.5"
-              title="Abrir PDF en pestaña independiente"
+              className="px-3.5 py-2 rounded-xl liquid-glass-card hover:bg-white/10 text-xs text-alabaster-200 border border-white/10 transition flex items-center space-x-1.5 shadow-sm"
+              title="Abrir PDF original en pestaña independiente"
             >
               <span>Abrir en Pestaña</span>
             </a>
           )}
           <button
             type="button"
-            onClick={() => setShowPdfViewer((v) => !v)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition border ${
-              showPdfViewer
-                ? 'bg-white/15 text-alabaster-50 border-white/20'
-                : 'liquid-glass-card hover:bg-white/10 text-zinc-300 border-white/10'
-            }`}
+            onClick={() => setShowPdfModal(true)}
+            className="px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-semibold transition flex items-center space-x-2 shadow-sm"
           >
-            <span>{showPdfViewer ? 'Ocultar Visor PDF' : 'Mostrar Visor PDF'}</span>
+            <IconSparkles className="w-4 h-4 text-purple-300" />
+            <span>Mostrar Factura</span>
           </button>
         </div>
       </div>
@@ -310,11 +307,54 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
           </button>
         </div>
       ) : (
-        /* Dynamic Layout: Split Screen or Full Summary */
-        <main className={`grid gap-4 flex-1 overflow-hidden min-h-0 ${showPdfViewer ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 max-w-4xl mx-auto w-full'}`}>
-          {/* Left Panel: Authentic PDF Viewer (Opcional) */}
-          {showPdfViewer && (
-            <section className="h-full overflow-hidden">
+        /* Main Structured Audit Panel (No inline viewer distractors) */
+        <main className="flex-1 overflow-hidden min-h-0 w-full">
+          <section className="h-full overflow-y-auto">
+            <AuditForm
+              invoice={invoice}
+              activeFieldKey={activeFieldKey}
+              onSelectField={setActiveFieldKey}
+              onUpdateInvoice={setInvoice}
+              onSaveTemplate={handleSaveTemplate}
+              onApproveAndExport={handleApproveAndExport}
+            />
+          </section>
+        </main>
+      )}
+
+      {/* 📄 Modal de Previsualización de Factura (US-REQ-008) */}
+      {showPdfModal && invoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-2xl animate-fade-in">
+          <div className="w-full max-w-5xl h-[90vh] bg-titanium-950/95 border border-white/20 rounded-3xl p-4 sm:p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col space-y-3 relative overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+              <div className="flex items-center space-x-2">
+                <h3 className="text-sm font-bold text-alabaster-100">
+                  Previsualización de Documento: {invoice.invoiceNumber || 'Comprobante'}
+                </h3>
+                <span className="text-xs text-zinc-400 font-mono">({invoice.issuerName})</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                {pdfUrl && (
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-alabaster-200 border border-white/10 transition"
+                  >
+                    Abrir en Pestaña
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowPdfModal(false)}
+                  className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden min-h-0 rounded-2xl border border-white/10">
               <DocumentViewer
                 invoice={invoice}
                 activeFieldKey={activeFieldKey}
@@ -327,21 +367,9 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
                   }
                 }}
               />
-            </section>
-          )}
-
-          {/* Right Panel: Extracted Summary & Fields */}
-          <section className="h-full overflow-y-auto">
-            <AuditForm
-              invoice={invoice}
-              activeFieldKey={activeFieldKey}
-              onSelectField={setActiveFieldKey}
-              onUpdateInvoice={setInvoice}
-              onSaveTemplate={handleSaveTemplate}
-              onApproveAndExport={handleApproveAndExport}
-            />
-          </section>
-        </main>
+            </div>
+          </div>
+        </div>
       )}
 
       {toastMessage && <Toast message={toastMessage} />}
