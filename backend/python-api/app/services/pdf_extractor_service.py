@@ -138,11 +138,11 @@ class PDFExtractorService:
                 btxt = b[4].strip()
                 blines = [l.strip() for l in btxt.splitlines() if l.strip()]
 
-                # Vendor details (in top area y0 < 180)
-                if b[1] < 180:
+                # Vendor details (in top area y0 < 150)
+                if b[1] < 150 and not any(k in btxt.upper() for k in ["BILL TO", "SHIP TO", "CUSTOMER", "CLIENTE", "DESCRIPTION", "DESCRIPCI"]):
                     for l in blines:
-                        if any(k in l for k in ["NIF/CIF:", "CIF:", "NIT:"]):
-                            m_nit = re.search(r"(?:NIT|CIF|NIF)[:\s]*([0-9.\-]+)", l)
+                        if any(k in l.upper() for k in ["NIF/CIF:", "CIF:", "NIT:", "TAX ID:", "VAT ID:", "EIN:", "VAT:"]):
+                            m_nit = re.search(r"(?:NIT|CIF|NIF|TAX\s*ID|VAT\s*ID|EIN|VAT)[:\s]*([A-Z0-9.\-]+)", l, re.IGNORECASE)
                             if m_nit and not result["vendor_tax_id"]:
                                 result["vendor_tax_id"] = m_nit.group(1).strip()
                         elif not result["vendor_name"] and not any(
@@ -151,47 +151,71 @@ class PDFExtractorService:
                                 "@",
                                 "+34",
                                 "+57",
+                                "+1",
                                 "CALLE",
                                 "CARRERA",
                                 "AVENIDA",
                                 "PASEO",
-                                "C.",
-                                "CRA",
-                                "APT",
+                                "STREET",
+                                "AVENUE",
+                                "SUITE",
+                                "BLVD",
+                                "ROAD",
+                                "CRA ",
+                                "CL ",
+                                "C/ ",
+                                "APT ",
                                 "DIRECCIÓN",
                                 "DIRECCION",
-                                "FACTURA ELECTRÓNICA",
-                                "FACTURA ELECTRONICA",
-                                "FACTURA DE VENTA",
+                                "ADDRESS",
+                                "FACTURA",
+                                "INVOICE",
+                                "BILL TO",
+                                "SHIP TO",
                                 "N°:",
                                 "NÚMERO",
+                                "NUMBER",
                                 "FECHA",
+                                "DATE",
                                 "CLIENTE",
+                                "CUSTOMER",
+                                "DESCRIPTION",
+                                "DESCRIPCI",
+                                "AMOUNT",
+                                "PRICE",
+                                "QTY",
                             ]
-                        ) and len(l) > 3:
-                            result["vendor_name"] = l
+                        ) and not re.search(r"\b[0-9]{5}\b", l) and len(l.strip()) > 2:
+                            result["vendor_name"] = l.strip()
 
-                # Customer details
-                if "CLIENTE" in btxt.upper():
+                # Customer details (Spanish / English)
+                if any(k in btxt.upper() for k in ["CLIENTE", "BILL TO", "CUSTOMER", "SOLD TO"]):
                     for i, l in enumerate(blines):
-                        if "CLIENTE" in l.upper():
-                            c_name = re.sub(r"^CLIENTE\s*(?:/\s*ADQUIRIENTE)?:\s*", "", l, flags=re.IGNORECASE).strip()
+                        if any(k in l.upper() for k in ["CLIENTE", "BILL TO", "CUSTOMER", "SOLD TO"]):
+                            c_name = re.sub(r"^(?:CLIENTE|BILL\s+TO|CUSTOMER|SOLD\s+TO)\s*(?:/\s*ADQUIRIENTE)?:\s*", "", l, flags=re.IGNORECASE).strip()
                             if c_name:
                                 result["customer_name"] = c_name
                             elif i + 1 < len(blines):
-                                result["customer_name"] = blines[i + 1]
+                                result["customer_name"] = blines[i + 1].strip()
                             break
 
-                if "ID/NIF:" in btxt or "NIT Cliente:" in btxt or ("NIT:" in btxt and b[1] >= 140 and b[1] <= 220):
-                    m = re.search(r"(?:ID/NIF|NIT Cliente|NIT):\s*([0-9.\-]+)", btxt)
+                if any(k in btxt.upper() for k in ["ID/NIF:", "NIT CLIENTE:", "CUSTOMER TAX ID:", "TAX ID:"]) or ("NIT:" in btxt and b[1] >= 140 and b[1] <= 240):
+                    m = re.search(r"(?:ID/NIF|NIT Cliente|Customer Tax ID|Tax ID|NIT):\s*([A-Z0-9.\-]+)", btxt, re.IGNORECASE)
                     if m and not result["customer_tax_id"]:
                         result["customer_tax_id"] = m.group(1).strip()
 
                 # Invoice folio from block
-                if "FACTURA" in btxt.upper():
-                    m = re.search(r"\b(FAC-[0-9]+|INV-[0-9]+|FE-[0-9]+)\b", btxt)
-                    if m:
-                        result["invoice_number"] = m.group(1)
+                if any(k in btxt.upper() for k in ["FACTURA", "INVOICE", "BILL", "RECEIPT", "FOLIO"]):
+                    # First check for typical invoice prefixes with multi-segment IDs
+                    m_pref = re.search(r"\b((?:FAC|INV|FE|FEV|NC|ND|SETP|SETT|BILL)(?:[-_][0-9A-Z]+)+)\b", btxt, re.IGNORECASE)
+                    if m_pref:
+                        result["invoice_number"] = m_pref.group(1).upper()
+                    else:
+                        m = re.search(r"(?:FACTURA(?:\s+ELECTR[OÓ]NICA)?(?:\s+DE\s+VENTA)?|INVOICE|BILL|RECEIPT|FOLIO|N[°ºO\.]*)[\s:#]*([A-Z0-9\-_]{3,30})\b", btxt, re.IGNORECASE)
+                        if m:
+                            candidate = m.group(1).strip()
+                            if candidate.upper() not in ["ELECTRONICA", "VENTA", "NUMBER", "DATE", "CLIENTE", "CUSTOMER", "TECHNOLOGIES", "ICA", "DE"]:
+                                result["invoice_number"] = candidate
 
             # 3. Line by line scanner for Totals and Dates
             table_header_y = None
@@ -202,26 +226,32 @@ class PDFExtractorService:
 
                 # Invoice Folio fallback
                 if not result["invoice_number"]:
-                    m = re.search(r"\b(FAC-[0-9]+|INV-[0-9]+|FE-[0-9]+)\b", t)
-                    if m:
-                        result["invoice_number"] = m.group(1)
+                    m_pref = re.search(r"\b((?:FAC|INV|FE|FEV|NC|ND|SETP|SETT|BILL)(?:[-_][0-9A-Z]+)+)\b", t, re.IGNORECASE)
+                    if m_pref:
+                        result["invoice_number"] = m_pref.group(1).upper()
+                    else:
+                        m = re.search(r"(?:FACTURA(?:\s+ELECTR[OÓ]NICA)?(?:\s+DE\s+VENTA)?|INVOICE|BILL|RECEIPT|FOLIO|N[°ºO\.]*)[\s:#]*([A-Z0-9\-_]{3,30})\b", t, re.IGNORECASE)
+                        if m:
+                            candidate = m.group(1).strip()
+                            if candidate.upper() not in ["ELECTRONICA", "VENTA", "NUMBER", "DATE", "CLIENTE", "CUSTOMER", "TECHNOLOGIES", "ICA", "DE"]:
+                                result["invoice_number"] = candidate
 
-                # Issue Date
-                if ("Fecha" in t or "Emisión" in t or "Emision" in t) and not result["issue_date"]:
-                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})", t)
+                # Issue Date (Spanish / English / ISO / Slash)
+                if any(k in t.upper() for k in ["FECHA", "EMISIÓN", "EMISION", "ISSUE DATE", "INVOICE DATE", "BILLING DATE", "DATE:"]) and not result["issue_date"]:
+                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}-[0-9]{2}-[0-9]{4})", t)
                     if m:
                         result["issue_date"] = m.group(1)
 
-                # Due Date
-                if ("Vencimiento" in t or "Vence" in t) and not result["due_date"]:
-                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})", t)
+                # Due Date (Spanish / English)
+                if any(k in t.upper() for k in ["VENCIMIENTO", "VENCE", "DUE DATE", "PAYMENT DUE"]) and not result["due_date"]:
+                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}-[0-9]{2}-[0-9]{4})", t)
                     if m:
                         result["due_date"] = m.group(1)
 
-                # Subtotal
-                if "SUBTOTAL" in t.upper():
+                # Subtotal (Spanish / English)
+                if any(k in t.upper() for k in ["SUBTOTAL", "SUB-TOTAL", "NET AMOUNT", "BASE IMPONIBLE"]):
                     table_footer_y = l["y"]
-                    m = re.search(r"(?:SUBTOTAL)[:\s]*[\$\€]?\s*([0-9.,]+)", t, re.IGNORECASE)
+                    m = re.search(r"(?:SUBTOTAL|SUB-TOTAL|NET AMOUNT|BASE IMPONIBLE)[:\s]*[\$\€\£]?\s*([0-9.,]+)", t, re.IGNORECASE)
                     if m:
                         val_str = m.group(1).replace(".", "").replace(",", ".") if "," in m.group(1) and "." in m.group(1) else m.group(1).replace(",", "")
                         try:
@@ -229,9 +259,9 @@ class PDFExtractorService:
                         except ValueError:
                             pass
 
-                # IVA / Tax
-                if "IVA" in t.upper():
-                    m = re.search(r"IVA(?:\s*\([0-9]+%\))?[:\s]*[\$\€]?\s*([0-9.,]+)", t, re.IGNORECASE)
+                # IVA / Tax / VAT / GST
+                if any(k in t.upper() for k in ["IVA", "VAT", "TAX", "GST", "SALES TAX", "IMPUESTO"]):
+                    m = re.search(r"(?:IVA|VAT|TAX|GST|SALES TAX|IMPUESTO)(?:\s*\([0-9]+%\))?[:\s]*[\$\€\£]?\s*([0-9.,]+)", t, re.IGNORECASE)
                     if m:
                         val_str = m.group(1).replace(".", "").replace(",", ".") if "," in m.group(1) and "." in m.group(1) else m.group(1).replace(",", "")
                         try:
@@ -239,9 +269,9 @@ class PDFExtractorService:
                         except ValueError:
                             pass
 
-                # Grand Total
-                if "TOTAL" in t.upper() and "TOTAL ITEM" not in t.upper() and "UNIT" not in t.upper():
-                    m = re.search(r"(?:TOTAL A PAGAR|TOTAL)[:\s]*[\$\€]?\s*([0-9.,]+)", t, re.IGNORECASE)
+                # Grand Total (Spanish: Total / Total a Pagar; English: Amount Due / Total Due / Balance Due / Total Amount)
+                if any(k in t.upper() for k in ["TOTAL", "AMOUNT DUE", "TOTAL DUE", "BALANCE DUE", "AMOUNT PAYABLE", "TOTAL AMOUNT", "TOTAL A PAGAR"]) and "TOTAL ITEM" not in t.upper() and "UNIT" not in t.upper():
+                    m = re.search(r"(?:TOTAL A PAGAR|AMOUNT DUE|TOTAL DUE|BALANCE DUE|AMOUNT PAYABLE|TOTAL AMOUNT|TOTAL)[:\s]*[\$\€\£]?\s*([0-9.,]+)", t, re.IGNORECASE)
                     if m:
                         val_str = m.group(1).replace(".", "").replace(",", ".") if "," in m.group(1) and "." in m.group(1) else m.group(1).replace(",", "")
                         try:
@@ -249,8 +279,8 @@ class PDFExtractorService:
                         except ValueError:
                             pass
 
-                # Table Header marker
-                if any(k in t.upper() for k in ["DESCRIPCI", "CANT", "PRECIO", "VALOR"]):
+                # Table Header marker (Spanish / English) - capture only the first header
+                if table_header_y is None and any(k in t.upper() for k in ["DESCRIPCI", "DESCRIPTION"]) and any(k in t.upper() for k in ["CANT", "QTY", "QUANTITY", "PRECIO", "PRICE", "RATE", "VALOR", "AMOUNT"]):
                     table_header_y = l["y"]
 
             # 4. Table Line Items Extraction
@@ -264,22 +294,23 @@ class PDFExtractorService:
                         break
 
                     t = l["text"]
-                    if any(h in t for h in ["Descripci", "Precio", "Unit.", "Total Item"]):
-                        t = re.sub(r"\b(Descripci[oó]n|Cant\.|Precio|Unit\.|Total|Item)\b", "", t).strip()
+                    if any(h in t for h in ["Descripci", "Description", "Precio", "Price", "Unit.", "Total Item", "Amount", "Rate"]):
+                        t = re.sub(r"\b(Descripci[oó]n|Description|Cant\.|Qty|Quantity|Precio|Price|Rate|Unit\.|Total|Item|Amount)\b", "", t, flags=re.IGNORECASE).strip()
                         if not t:
                             continue
 
-                    # Match: Description ... Qty $UnitPrice $TotalPrice
+                    # Match: Description ... Qty $UnitPrice $TotalPrice (supporting varied currency formats)
                     m = re.search(
-                        r"^(.*?)\s*([0-9]+)\s+[\$\€]?\s*([0-9]+(?:[.,][0-9]{2}))\s+[\$\€]?\s*([0-9]+(?:[.,][0-9]{2}))$",
+                        r"^(.*?)\s*([0-9]+(?:\.[0-9]+)?)\s+(?:USD|COP|EUR|\$|\€|\£)?\s*([0-9]+(?:[.,][0-9]{2}))\s+(?:USD|COP|EUR|\$|\€|\£)?\s*([0-9]+(?:[.,][0-9]{2}))$",
                         t,
                     )
                     if m:
                         line_desc = m.group(1).strip()
                         line_desc = re.sub(
-                            r"^(Unit\.\s*Item\s*|Total\s*Item\s*|Precio\s*Unit\.\s*|Unit\.\s*)",
+                            r"^(Unit\.\s*Item\s*|Total\s*Item\s*|Precio\s*Unit\.\s*|Unit\.\s*|Rate\s*)",
                             "",
                             line_desc,
+                            flags=re.IGNORECASE,
                         ).strip()
                         full_desc = " ".join(
                             pending_desc_parts + ([line_desc] if line_desc else [])
@@ -304,12 +335,13 @@ class PDFExtractorService:
                     else:
                         if not any(
                             stop in t
-                            for stop in ["Subtotal:", "Total:", "IVA", "MÃ©todo", "Cliente:"]
+                            for stop in ["Subtotal", "Total", "Amount Due", "IVA", "VAT", "Tax", "Método", "Cliente", "Customer"]
                         ):
                             clean_piece = re.sub(
-                                r"\b(Descripci[oó]n|Cant\.|Precio|Unit\.|Total|Item)\b",
+                                r"\b(Descripci[oó]n|Description|Cant\.|Qty|Precio|Price|Unit\.|Total|Item)\b",
                                 "",
                                 t,
+                                flags=re.IGNORECASE,
                             ).strip()
                             if clean_piece:
                                 pending_desc_parts.append(clean_piece)

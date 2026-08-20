@@ -26,8 +26,8 @@ ANCHOR_WEIGHTS: Dict[str, float] = {
 }
 
 # Minimum score to be considered an invoice
-INVOICE_THRESHOLD = 0.35
-RECEIPT_THRESHOLD = 0.20
+INVOICE_THRESHOLD = 0.22
+RECEIPT_THRESHOLD = 0.15
 
 
 class DocumentClassifier:
