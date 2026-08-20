@@ -31,6 +31,18 @@ export default {
           rose: '#F43F5E',
         }
       },
+      borderRadius: {
+        'none': '0px',
+        'sm': '4px',
+        'DEFAULT': '6px',
+        'md': '8px',
+        'lg': '10px',
+        'xl': '12px',
+        '2xl': '14px',
+        '3xl': '16px',
+        '4xl': '20px',
+        'full': '9999px',
+      },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
