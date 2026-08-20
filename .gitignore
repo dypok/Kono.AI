@@ -89,6 +89,21 @@ inbound_invoices/
 storage/
 
 # ------------------------------------------
+# AI Assistants, Skills & Local Configs
+# ------------------------------------------
+.agents/
+.gemini/
+skills-lock.json
+.claude/
+.cursor/
+
+# ------------------------------------------
+# Sample & Generated Invoices / PDFs
+# ------------------------------------------
+scripts/facturas_pdf/
+*.pdf
+
+# ------------------------------------------
 # Operating System & IDEs
 # ------------------------------------------
 .DS_Store
