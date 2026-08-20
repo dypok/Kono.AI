@@ -30,6 +30,7 @@ class Document(Base):
     __tablename__ = "documents"
 
     id = Column(String(36), primary_key=True, default=_uuid)
+    user_id = Column(String(80), index=True, nullable=True) # Supabase User UUID
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(512), nullable=False)
     file_hash_sha256 = Column(String(64), unique=True, index=True, nullable=True)
@@ -37,6 +38,8 @@ class Document(Base):
     file_size_bytes = Column(Integer, default=0)
 
     invoice_number = Column(String(80), index=True, nullable=True)
+    vendor_name = Column(String(255), index=True, nullable=True)
+    vendor_tax_id = Column(String(50), index=True, nullable=True) # NIT / RUT
     issue_date = Column(String(20), nullable=True)
     due_date = Column(String(20), nullable=True)
     currency = Column(String(10), default="COP")
@@ -96,8 +99,8 @@ class Discrepancy(Base):
     document_id = Column(String(36), ForeignKey("documents.id"), nullable=False)
     field_name = Column(String(60), nullable=False)
     alert_type = Column(String(40), nullable=False)
-    expected_value = Column(Float, nullable=True)
-    extracted_value = Column(Float, nullable=True)
+    expected_value = Column(String(255), nullable=True)
+    extracted_value = Column(String(255), nullable=True)
     delta_amount = Column(Float, nullable=True)
     description = Column(String(500), default="")
 

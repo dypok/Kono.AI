@@ -1,59 +1,9 @@
-# ==============================================================================
-# 🪙 Kono.ai — Unified Docker Compose (Development Hot-Reload by Default)
-# Architecture: Rust Ingestion Core + Python FastAPI Engine + Redis + React App
-# ==============================================================================
-
 services:
-  # ----------------------------------------------------------------------------
-  # 1. In-Memory Event Broker & Job Queue
-  # ----------------------------------------------------------------------------
-  redis:
-    image: redis:7-alpine
-    container_name: kono-redis
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - kono-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  # ----------------------------------------------------------------------------
-  # 2. 🦀 Rust Ingestion Core (Folder Watcher & PDF/Image Triage)
-  # ----------------------------------------------------------------------------
-  rust-core:
+  kono-app:
     build:
-      context: ./backend/rust-core
-      dockerfile: Dockerfile
-    container_name: kono-rust-core
-    restart: unless-stopped
-    environment:
-      - RUST_LOG=info
-      - REDIS_URL=redis://redis:6379/0
-      - WATCH_DIR=/data/storage/inbound
-      - STORAGE_DIR=/data/storage
-    volumes:
-      - shared_storage:/data/storage
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - kono-network
-
-  # ----------------------------------------------------------------------------
-  # 3. 🐍 Python API & Business Engine (FastAPI with --reload Hot-Reload)
-  # ----------------------------------------------------------------------------
-  python-api:
-    build:
-      context: ./backend/python-api
-      dockerfile: Dockerfile
-    container_name: kono-python-api
+      context: .
+      dockerfile: Dockerfile.allinone
+    container_name: kono-app
     restart: unless-stopped
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     environment:
@@ -70,71 +20,25 @@ services:
       - IMAP_PASSWORD=${IMAP_PASSWORD:-}
       - IMAP_POLL_INTERVAL_SEC=${IMAP_POLL_INTERVAL_SEC:-60}
     ports:
-      - "8000:8000"
+      - "80:80"
     volumes:
+      # Live Hot-Reload Mounts for Python Backend & Frontend Vite
       - ./backend/python-api/app:/app/app
-      - shared_storage:/data/storage
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - kono-network
-
-  # ----------------------------------------------------------------------------
-  # 4. ⚛️ Frontend Split-Screen Dashboard (Vite HMR Live Reload)
-  # ----------------------------------------------------------------------------
-  frontend:
-    image: node:20-alpine
-    container_name: kono-frontend
-    working_dir: /app
-    restart: unless-stopped
-    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0 --port 3000"]
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/src:/app/frontend/src
+      - ./frontend/public:/app/frontend/public
+      - ./frontend/index.html:/app/frontend/index.html
+      - ./frontend/vite.config.ts:/app/frontend/vite.config.ts
+      # Persistent Data Storage
+      - kono_storage:/data/storage
     environment:
-      - VITE_API_URL=http://localhost:8000
-    depends_on:
-      - python-api
-    networks:
-      - kono-network
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres
+      - DATABASE_SYNC_URL=postgresql+psycopg2://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - KONO_WEBHOOK_SECRET=${KONO_WEBHOOK_SECRET:-kono_secret_key_2026}
+      - SUPABASE_URL=${SUPABASE_URL:-https://avkxhplapmibhyleywzd.supabase.co}
+      - SUPABASE_KEY=${SUPABASE_KEY:-}
 
-  # ----------------------------------------------------------------------------
-  # 5. 🤖 n8n Workflow Automation Platform (Inbound & ERP Orchestration)
-  # ----------------------------------------------------------------------------
-  n8n:
-    image: docker.n8n.io/n8nio/n8n:latest
-    container_name: kono-n8n
-    restart: unless-stopped
-    ports:
-      - "5678:5678"
-    environment:
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://localhost:5678/
-      - GENERIC_TIMEZONE=America/Bogota
-      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
-    volumes:
-      - n8n_data:/home/node/.n8n
-      - shared_storage:/data/storage
-    depends_on:
-      - python-api
-    networks:
-      - kono-network
-
-# ------------------------------------------------------------------------------
-# Volumes & Networks
-# ------------------------------------------------------------------------------
 volumes:
-  shared_storage:
+  kono_storage:
     driver: local
-  redis_data:
-    driver: local
-  n8n_data:
-    driver: local
-
-networks:
-  kono-network:
-    driver: bridge

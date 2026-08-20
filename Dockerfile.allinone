@@ -1,20 +1,10 @@
 # ==============================================================================
-# 🪙 Kono.ai — All-in-One Monolithic Container
-# Combines: Redis + Rust Core + Python FastAPI + React/Nginx in a single container
+# 🪙 Kono.ai — All-in-One Container with Instant Vite HMR & FastAPI Reload
+# Combines: Redis + Rust Core + Python FastAPI (--reload) + Vite Dev Server (Live HMR)
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# Stage 1: Build Frontend React App
-# ------------------------------------------------------------------------------
-FROM node:20-alpine AS frontend-builder
-WORKDIR /app
-COPY frontend/package*.json ./
-RUN npm install
-COPY frontend/ ./
-RUN npm run build
-
-# ------------------------------------------------------------------------------
-# Stage 2: Build Rust Core Binary
+# Stage 1: Build Rust Core Binary
 # ------------------------------------------------------------------------------
 FROM rust:1-slim-bookworm AS rust-builder
 RUN apt-get update && apt-get install -y --no-install-recommends pkg-config libssl-dev build-essential && rm -rf /var/lib/apt/lists/*
@@ -24,12 +14,15 @@ COPY backend/rust-core/src ./src
 RUN cargo build --release
 
 # ------------------------------------------------------------------------------
-# Stage 3: Final Runtime Image with Supervisord
+# Stage 2: Final Runtime Image
 # ------------------------------------------------------------------------------
 FROM python:3.11-slim-bookworm
 
-# Install Redis, Nginx, Supervisord, Tesseract OCR, and C-dependencies
+# Install Node.js 20, Redis, Nginx, Supervisord, Tesseract OCR
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    gnupg \
     redis-server \
     nginx \
     supervisor \
@@ -38,8 +31,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr-eng \
     libgl1 \
     libglib2.0-0 \
-    ca-certificates \
-    curl \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -51,19 +47,24 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy Python API source code
 COPY backend/python-api/app ./app
 
-# Copy Rust Binary from Stage 2
+# Install Frontend dependencies in /app/frontend
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+
+WORKDIR /app
+
+# Copy Rust Binary from Stage 1
 COPY --from=rust-builder /usr/src/kono-rust-core/target/release/kono-rust-core /usr/local/bin/kono-rust-core
 
-# Copy Built Frontend Static Files from Stage 1 to Nginx HTML
-COPY --from=frontend-builder /app/dist /usr/share/nginx/html
-
-# Copy Nginx & Supervisor Configs
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
-
-# Setup shared storage directory
+# Setup shared storage directory & supervisor logs
 RUN mkdir -p /data/storage/inbound /data/storage/failed /var/log/supervisor
 
-# Configure Supervisord to run Redis, Rust Core, FastAPI, and Nginx concurrently
+# Copy Nginx Config
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Configure Supervisord with Live Hot-Reload on FastAPI and Vite Dev Server
 RUN cat << 'SUP_EOF' > /etc/supervisor/conf.d/kono.conf
 [supervisord]
 nodaemon=true
@@ -86,12 +87,21 @@ stdout_logfile=/var/log/supervisor/rust.log
 stderr_logfile=/var/log/supervisor/rust_err.log
 
 [program:python-api]
-command=uvicorn app.main:app --host 127.0.0.1 --port 8000
+command=uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+directory=/app
 autostart=true
 autorestart=true
-environment=REDIS_URL="redis://127.0.0.1:6379/0",DATABASE_URL="sqlite+aiosqlite:////data/storage/kono.db",STORAGE_DIR="/data/storage"
+environment=REDIS_URL="redis://127.0.0.1:6379/0",DATABASE_URL="postgresql+asyncpg://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres",DATABASE_SYNC_URL="postgresql+psycopg2://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres",STORAGE_DIR="/data/storage",PYTHONPATH="/app"
 stdout_logfile=/var/log/supervisor/python.log
 stderr_logfile=/var/log/supervisor/python_err.log
+
+[program:frontend-dev]
+command=npm run dev -- --host 127.0.0.1 --port 5173
+directory=/app/frontend
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/supervisor/frontend.log
+stderr_logfile=/var/log/supervisor/frontend_err.log
 
 [program:nginx]
 command=nginx -g "daemon off;"
@@ -100,9 +110,6 @@ autorestart=true
 stdout_logfile=/var/log/supervisor/nginx.log
 stderr_logfile=/var/log/supervisor/nginx_err.log
 SUP_EOF
-
-# Update Nginx config to point to local Python API
-RUN sed -i 's/python-api:8000/127.0.0.1:8000/g' /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

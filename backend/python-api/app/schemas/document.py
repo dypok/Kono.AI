@@ -12,8 +12,11 @@ class MoneyRangeQuery(BaseModel):
 
 class DocumentListItem(BaseModel):
     id: str
+    user_id: Optional[str] = None
     file_name: Optional[str] = None
     invoice_number: Optional[str] = None
+    vendor_name: Optional[str] = None
+    vendor_tax_id: Optional[str] = None
     issue_date: Optional[str] = None
     currency: Optional[str] = None
     subtotal: Optional[float] = None
@@ -41,8 +44,8 @@ class InvoiceItemRead(BaseModel):
 class DiscrepancyRead(BaseModel):
     field_name: str
     alert_type: str
-    expected_value: Optional[float] = None
-    extracted_value: Optional[float] = None
+    expected_value: Optional[str] = None
+    extracted_value: Optional[str] = None
     delta_amount: Optional[float] = None
     description: Optional[str] = None
 
@@ -51,11 +54,14 @@ class DiscrepancyRead(BaseModel):
 
 class DocumentDetail(BaseModel):
     id: str
+    user_id: Optional[str] = None
     file_name: Optional[str] = None
     file_path: Optional[str] = None
     mime_type: Optional[str] = None
     file_size_bytes: Optional[int] = 0
     invoice_number: Optional[str] = None
+    vendor_name: Optional[str] = None
+    vendor_tax_id: Optional[str] = None
     issue_date: Optional[str] = None
     currency: Optional[str] = None
     subtotal: Optional[float] = None

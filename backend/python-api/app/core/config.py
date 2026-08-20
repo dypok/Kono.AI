@@ -12,16 +12,20 @@ class Settings:
     docker-compose (REDIS_URL, DATABASE_URL, STORAGE_DIR, WEBHOOK_SECRET).
     """
 
-    # ---- Persistence ----
+    # ---- Persistence (PostgreSQL Supabase) ----
     database_url: str = field(
         default_factory=lambda: os.environ.get(
-            "DATABASE_URL", "sqlite+aiosqlite:///./kono.db"
+            "DATABASE_URL", 
+            "postgresql+asyncpg://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
         )
     )
 
     # ---- Storage ----
     storage_dir: str = field(
-        default_factory=lambda: os.environ.get("STORAGE_DIR", "./data/storage")
+        default_factory=lambda: os.environ.get(
+            "STORAGE_DIR", 
+            "/data/storage" if os.path.exists("/data/storage") else "./data/storage"
+        )
     )
 
     # ---- Streaming / Broker ----

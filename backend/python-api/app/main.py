@@ -11,7 +11,9 @@ from app import models  # noqa: F401  (registers all ORM models on Base)
 from app.api.v1 import audit as audit_router
 from app.api.v1 import documents as documents_router
 from app.api.v1 import vendors as vendors_router
+from app.api.v1 import auth as auth_router
 from app.api.v1 import inbound as inbound_router
+from app.api.v1 import integrations as integrations_router
 from app.api.v1.websockets import ConnectionManager
 
 logging.basicConfig(level=logging.INFO)
@@ -25,12 +27,23 @@ app = FastAPI(
 
 settings = get_settings()
 
+@app.middleware("http")
+async def add_process_time_header(request, call_next):
+    import time
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    process_time_ms = (time.perf_counter() - start_time) * 1000.0
+    response.headers["X-Process-Time"] = f"{process_time_ms:.2f}"
+    response.headers["Server-Timing"] = f"total;dur={process_time_ms:.2f}"
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Process-Time", "Server-Timing"],
 )
 
 # Shared WebSocket connection manager + Redis bridge.
@@ -41,23 +54,33 @@ app.state.ws_manager = ws_manager
 app.include_router(documents_router.router, prefix="/api/v1")
 app.include_router(vendors_router.router, prefix="/api/v1")
 app.include_router(audit_router.router, prefix="/api/v1")
+app.include_router(auth_router.router, prefix="/api/v1")
 app.include_router(inbound_router.router, prefix="/api/v1")
+app.include_router(integrations_router.router, prefix="/api/v1")
 
+
+from app.services.inbox_scheduler import inbox_scheduler
+from app.services.redis_pipeline_consumer import redis_pipeline_consumer
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize async engine and create tables for the configured DB.
+    # Initialize async engine for PostgreSQL Supabase
     init_engine()
-    with get_sync_engine().connect() as conn:
-        Base.metadata.create_all(conn)
 
     # Start the Redis -> WebSocket bridge in the background (non-blocking).
     bridge = asyncio.create_task(
         ws_manager.run_redis_bridge(settings.redis_url, settings.kono_feed_channel)
     )
-    logger.info("Kono API started; WS bridge task launched")
+    # Start the 60-second periodic background inbox scanner
+    inbox_scheduler.start()
+
+    # Start the Rust Core -> Python Spatial Engine Redis Stream consumer
+    redis_pipeline_consumer.start(settings.redis_url, ws_manager=ws_manager)
+    logger.info("🦀 Kono API started; Rust Redis Pipeline Consumer & WS bridge launched")
     yield
     bridge.cancel()
+    inbox_scheduler.stop()
+    redis_pipeline_consumer.stop()
 
 
 # FastAPI lifespan is the supported way to run startup/shutdown in modern

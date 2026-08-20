@@ -63,3 +63,13 @@ async def create_vendor_template(body: VendorTemplateCreate, db: AsyncSession = 
     await db.commit()
     await db.refresh(template)
     return template
+
+
+@router.delete("/{template_id}")
+async def delete_vendor_template(template_id: str, db: AsyncSession = Depends(get_db)):
+    row = await db.get(VendorTemplate, template_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+    await db.delete(row)
+    await db.commit()
+    return {"status": "SUCCESS", "message": "Template deleted successfully", "id": template_id}

@@ -1,24 +1,43 @@
-# 🤖 Guía de Integración y Automatización con n8n en Kono.ai
+# 📧 Guía de Ingesta Desatendida con n8n y Gmail en Kono.ai
 
-Esta guía describe cómo utilizar la plataforma de automatización de flujos **n8n** integrada en el Docker Compose de Kono.ai para recibir facturas automáticamente desde cualquier fuente externa (Gmail, Slack, Drive, Webhooks o formularios) y enviarlas hacia el motor de auditoría determinista de Kono.ai.
+Esta guía detalla cómo opera el flujo de **extracción 100% desatendida de facturas desde Gmail con n8n**. No requiere que el usuario cargue archivos manualmente ni ejecute comandos.
 
 ---
 
-## 🚀 1. Levantar n8n en Docker Compose
+## 🔄 Arquitectura del Flujo Desatendido
 
-El servicio `n8n` ya está preconfigurado en el archivo [docker-compose.yml](file:///home/dypok/Projects/Kono.AI/docker-compose.yml):
-
-```bash
-docker compose up -d n8n
+```
+                                    [ Proveedor / Remitente ]
+                                               │
+                                               ▼
+                              [ Envía factura por correo a Gmail ]
+                                               │
+                                               ▼
+               ┌───────────────────────────────────────────────────────────────┐
+               │              🤖 N8N AUTOMATION ENGINE (Port 5678)             │
+               │                                                               │
+               │  1. [Nodo Gmail Trigger]: Sondea y filtra correos:            │
+               │     "has:attachment (filename:pdf OR subject:factura)"        │
+               │                                                               │
+               │  2. [Extracción Binaria]: Descarga el PDF/Imagen adjunto      │
+               │                                                               │
+               │  3. [HTTP Request Multi-part POST]:                           │
+               │     URL: http://kono-app:80/api/v1/inbound/webhook            │
+               │     Header: X-Kono-Webhook-Secret                             │
+               │                                                               │
+               │  4. [Nodo Gmail Label]: Marca el correo como PROCESADO        │
+               └───────────────────────────────┬───────────────────────────────┘
+                                               │
+                                               ▼
+                 🦀 [Kono Rust Ingestion Core & 🐍 Python Deterministic Audit]
+                                               │
+                                               ▼
+                   ⚛️ [Visor Split-Screen & Mascota Kono en tiempo real]
 ```
 
-- **URL de n8n:** `http://localhost:5678`
-- **Volumen persistente:** `n8n_data` (almacena credenciales y workflows sin pérdida de datos).
-- **Red interna:** Se comunica con FastAPI mediante `http://python-api:8000`.
-
 ---
 
-## 📥 2. Importar el Flujo Preconfigurado (1-Click)
+## 🚀 1. Importar el Flujo de Gmail en n8n (1-Click)
 
 En la raíz del proyecto se encuentra la plantilla lista para importar:
 📁 [n8n/workflows/kono_inbound_workflow.json](file:///home/dypok/Projects/Kono.AI/n8n/workflows/kono_inbound_workflow.json)
@@ -37,34 +56,16 @@ En la raíz del proyecto se encuentra la plantilla lista para importar:
 
 ---
 
-## 🔄 3. Arquitectura del Flujo de Trabajo
+## 🔑 2. Conectar tu Cuenta de Gmail en n8n
 
-```
- [Fuente Externa: Correo / ERP / Formulario]
-                     │
-                     ▼
-       [Node 1: Webhook Trigger n8n]
-        URL: http://localhost:5678/webhook/kono-inbound-invoice
-                     │
-                     ▼
-    [Node 2: HTTP Request multipart/form-data]
-    POST http://python-api:8000/api/v1/inbound/webhook
-    Header: X-Kono-Webhook-Secret: kono_secret_n8n_key_2026
-                     │
-                     ▼
- 🦀 [Kono Rust Triage + 🐍 Python Deterministic Audit Engine]
-```
+1. En el nodo **"Gmail Trigger"**, haz clic en **"Credential to connect with"** ➔ **Create New Credential**.
+2. Selecciona **Gmail OAuth2** (o cuenta de servicio).
+3. Inicia sesión con tu correo corporativo o de pruebas donde llegan las facturas de los proveedores.
+4. Activa el interruptor **"Active"** en la esquina superior derecha del flujo.
 
 ---
 
-## 🧪 4. Prueba Rápida con cURL
-
-Puedes enviar una factura de prueba al Webhook de n8n para verificar el flujo de extremo a extremo:
-
-```bash
-curl -X POST http://localhost:5678/webhook-test/kono-inbound-invoice \
-  -F "data=@scripts/factura_valida.pdf"
-```
+## ⚡ 3. ¿Qué ocurre a partir de ese momento?
 
 El flujo procesará el archivo binario, lo transferirá a la API de Kono.ai y retornará el identificador del documento procesado en milisegundos.
 
