@@ -190,10 +190,7 @@ class GmailOAuthService:
                                 async with aiofiles.open(file_path, "wb") as f:
                                     await f.write(file_bytes)
 
-                                has_attachment = True
-                                results["invoices_found"] += 1
-
-                                # ⚡ Deterministic Extraction & PostgreSQL Storage
+                                # ⚡ Deterministic Extraction & Strict Invoice Validation
                                 try:
                                     from app.services.pdf_extractor_service import pdf_extractor_service
                                     from app.core.database import AsyncSessionLocal
@@ -201,7 +198,22 @@ class GmailOAuthService:
                                     import uuid
 
                                     extracted = pdf_extractor_service.extract_document(file_path)
+                                    doc_type = extracted.get("document_type", "INVOICE")
+                                    is_other = doc_type == "OTHER"
+
+                                    # 🛑 FILTRO ESTRICTO: Si NO es factura/recibo (ej. contratos, manuales, fotos, documentos varios), descartar inmediatamente
+                                    if is_other:
+                                        logger.info("Discarding non-invoice attachment from Gmail: %s (Type: OTHER, Score: %s)", filename, extracted.get("classifier_score"))
+                                        if os.path.exists(file_path):
+                                            try:
+                                                os.remove(file_path)
+                                            except Exception:
+                                                pass
+                                        continue
+
                                     doc_id = str(uuid.uuid4())
+                                    has_attachment = True
+                                    results["invoices_found"] += 1
 
                                     if AsyncSessionLocal is not None:
                                         async with AsyncSessionLocal() as db:
@@ -222,10 +234,10 @@ class GmailOAuthService:
                                                     file_hash_sha256=file_hash,
                                                     mime_type="application/pdf" if filename.lower().endswith(".pdf") else "image/png",
                                                     file_size_bytes=len(file_bytes),
-                                                    invoice_number=extracted.get("invoice_number") or f"FAC-GMAIL-{doc_id[:6].upper()}",
-                                                    vendor_name=extracted.get("vendor_name") or (sender.split("<")[0].strip() if sender else "Proveedor Gmail"),
-                                                    vendor_tax_id=extracted.get("vendor_tax_id") or "NIT-PENDIENTE",
-                                                    issue_date=extracted.get("issue_date") or datetime.utcnow().strftime("%d/%m/%Y"),
+                                                    invoice_number=extracted.get("invoice_number"),
+                                                    vendor_name=extracted.get("vendor_name"),
+                                                    vendor_tax_id=extracted.get("vendor_tax_id"),
+                                                    issue_date=extracted.get("issue_date"),
                                                     currency=extracted.get("currency", "COP"),
                                                     subtotal=extracted.get("subtotal") or 0.0,
                                                     tax_total=extracted.get("tax_total") or 0.0,
@@ -233,6 +245,8 @@ class GmailOAuthService:
                                                     grand_total=extracted.get("grand_total") or 0.0,
                                                     processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
                                                     kono_state=extracted.get("kono_state", "GREEN"),
+                                                    document_type=doc_type,
+                                                    classifier_score=extracted.get("classifier_score"),
                                                     extraction_method="DETERMINISTIC",
                                                     bounding_boxes=extracted.get("bounding_boxes"),
                                                 )
@@ -258,7 +272,7 @@ class GmailOAuthService:
                                                     ))
 
                                                 await db.commit()
-                                                logger.info("Successfully ingested Gmail invoice into PostgreSQL: %s (Doc ID: %s)", filename, doc_id)
+                                                logger.info("Successfully ingested genuine Gmail invoice into PostgreSQL: %s (Doc ID: %s)", filename, doc_id)
                                 except Exception as db_err:
                                     logger.error("Error saving Gmail invoice to database: %s", db_err)
 
