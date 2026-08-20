@@ -65,7 +65,15 @@ async def upload_document(
     mime = file.content_type or "application/octet-stream"
     ext = ALLOWED_MIME.get(mime)
     if ext is None:
-        raise HTTPException(status_code=415, detail=f"Unsupported MIME type: {mime}")
+        fname = (file.filename or "").lower()
+        if fname.endswith(".pdf"):
+            ext = "pdf"
+        elif fname.endswith(".png"):
+            ext = "png"
+        elif fname.endswith(".jpg") or fname.endswith(".jpeg"):
+            ext = "jpg"
+        else:
+            raise HTTPException(status_code=415, detail=f"Tipo de archivo no soportado: {mime}")
 
     raw = await file.read()
     if len(raw) == 0:

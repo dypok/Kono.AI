@@ -159,7 +159,9 @@ export const DashboardPage: React.FC = () => {
       fetchDocuments();
       setTimeout(() => setUploadSuccessMsg(null), 6000);
     } catch (err: any) {
-      alert(`Error al procesar lote: ${err.message}`);
+      console.error('Error al subir documento(s):', err);
+      setToastMsg(`Error al subir: ${err.message}`);
+      setTimeout(() => setToastMsg(null), 5000);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
