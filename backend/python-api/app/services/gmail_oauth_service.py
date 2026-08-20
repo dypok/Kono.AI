@@ -103,11 +103,19 @@ class GmailOAuthService:
                     subject = next((h["value"] for h in headers_list if h["name"].lower() == "subject"), "")
                     sender = next((h["value"] for h in headers_list if h["name"].lower() == "from"), "")
 
-                    # Inspect parts for attachments
-                    parts = payload.get("parts", [payload])
+                    # Inspect parts recursively for attachments (handles nested multipart/mixed/related)
+                    def extract_attachment_parts(part_node: dict) -> list:
+                        found = []
+                        if part_node.get("filename") and part_node.get("body", {}).get("attachmentId"):
+                            found.append(part_node)
+                        for child in part_node.get("parts", []):
+                            found.extend(extract_attachment_parts(child))
+                        return found
+
+                    attachment_parts = extract_attachment_parts(payload)
                     has_attachment = False
 
-                    for part in parts:
+                    for part in attachment_parts:
                         filename = part.get("filename")
                         body = part.get("body", {})
                         attachment_id = body.get("attachmentId")
@@ -129,6 +137,76 @@ class GmailOAuthService:
 
                                 has_attachment = True
                                 results["invoices_found"] += 1
+
+                                # ⚡ Deterministic Extraction & PostgreSQL Storage
+                                try:
+                                    from app.services.pdf_extractor_service import pdf_extractor_service
+                                    from app.core.database import AsyncSessionLocal
+                                    from app.models.document import Document, InvoiceItem, Discrepancy
+                                    import uuid
+
+                                    extracted = pdf_extractor_service.extract_document(file_path)
+                                    doc_id = str(uuid.uuid4())
+
+                                    if AsyncSessionLocal is not None:
+                                        async with AsyncSessionLocal() as db:
+                                            # Check if file hash already exists to prevent duplicates
+                                            existing = None
+                                            file_hash = extracted.get("file_hash_sha256")
+                                            if file_hash:
+                                                from sqlalchemy import select
+                                                stmt = select(Document).where(Document.file_hash_sha256 == file_hash)
+                                                existing = (await db.execute(stmt)).scalars().first()
+
+                                            if not existing:
+                                                doc_obj = Document(
+                                                    id=doc_id,
+                                                    user_id=user_id or "b1a74a90-f715-4432-8e94-1a4dd43964dc",
+                                                    file_name=filename,
+                                                    file_path=file_path,
+                                                    file_hash_sha256=file_hash,
+                                                    mime_type="application/pdf" if filename.lower().endswith(".pdf") else "image/png",
+                                                    file_size_bytes=len(file_bytes),
+                                                    invoice_number=extracted.get("invoice_number") or f"FAC-GMAIL-{doc_id[:6].upper()}",
+                                                    vendor_name=extracted.get("vendor_name") or (sender.split("<")[0].strip() if sender else "Proveedor Gmail"),
+                                                    vendor_tax_id=extracted.get("vendor_tax_id") or "NIT-PENDIENTE",
+                                                    issue_date=extracted.get("issue_date") or datetime.utcnow().strftime("%d/%m/%Y"),
+                                                    currency=extracted.get("currency", "COP"),
+                                                    subtotal=extracted.get("subtotal") or 0.0,
+                                                    tax_total=extracted.get("tax_total") or 0.0,
+                                                    withholding_total=extracted.get("withholding_total") or 0.0,
+                                                    grand_total=extracted.get("grand_total") or 0.0,
+                                                    processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
+                                                    kono_state=extracted.get("kono_state", "GREEN"),
+                                                    extraction_method="DETERMINISTIC",
+                                                    bounding_boxes=extracted.get("bounding_boxes"),
+                                                )
+                                                db.add(doc_obj)
+
+                                                for it in extracted.get("items", []):
+                                                    db.add(InvoiceItem(
+                                                        document_id=doc_id,
+                                                        line_number=it.get("line_number", 1),
+                                                        description=it.get("description", "Ítem Facturado"),
+                                                        quantity=it.get("quantity", 1.0),
+                                                        unit_price=it.get("unit_price", 0.0),
+                                                        total_price=it.get("total_price", 0.0),
+                                                        is_math_valid=it.get("is_math_valid", True),
+                                                    ))
+
+                                                for disc in extracted.get("discrepancies", []):
+                                                    db.add(Discrepancy(
+                                                        document_id=doc_id,
+                                                        field_name=disc.get("field_name", ""),
+                                                        alert_type=disc.get("alert_type", "WARNING"),
+                                                        description=disc.get("description", ""),
+                                                    ))
+
+                                                await db.commit()
+                                                logger.info("Successfully ingested Gmail invoice into PostgreSQL: %s (Doc ID: %s)", filename, doc_id)
+                                except Exception as db_err:
+                                    logger.error("Error saving Gmail invoice to database: %s", db_err)
+
                                 results["files_extracted"].append({
                                     "filename": safe_filename,
                                     "file_path": file_path,
