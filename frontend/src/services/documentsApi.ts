@@ -277,4 +277,75 @@ export const documentsApi = {
     }
     return res.json();
   },
+
+  /** Obtiene resumen financiero en tiempo real y conciliación contable */
+  async getReconciliationSummary(): Promise<{
+    total_invoiced: number;
+    total_tax: number;
+    total_subtotal: number;
+    total_count: number;
+    approved_count: number;
+    exported_count: number;
+    green_count: number;
+    token_savings_usd: number;
+    zero_token_percentage: number;
+    approval_rate: number;
+    reconciled_items: Array<{
+      id: string;
+      invoice_number: string;
+      vendor_name: string;
+      vendor_tax_id: string;
+      issue_date?: string;
+      currency?: string;
+      grand_total: number;
+      processing_status: string;
+      kono_state: string;
+    }>;
+  }> {
+    const headers = await getAuthHeader();
+    const res = await fetch('/api/v1/documents/reconciliation/summary', {
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('Fallo al obtener conciliación contable');
+    }
+    return res.json();
+  },
+
+  /** Descarga exportación en lote en formato CSV o JSON */
+  async downloadExport(format: 'csv' | 'json' = 'csv'): Promise<void> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/documents/export?format=${format}`, {
+      headers,
+    });
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: Fallo al exportar archivo`);
+    }
+
+    if (format === 'csv') {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kono_conciliacion_erp_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } else {
+      const json = await res.json();
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kono_asientos_contables_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
+  },
 };
