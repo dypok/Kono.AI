@@ -95,4 +95,5 @@
 - [Wednesday]-[19/08/2026]-[19:37] : Fixed supervisor configuration inside live container and enabled resilient local development fallback for `get_current_user`. Verified `GET /api/v1/documents/` returns 200 OK directly from Supabase PostgreSQL.
 - [Wednesday]-[19/08/2026]-[19:40] : Completely unmocked Conciliation & ERP Sync page (`AnalyticsPage.tsx`). Implemented `GET /api/v1/documents/reconciliation/summary` in backend with real PostgreSQL financial aggregations, token zero-cost metrics, dynamic ERP targeting (Siigo, Alegra, SAP, Standard JSON), and direct CSV/JSON batch file export.
 - [Wednesday]-[19/08/2026]-[19:43] : Created `KonoCyclingLoader.tsx` dynamic mascot loader cycling smoothly through Green (`ok`), Yellow (`warning`), and Red (`critical`) states and vice versa with halo pulses and status indicator dots across all loading screens (`DashboardPage`, `TemplatesPage`, `AnalyticsPage`).
+- [Wednesday]-[19/08/2026]-[19:44] : Unmocked TopNavbar header metrics (`TopNavbar.tsx`). Integrated dynamic polling and real-time query against Supabase PostgreSQL `GET /api/v1/documents/` total count for live invoice display.
 

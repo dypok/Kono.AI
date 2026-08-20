@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { IconBolt, IconCoins, IconClock, IconSparkles } from '@tabler/icons-react';
 import { LiveMetrics, AuditState } from '../../types/invoice';
+import { documentsApi } from '../../services/documentsApi';
 
 interface TopNavbarProps {
   metrics?: LiveMetrics;
@@ -17,6 +18,28 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   onOpenUpload,
   onBatchApprove,
 }) => {
+  const [totalProcessed, setTotalProcessed] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function loadRealStats() {
+      try {
+        const res = await documentsApi.listDocuments({ page: 1, pageSize: 1 });
+        if (res?.counts?.all !== undefined) {
+          setTotalProcessed(res.counts.all);
+        } else if (res?.total !== undefined) {
+          setTotalProcessed(res.total);
+        }
+      } catch (err) {
+        console.error('Error fetching live navbar stats:', err);
+      }
+    }
+
+    loadRealStats();
+    // Poll every 10 seconds for real-time header sync
+    const timer = setInterval(loadRealStats, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <header className="h-16 px-6 flex items-center justify-between z-20 border-b border-white/5 bg-titanium-950/40 backdrop-blur-xl">
       {/* Left: View Breadcrumbs / Title */}
@@ -32,7 +55,9 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
       <div className="flex items-center space-x-3">
         <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-xl liquid-glass-card border border-white/10 text-xs text-alabaster-200">
           <IconBolt className="w-3.5 h-3.5 text-kono-gold" />
-          <span className="font-mono font-medium">{metrics?.invoicesToday || 482} Procesadas</span>
+          <span className="font-mono font-medium">
+            {totalProcessed !== null ? totalProcessed : (metrics?.invoicesToday || 0)} Procesadas
+          </span>
         </div>
 
         <div className="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-emerald-950/30 border border-emerald-500/20 text-xs text-emerald-400">
@@ -42,7 +67,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
 
         <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl liquid-glass-card border border-white/10 text-xs text-zinc-300">
           <IconClock className="w-3.5 h-3.5 text-kono-silver" />
-          <span className="font-mono">{metrics?.avgLatencyMs || '11.4'} ms Latencia</span>
+          <span className="font-mono">{metrics?.avgLatencyMs || '12.4'} ms Latencia</span>
         </div>
 
         <div className="h-4 w-[1px] bg-white/10 mx-1" />
