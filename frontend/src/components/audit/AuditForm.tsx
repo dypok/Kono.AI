@@ -1,10 +1,10 @@
+import { Save, CheckCircle2, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { InvoiceRecord } from '../../types/invoice';
 import { KonoCoin } from '../mascot/KonoCoin';
-import { AuditSpeechBubble } from '../mascot/AuditSpeechBubble';
 import { MetadataSection } from './MetadataSection';
 import { LineItemsTable } from './LineItemsTable';
 import { TotalsBreakdown } from './TotalsBreakdown';
-import { AuditActions } from './AuditActions';
+import { cn } from '../../lib/cn';
 
 interface AuditFormProps {
   invoice: InvoiceRecord;
@@ -15,22 +15,75 @@ interface AuditFormProps {
   onApproveAndExport: () => void;
 }
 
-/** Right panel: structured financial audit form, composed from the four audit sub-sections. */
+/** Right panel: structured financial audit form with direct top action controls next to Kono mascot. */
 export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvoice, onSaveTemplate, onApproveAndExport }: AuditFormProps) {
+  const isCritical = invoice.auditState === 'critical';
+
   return (
     <div className="flex h-full flex-col space-y-5 overflow-y-auto rounded-3xl border border-white/10 liquid-glass p-5 shadow-glass backdrop-blur-2xl">
-      <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 shadow-inner">
-        <div className="flex flex-col items-center shrink-0">
-          <KonoCoin state={invoice.auditState} size="md" />
-          <span className="mt-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Kono AI</span>
+      {/* Top Header Card: Kono Mascot + Primary Execution Buttons */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 shadow-inner">
+        <div className="flex items-center space-x-3.5 shrink-0">
+          <KonoCoin state={invoice.auditState} size="md" pulse={true} />
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-semibold text-alabaster-100 font-mono">
+                {invoice.invoiceNumber || 'DOC-ORIGINAL'}
+              </h3>
+              <span className={cn(
+                'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono border',
+                invoice.auditState === 'ok' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                invoice.auditState === 'warning' && 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                invoice.auditState === 'critical' && 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+              )}>
+                {invoice.auditState === 'ok' ? (
+                  <span className="flex items-center space-x-1"><ShieldCheck className="w-3 h-3" /><span>Cuadrada</span></span>
+                ) : invoice.auditState === 'warning' ? (
+                  <span className="flex items-center space-x-1"><AlertCircle className="w-3 h-3" /><span>Revisión</span></span>
+                ) : (
+                  <span>Bloqueada</span>
+                )}
+              </span>
+            </div>
+            <p className="text-xs text-zinc-400 font-mono mt-0.5 truncate max-w-[200px]">
+              {invoice.issuerName || 'Proveedor'}
+            </p>
+          </div>
         </div>
-        <AuditSpeechBubble invoice={invoice} />
+
+        {/* Action Buttons Placed Directly Here */}
+        <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-end">
+          <button
+            type="button"
+            onClick={onSaveTemplate}
+            className="px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-medium text-alabaster-200 transition shadow-sm flex items-center space-x-2 active:scale-95"
+            title="Guardar coordenadas vectoriales para futuras extracciones a $0 tokens"
+          >
+            <Save className="w-4 h-4 text-cyan-400" />
+            <span>Guardar Plantilla</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onApproveAndExport}
+            disabled={isCritical}
+            className={cn(
+              'px-4 py-2.5 rounded-xl text-xs font-semibold shadow-lg transition flex items-center space-x-2 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed',
+              isCritical
+                ? 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+                : 'bg-alabaster-100 hover:bg-white text-titanium-950 shadow-white/10'
+            )}
+          >
+            <CheckCircle2 className="w-4 h-4 text-titanium-950" />
+            <span>Aprobar &amp; Exportar ERP</span>
+            <ArrowRight className="w-3.5 h-3.5 text-titanium-950" />
+          </button>
+        </div>
       </div>
 
       <MetadataSection invoice={invoice} activeFieldKey={activeFieldKey} onSelectField={onSelectField} onUpdateInvoice={onUpdateInvoice} />
       <LineItemsTable invoice={invoice} onUpdateInvoice={onUpdateInvoice} />
       <TotalsBreakdown invoice={invoice} activeFieldKey={activeFieldKey} onSelectField={onSelectField} />
-      <AuditActions auditState={invoice.auditState} onSaveTemplate={onSaveTemplate} onApproveAndExport={onApproveAndExport} />
     </div>
   );
 }
