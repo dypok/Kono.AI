@@ -27,18 +27,14 @@ export const TemplatesPage: React.FC = () => {
     try {
       setIsLoading(true);
       const data = await documentsApi.listVendorTemplates();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setTemplates(data);
       } else {
-        // Fallback inicial con plantillas de base aprendidas
-        setTemplates([
-          { id: 'tpl-1', vendor_name: 'Amazon Web Services Colombia SAS', vendor_tax_id: '900.111.222-3', total_matched_count: 34 },
-          { id: 'tpl-2', vendor_name: 'Google Cloud Platform Sucursal Colombia', vendor_tax_id: '800.555.444-1', total_matched_count: 18 },
-          { id: 'tpl-3', vendor_name: 'Microsoft Colombia SAS', vendor_tax_id: '901.888.777-5', total_matched_count: 12 },
-        ]);
+        setTemplates([]);
       }
     } catch (err) {
       console.error('Error fetching templates:', err);
+      setTemplates([]);
     } finally {
       setIsLoading(false);
     }
