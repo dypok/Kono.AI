@@ -53,10 +53,8 @@ from app.services.redis_pipeline_consumer import redis_pipeline_consumer
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize async engine and create tables for the configured DB.
+    # Initialize async engine for PostgreSQL Supabase
     init_engine()
-    with get_sync_engine().connect() as conn:
-        Base.metadata.create_all(conn)
 
     # Start the Redis -> WebSocket bridge in the background (non-blocking).
     bridge = asyncio.create_task(
