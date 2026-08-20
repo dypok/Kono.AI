@@ -252,10 +252,10 @@ export const DashboardPage: React.FC = () => {
           />
         ) : documents.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center space-y-3 text-center px-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400">
+            <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400">
               <IconInbox className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-semibold text-alabaster-100">No hay facturas procesadas aún</h3>
+            <h3 className="text-sm font-semibold text-alabaster-100">No hay facturas por procesar</h3>
             <p className="text-xs text-zinc-400 max-w-sm">
               Sube tus comprobantes en PDF o imagen para procesarlos inmediatamente con extracción determinista, o vincula tu bandeja de Gmail en Configuración.
             </p>
