@@ -21,14 +21,14 @@ export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvo
   const isExported = invoice.processingStatus === 'EXPORTED' || invoice.processingStatus === 'APPROVED';
 
   return (
-    <div className="flex h-full flex-col space-y-5 overflow-y-auto rounded-xl border border-white/10 liquid-glass p-5 shadow-glass backdrop-blur-2xl">
-      {/* Top Header Card: Kono Mascot + Primary Execution Buttons */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-4 shadow-inner">
-        <div className="flex items-center space-x-3.5 shrink-0">
-          <KonoCoin state={invoice.auditState} size="md" pulse={true} />
+    <div className="flex h-full flex-col rounded-xl border border-white/10 liquid-glass shadow-glass backdrop-blur-2xl overflow-hidden relative">
+      {/* Static / Sticky Top Mini-Header: Mascot + Always-Visible Execution Controls */}
+      <div className="sticky top-0 z-20 flex flex-col xl:flex-row xl:items-center justify-between gap-3.5 border-b border-white/10 bg-titanium-950/80 backdrop-blur-xl p-4 shadow-sm">
+        <div className="flex items-center space-x-3 shrink-0">
+          <KonoCoin state={invoice.auditState} size="sm" pulse={true} />
           <div>
             <div className="flex items-center space-x-2">
-              <h3 className="text-sm font-semibold text-alabaster-100 font-mono">
+              <h3 className="text-xs font-bold text-alabaster-100 font-mono tracking-tight">
                 {invoice.invoiceNumber || 'DOC-ORIGINAL'}
               </h3>
               <span className={cn(
@@ -49,33 +49,34 @@ export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvo
                 )}
               </span>
             </div>
-            <p className="text-xs text-zinc-400 font-mono mt-0.5">
+            <p className="text-[11px] text-zinc-400 font-mono truncate max-w-[200px] sm:max-w-xs">
               {isExported 
-                ? '✓ Asiento contable generado y registrado inmutablemente en el historial.' 
-                : '1-Click Accounting Reconciler'}
+                ? '✓ Asiento contable registrado inmutablemente.' 
+                : invoice.issuerName || 'Proveedor General'}
             </p>
           </div>
         </div>
 
         {/* Action Buttons with high contrast and solid buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-start xl:justify-end">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onSaveTemplate}
-            className="px-3.5 py-2.5 rounded-xl border border-white/15 bg-white/10 hover:bg-white/15 text-xs font-semibold text-alabaster-100 transition shadow-sm flex items-center space-x-2 active:scale-95 shrink-0"
+            className="px-3 py-2 rounded-lg border border-white/15 bg-white/10 hover:bg-white/15 text-xs font-semibold text-alabaster-100 transition shadow-sm flex items-center space-x-1.5 active:scale-95 shrink-0"
             title="Guardar coordenadas vectoriales para futuras extracciones a $0 tokens"
           >
-            <Save className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span>Guardar Plantilla</span>
+            <Save className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span className="hidden sm:inline">Guardar Plantilla</span>
+            <span className="sm:hidden">Plantilla</span>
           </button>
 
           {isExported ? (
             <div
-              className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/5 text-zinc-400 border border-white/10 flex items-center space-x-2 shrink-0 cursor-default select-none shadow-sm"
+              className="px-3.5 py-2 rounded-lg text-xs font-bold bg-white/5 text-zinc-400 border border-white/10 flex items-center space-x-1.5 shrink-0 cursor-default select-none shadow-sm"
               title="Este comprobante ya fue auditado, aprobado y archivado en el Historial ERP"
             >
-              <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-              <span>Exportada a ERP (Bloqueada)</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>Exportada a ERP</span>
             </div>
           ) : (
             <button
@@ -83,23 +84,26 @@ export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvo
               onClick={onApproveAndExport}
               disabled={isCritical}
               className={cn(
-                'px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition flex items-center space-x-2 active:scale-95 shrink-0',
+                'px-3.5 py-2 rounded-lg text-xs font-bold shadow-lg transition flex items-center space-x-1.5 active:scale-95 shrink-0',
                 isCritical
                   ? 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'
                   : 'bg-emerald-400 hover:bg-emerald-300 text-titanium-950 shadow-emerald-500/20 cursor-pointer'
               )}
             >
-              <CheckCircle2 className="w-4 h-4 text-titanium-950 shrink-0" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-titanium-950 shrink-0" />
               <span>Aprobar &amp; Exportar ERP</span>
-              <ArrowRight className="w-3.5 h-3.5 text-titanium-950 shrink-0" />
+              <ArrowRight className="w-3 h-3 text-titanium-950 shrink-0" />
             </button>
           )}
         </div>
       </div>
 
-      <MetadataSection invoice={invoice} activeFieldKey={activeFieldKey} onSelectField={onSelectField} onUpdateInvoice={onUpdateInvoice} />
-      <LineItemsTable invoice={invoice} onUpdateInvoice={onUpdateInvoice} />
-      <TotalsBreakdown invoice={invoice} activeFieldKey={activeFieldKey} onSelectField={onSelectField} />
+      {/* Scrollable Form Content */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <MetadataSection invoice={invoice} activeFieldKey={activeFieldKey} onSelectField={onSelectField} onUpdateInvoice={onUpdateInvoice} />
+        <LineItemsTable invoice={invoice} onUpdateInvoice={onUpdateInvoice} />
+        <TotalsBreakdown invoice={invoice} activeFieldKey={activeFieldKey} onSelectField={onSelectField} />
+      </div>
     </div>
   );
 }
