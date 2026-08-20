@@ -101,4 +101,5 @@
 - [Wednesday]-[19/08/2026]-[20:03] : Streamlined `DocumentViewer.tsx` to exclusively render and stream the authentic original invoice file/PDF with direct "Ver Factura Completa" in new tab and direct download actions, completely removing synthetic mock canvas overlays.
 - [Wednesday]-[19/08/2026]-[20:05] : Replaced the verbose synthetic "Fully reconciled / Δ = $0.00" speech bubble in `AuditForm.tsx` with primary direct action buttons ("Guardar Plantilla" and "Aprobar & Exportar ERP") directly beside the Kono mascot header.
 - [Wednesday]-[19/08/2026]-[20:07] : Enhanced visual hierarchy, contrast, and responsive layout for the "Aprobar & Exportar ERP" action button (`bg-emerald-400`, bold typography, no clipping) in `AuditForm.tsx`.
+- [Wednesday]-[19/08/2026]-[20:08] : Resolved black screen issue in `DocumentViewer.tsx` by wrapping the binary PDF stream with native `<object>` and `<embed>` on a neutral white background canvas (`bg-white`) avoiding browser PDF dark-mode masking.
 

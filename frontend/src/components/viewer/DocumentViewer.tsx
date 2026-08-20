@@ -51,15 +51,32 @@ export function DocumentViewer({ invoice, pdfUrl }: DocumentViewerProps) {
       </div>
 
       {/* Main Authentic PDF Stream View */}
-      <div className="relative flex-1 overflow-hidden rounded-2xl border border-white/5 bg-titanium-950/90 shadow-2xl flex items-center justify-center">
+      <div className="relative flex-1 overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl flex items-center justify-center min-h-[600px]">
         {currentPdfUrl ? (
-          <iframe
-            src={`${currentPdfUrl}#toolbar=1&navpanes=0`}
-            title={`Factura Original ${invoice.invoiceNumber || invoice.id}`}
-            className="w-full h-full min-h-[650px] border-none rounded-2xl bg-titanium-950"
-          />
+          <object
+            data={currentPdfUrl}
+            type="application/pdf"
+            className="w-full h-full min-h-[650px] border-none rounded-2xl bg-white"
+          >
+            <embed
+              src={currentPdfUrl}
+              type="application/pdf"
+              className="w-full h-full min-h-[650px] border-none rounded-2xl bg-white"
+            />
+            <div className="p-8 text-center text-zinc-800 text-xs flex flex-col items-center justify-center space-y-3">
+              <p className="font-semibold">El navegador no puede previsualizar el PDF directamente dentro del marco.</p>
+              <a
+                href={currentPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 rounded-xl bg-titanium-950 text-white font-medium text-xs shadow hover:bg-black transition"
+              >
+                Abrir PDF en pestaña completa
+              </a>
+            </div>
+          </object>
         ) : (
-          <div className="p-8 text-center text-zinc-400 text-xs">
+          <div className="p-8 text-center text-zinc-500 text-xs">
             Cargando archivo original del comprobante...
           </div>
         )}
