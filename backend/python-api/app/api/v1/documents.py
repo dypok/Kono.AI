@@ -73,12 +73,12 @@ async def upload_document(
         raise HTTPException(status_code=413, detail="File too large (>15MB)")
 
     settings = get_settings()
-    inbound_dir = Path(settings.storage_dir) / "inbound"
-    inbound_dir.mkdir(parents=True, exist_ok=True)
+    processed_dir = Path(settings.storage_dir) / "processed"
+    processed_dir.mkdir(parents=True, exist_ok=True)
 
     doc_id = str(uuid.uuid4())
     target_name = f"{doc_id}.{ext}"
-    target_path = inbound_dir / target_name
+    target_path = processed_dir / target_name
     with open(target_path, "wb") as fh:
         fh.write(raw)
 
@@ -171,8 +171,8 @@ async def batch_upload_documents(
 ):
     """Processes multiple invoices uploaded concurrently or via a folder drag-and-drop."""
     settings = get_settings()
-    inbound_dir = Path(settings.storage_dir) / "inbound"
-    inbound_dir.mkdir(parents=True, exist_ok=True)
+    processed_dir = Path(settings.storage_dir) / "processed"
+    processed_dir.mkdir(parents=True, exist_ok=True)
 
     processed_items = []
 
@@ -185,7 +185,7 @@ async def batch_upload_documents(
 
         doc_id = str(uuid.uuid4())
         target_name = f"{doc_id}.{ext}"
-        target_path = inbound_dir / target_name
+        target_path = processed_dir / target_name
         with open(target_path, "wb") as fh:
             fh.write(raw)
 
@@ -404,20 +404,27 @@ async def stream_file(document_id: str, db: AsyncSession = Depends(get_db)):
     # 2. Check alternative storage locations if primary does not exist
     if not path or not path.exists():
         settings = get_settings()
+        storage_base = Path(settings.storage_dir)
+        fname = doc.file_name or ""
+
         candidates = [
-            Path(settings.storage_dir) / "processed" / f"{doc.id}.pdf",
-            Path(settings.storage_dir) / "processed" / f"{doc.id}.png",
-            Path(settings.storage_dir) / "processed" / f"{doc.id}.jpg",
+            storage_base / "processed" / f"{doc.id}.pdf",
+            storage_base / "processed" / f"{doc.id}.png",
+            storage_base / "processed" / f"{doc.id}.jpg",
+            storage_base / "processed" / fname,
+            storage_base / "processed" / "facturas_seed" / fname,
+            storage_base / "processed" / "facturas_pdf" / fname,
+            storage_base / "inbound" / f"{doc.id}.pdf",
+            storage_base / "inbound" / f"{doc.id}.png",
+            storage_base / "inbound" / f"{doc.id}.jpg",
+            storage_base / "inbound" / fname,
             Path("/data/storage/processed") / f"{doc.id}.pdf",
-            Path("/data/storage/processed") / f"{doc.id}.png",
-            Path("/data/storage/processed") / f"{doc.id}.jpg",
-            Path(settings.storage_dir) / "inbound" / f"{doc.id}.pdf",
-            Path(settings.storage_dir) / "inbound" / f"{doc.id}.png",
-            Path(settings.storage_dir) / "inbound" / f"{doc.id}.jpg",
+            Path("/data/storage/processed") / fname,
+            Path("/data/storage/processed/facturas_seed") / fname,
             Path("/data/storage/inbound") / f"{doc.id}.pdf",
-            Path("/app/data/storage/inbound") / f"{doc.id}.pdf",
-            Path("/app/scripts/facturas_pdf") / (doc.file_name or ""),
-            Path("scripts/facturas_pdf") / (doc.file_name or ""),
+            Path("/data/storage/inbound") / fname,
+            Path("/app/scripts/facturas_pdf") / fname,
+            Path("scripts/facturas_pdf") / fname,
         ]
         found = False
         for c in candidates:
@@ -425,6 +432,27 @@ async def stream_file(document_id: str, db: AsyncSession = Depends(get_db)):
                 path = c
                 found = True
                 break
+
+        # 3. Hash matching fallback across processed directory
+        if not found and doc.file_hash_sha256:
+            import hashlib
+            proc_dir = storage_base / "processed"
+            if proc_dir.exists():
+                for entry in proc_dir.iterdir():
+                    if entry.is_file() and entry.suffix.lower() in [".pdf", ".png", ".jpg", ".jpeg"]:
+                        try:
+                            with open(entry, "rb") as f:
+                                h = hashlib.sha256(f.read()).hexdigest()
+                                if h == doc.file_hash_sha256:
+                                    path = entry
+                                    found = True
+                                    # Update doc.file_path in DB for future instant hits
+                                    doc.file_path = str(path)
+                                    await db.commit()
+                                    break
+                        except Exception:
+                            continue
+
         if not found:
             raise HTTPException(status_code=404, detail="Original file missing")
             

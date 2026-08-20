@@ -87,4 +87,5 @@
 - [Wednesday]-[19/08/2026]-[19:09] : Modularized Rust Core architecture into clean single-responsibility submodules (`triage/`, `ocr/`, `pipeline/safe_io`, `pipeline/concurrent_runner`), deleted heavy monolithic files, and executed the full automated test suite (11/11 tests passed).
 - [Wednesday]-[19/08/2026]-[19:11] : Fixed "Original file missing" in /api/v1/documents/:id/file by including /data/storage/processed fallback paths. Implemented DELETE /api/v1/documents/:id endpoint and added interactive delete action button in Dashboard table.
 - [Wednesday]-[19/08/2026]-[19:12] : Fixed TypeScript syntax typo in `documentsApi.ts` for Vite HMR live compilation.
+- [Wednesday]-[19/08/2026]-[19:14] : Implemented automated SHA-256 fingerprint search and persistent volume fallback in `GET /api/v1/documents/:id/file`. Verified binary PDF streaming directly from `/data/storage/processed/`.
 
