@@ -69,6 +69,8 @@ export const documentsApi = {
     kono_state?: string;
     scope?: 'inbox' | 'history' | 'all';
     q?: string;
+    document_type?: string;
+    year?: number;
     page?: number;
     pageSize?: number;
   }): Promise<DocumentsResponse> {
@@ -78,6 +80,12 @@ export const documentsApi = {
     }
     if (params?.kono_state && params.kono_state !== 'all') {
       searchParams.append('kono_state', params.kono_state.toUpperCase());
+    }
+    if (params?.document_type) {
+      searchParams.append('document_type', params.document_type.toUpperCase());
+    }
+    if (params?.year) {
+      searchParams.append('year', params.year.toString());
     }
     if (params?.q) {
       searchParams.append('q', params.q);
@@ -244,6 +252,30 @@ export const documentsApi = {
 
     if (!res.ok) {
       throw new Error('Error al aprobar facturas en lote');
+    }
+    return res.json();
+  },
+
+  /** Elimina múltiples documentos atómicamente en lote */
+  async bulkDeleteDocuments(documentIds: string[]): Promise<{
+    status: string;
+    message: string;
+    deleted_count: number;
+    ids: string[];
+  }> {
+    const headers = await getAuthHeader();
+    const res = await fetch('/api/v1/documents/bulk-delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ ids: documentIds }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al eliminar facturas en lote' }));
+      throw new Error(err.detail || 'Fallo en la eliminación masiva');
     }
     return res.json();
   },

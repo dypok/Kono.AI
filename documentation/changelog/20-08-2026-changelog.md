@@ -9,3 +9,8 @@
 - [Thursday]-[20/08/2026]-[10:32] : Implemented US-REQ-009 and US-REQ-007 backend: Optimized list_documents with SQL COUNT and proper pagination (removed in-memory full load), added year filter and document_type filter, added POST /api/v1/documents/bulk-delete for multiselect, updated batch-upload to return failed_count/success_count and document_type per item, and fixed database sync_url for SQLite aiosqlite handling.
 - [Thursday]-[20/08/2026]-[10:47] : Created comprehensive backend technical documentation documentation/back/backend-req-004-009-technical.md covering all 6 backend US (004/001/002/005/006/009) with architecture, API, DB migrations, and test evidence (58/58 verdes).
 - [Thursday]-[20/08/2026]-[12:12] : Fixed test database engine isolation: ensure `sync_url` respects local SQLite dialect when test fixtures override `DATABASE_URL` during isolated test runs. All 58 unit/integration tests passing cleanly.
+- [Thursday]-[20/08/2026]-[12:18] : Implemented US-REQ-005, US-REQ-007, US-REQ-008:
+  * Backend: Added atomic bulk delete endpoint `POST /api/v1/documents/bulk-delete` and verified hierarchical Gmail classification `KONO_INVOICE/{Empresa}/{Debito|Credito}` with 4 dedicated unit tests (62 total tests passing).
+  * Frontend: Implemented multi-selection checkbox UI, floating batch action bar for bulk delete, accounting year filter (2024-2026), 250ms search debounce, and full responsive pagination.
+  * Auditor & Viewer: Added dynamic split-screen layout with 'Mostrar/Ocultar Visor PDF' toggle and direct 'Abrir en Pestaña' button.
+  * Successfully compiled and verified frontend production build (Vite + TypeScript).

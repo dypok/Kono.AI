@@ -233,6 +233,8 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
     }
   }
 
+  const [showPdfViewer, setShowPdfViewer] = useState(true);
+
   return (
     <div className="space-y-4 max-w-7xl mx-auto h-[calc(100vh-100px)] flex flex-col pb-4">
       {/* Header Bar */}
@@ -259,6 +261,32 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
             </p>
           </div>
         </div>
+
+        {/* View Document Option Toggle */}
+        <div className="flex items-center space-x-2">
+          {pdfUrl && (
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-1.5 rounded-xl liquid-glass-card hover:bg-white/10 text-xs text-alabaster-200 border border-white/10 transition flex items-center space-x-1.5"
+              title="Abrir PDF en pestaña independiente"
+            >
+              <span>Abrir en Pestaña</span>
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowPdfViewer((v) => !v)}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition border ${
+              showPdfViewer
+                ? 'bg-white/15 text-alabaster-50 border-white/20'
+                : 'liquid-glass-card hover:bg-white/10 text-zinc-300 border-white/10'
+            }`}
+          >
+            <span>{showPdfViewer ? 'Ocultar Visor PDF' : 'Mostrar Visor PDF'}</span>
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -282,23 +310,25 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
           </button>
         </div>
       ) : (
-        /* Split Screen: Left: PDF Viewer | Right: Audit Summary & Extracted Data */
-        <main className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 overflow-hidden min-h-0">
-          {/* Left Panel: Authentic PDF Viewer */}
-          <section className="h-full overflow-hidden">
-            <DocumentViewer
-              invoice={invoice}
-              activeFieldKey={activeFieldKey}
-              onSelectField={setActiveFieldKey}
-              pdfUrl={pdfUrl}
-              onUnlocked={() => {
-                showToast('🔓 Factura desbloqueada y re-extraída con éxito.');
-                if (invoice?.id) {
-                  window.location.reload();
-                }
-              }}
-            />
-          </section>
+        /* Dynamic Layout: Split Screen or Full Summary */
+        <main className={`grid gap-4 flex-1 overflow-hidden min-h-0 ${showPdfViewer ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 max-w-4xl mx-auto w-full'}`}>
+          {/* Left Panel: Authentic PDF Viewer (Opcional) */}
+          {showPdfViewer && (
+            <section className="h-full overflow-hidden">
+              <DocumentViewer
+                invoice={invoice}
+                activeFieldKey={activeFieldKey}
+                onSelectField={setActiveFieldKey}
+                pdfUrl={pdfUrl}
+                onUnlocked={() => {
+                  showToast('🔓 Factura desbloqueada y re-extraída con éxito.');
+                  if (invoice?.id) {
+                    window.location.reload();
+                  }
+                }}
+              />
+            </section>
+          )}
 
           {/* Right Panel: Extracted Summary & Fields */}
           <section className="h-full overflow-y-auto">

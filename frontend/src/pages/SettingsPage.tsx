@@ -13,6 +13,7 @@ import {
   IconBrandGoogle,
 } from '@tabler/icons-react';
 import { useAuthStore } from '../store/authStore';
+import { documentsApi } from '../services/documentsApi';
 
 interface ConnectedInbox {
   id: string;

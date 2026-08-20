@@ -615,6 +615,36 @@ async def stream_file(document_id: str, db: AsyncSession = Depends(get_db)):
 
 
 # -------------------------------------------------------------------------- #
+# POST /api/v1/documents/bulk-delete (Bulk Delete Documents in single atomic SQL)
+# -------------------------------------------------------------------------- #
+@router.post("/bulk-delete")
+async def bulk_delete_documents(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: SupabaseUser = Depends(get_current_user),
+):
+    """Deletes multiple documents and associated records atomically."""
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    doc_ids = body.get("ids", [])
+    if not doc_ids or not isinstance(doc_ids, list):
+        raise HTTPException(status_code=400, detail="Debe proporcionar una lista de IDs 'ids'")
+
+    # Delete related records in batch
+    await db.execute(delete(AuditLog).where(AuditLog.document_id.in_(doc_ids)))
+    await db.execute(delete(InvoiceItem).where(InvoiceItem.document_id.in_(doc_ids)))
+    await db.execute(delete(Discrepancy).where(Discrepancy.document_id.in_(doc_ids)))
+    await db.execute(delete(Document).where(Document.id.in_(doc_ids)))
+    await db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Se eliminaron {len(doc_ids)} comprobantes exitosamente.",
+        "deleted_count": len(doc_ids),
+        "ids": doc_ids,
+    }
+
+
+# -------------------------------------------------------------------------- #
 # DELETE /api/v1/documents/{id} (Delete document and associated records/files)
 # -------------------------------------------------------------------------- #
 @router.delete("/{document_id}")

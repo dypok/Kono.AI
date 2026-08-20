@@ -27,11 +27,19 @@ export const DashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isApprovingBulk, setIsApprovingBulk] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<{ id: string; name: string } | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [uploadSuccessMsg, setUploadSuccessMsg] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Modal State
-  const [docToDelete, setDocToDelete] = useState<{ id: string; name: string } | null>(null);
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 20;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -43,8 +51,12 @@ export const DashboardPage: React.FC = () => {
         scope: 'inbox',
         kono_state: activeTab === 'all' ? undefined : activeTab,
         q: searchQuery.trim() || undefined,
+        year: selectedYear === 'all' ? undefined : parseInt(selectedYear, 10),
+        page: currentPage,
+        pageSize: pageSize,
       });
       setDocuments(res.items || []);
+      setTotalPages(res.total_pages || 1);
       setCounts(res.counts || { all: 0, green: 0, yellow: 0, red: 0 });
     } catch (err) {
       console.error('Error fetching documents:', err);
@@ -54,8 +66,63 @@ export const DashboardPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchDocuments();
-  }, [activeTab, searchQuery]);
+    const handler = setTimeout(() => {
+      fetchDocuments();
+    }, 250); // Debounce de 250ms para búsqueda rápida y fluida
+    return () => clearTimeout(handler);
+  }, [activeTab, searchQuery, selectedYear, currentPage]);
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === documents.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(documents.map((d) => d.id)));
+    }
+  };
+
+  const handleToggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const idsToDelete = Array.from(selectedIds);
+
+    // ⚡ Optimistic UI Update: remover los elementos seleccionados inmediatamente (0ms)
+    setShowBulkDeleteModal(false);
+    setSelectedIds(new Set());
+    setDocuments((prev) => prev.filter((d) => !idsToDelete.includes(d.id)));
+    setCounts((prev) => ({
+      ...prev,
+      all: Math.max(0, prev.all - idsToDelete.length),
+    }));
+    setToastMsg(`🗑️ Eliminando ${idsToDelete.length} comprobantes...`);
+    setTimeout(() => setToastMsg(null), 3000);
+
+    setDeletingIds((prev) => new Set([...prev, ...idsToDelete]));
+    try {
+      setIsBulkDeleting(true);
+      await documentsApi.bulkDeleteDocuments(idsToDelete);
+      setToastMsg(`✅ ${idsToDelete.length} comprobantes eliminados con éxito.`);
+      setTimeout(() => setToastMsg(null), 3000);
+    } catch (err: any) {
+      alert(`Error en eliminación masiva: ${err.message}`);
+      fetchDocuments();
+    } finally {
+      setIsBulkDeleting(false);
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        idsToDelete.forEach((id) => next.delete(id));
+        return next;
+      });
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -69,8 +136,8 @@ export const DashboardPage: React.FC = () => {
         const res = await documentsApi.uploadDocument(fileList[0]);
         setUploadSuccessMsg(`Comprobante ${res.invoice_number || fileList[0].name} extraído y procesado con éxito.`);
       } else {
-        const res = await documentsApi.uploadBatchDocuments(fileList);
-        setUploadSuccessMsg(`Lote procesado: ${res.total_processed} facturas extraídas exitosamente.`);
+        const res = await documentsApi.batchUploadDocuments(fileList);
+        setUploadSuccessMsg(`Lote procesado: ${res.processed_count || fileList.length} facturas extraídas exitosamente.`);
       }
       fetchDocuments();
       setTimeout(() => setUploadSuccessMsg(null), 4500);
@@ -212,20 +279,23 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Filter Tabs & Search Bar */}
+      {/* Year Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* State Filter Pills with dynamic counts */}
-        <div className="flex items-center space-x-2 p-1.5 liquid-glass-card rounded-2xl border border-white/5 w-full sm:w-auto">
+        <div className="flex items-center space-x-2 p-1.5 liquid-glass-card rounded-2xl border border-white/5 w-full sm:w-auto overflow-x-auto">
           {[
-            { id: 'all', label: `Todas las Facturas (${counts.all})` },
+            { id: 'all', label: `Todas (${counts.all})` },
             { id: 'green', label: `🟢 Exactas (${counts.green})` },
             { id: 'yellow', label: `🟡 Alertas (${counts.yellow})` },
             { id: 'red', label: `🔴 Duplicadas (${counts.red})` },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-white/10 text-alabaster-50 border border-white/15'
                   : 'text-zinc-400 hover:text-alabaster-200'
@@ -236,18 +306,75 @@ export const DashboardPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-full sm:w-72">
-          <IconSearch className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por NIT, emisor o folio..."
-            className="w-full liquid-glass-input pl-10 pr-4 py-2 rounded-xl text-xs"
-          />
+        {/* Year Filter & Search Input */}
+        <div className="flex items-center space-x-3 w-full sm:w-auto">
+          {/* Year Filter Selector */}
+          <select
+            value={selectedYear}
+            onChange={(e) => {
+              setSelectedYear(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="liquid-glass-input px-3 py-2 rounded-xl text-xs text-alabaster-200 bg-titanium-950/80 border border-white/10"
+            title="Filtrar por año contable"
+          >
+            <option value="all" className="bg-titanium-900 text-white">Todos los Años</option>
+            <option value="2026" className="bg-titanium-900 text-white">Año 2026</option>
+            <option value="2025" className="bg-titanium-900 text-white">Año 2025</option>
+            <option value="2024" className="bg-titanium-900 text-white">Año 2024</option>
+          </select>
+
+          {/* Search Input */}
+          <div className="relative w-full sm:w-64">
+            <IconSearch className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Buscar por NIT, emisor..."
+              className="w-full liquid-glass-input pl-10 pr-4 py-2 rounded-xl text-xs"
+            />
+          </div>
         </div>
       </div>
+
+      {/* Floating Multi-Selection Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="p-3 px-5 rounded-2xl bg-titanium-900/90 border border-rose-500/30 flex items-center justify-between shadow-2xl backdrop-blur-md animate-fade-in">
+          <div className="flex items-center space-x-3 text-xs text-alabaster-100">
+            <span className="font-semibold px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 font-mono">
+              {selectedIds.size} seleccionada(s)
+            </span>
+            <span className="text-zinc-400">Acciones masivas sobre el lote:</span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs transition"
+            >
+              Desmarcar
+            </button>
+            <button
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="px-4 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs transition shadow-lg shadow-rose-500/20 flex items-center space-x-1.5"
+            >
+              <IconTrash className="w-4 h-4" />
+              <span>Eliminar Selección ({selectedIds.size})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 p-3.5 px-4 rounded-2xl bg-titanium-900/95 border border-white/20 text-xs text-white shadow-2xl backdrop-blur-md animate-fade-in flex items-center space-x-2">
+          <span>{toastMsg}</span>
+        </div>
+      )}
 
       {/* Structured Invoices Datagrid Table */}
       <div className="liquid-glass rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
@@ -274,90 +401,140 @@ export const DashboardPage: React.FC = () => {
             </button>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/10 bg-white/[0.02] text-[11px] font-semibold text-zinc-400 uppercase tracking-wider font-mono">
-                <th className="py-3.5 px-6">Comprobante</th>
-                <th className="py-3.5 px-6">Emisor & NIT</th>
-                <th className="py-3.5 px-6">Fecha</th>
-                <th className="py-3.5 px-6">Total Extraído</th>
-                <th className="py-3.5 px-6">Estado & Diagnóstico</th>
-                <th className="py-3.5 px-6 text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5 text-xs text-alabaster-200">
-              {documents.map((doc) => (
-                <tr key={doc.id} className="hover:bg-white/[0.03] transition duration-150 group">
-                  <td className="py-4 px-6 font-mono font-medium text-alabaster-100 flex items-center space-x-2.5">
-                    <IconFileText className="w-4 h-4 text-kono-silver group-hover:text-white transition" />
-                    <span>{doc.invoice_number || doc.file_name || 'DOC-PENDING'}</span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <p className="font-medium text-alabaster-100">{doc.vendor_name || 'Proveedor General'}</p>
-                    <p className="text-[10px] text-zinc-400 font-mono">{doc.vendor_tax_id || 'NIT Pendiente'}</p>
-                  </td>
-                  <td className="py-4 px-6 font-mono text-zinc-300">
-                    {formatDate(doc.issue_date || doc.created_at)}
-                  </td>
-                  <td className="py-4 px-6 font-mono font-bold text-alabaster-100">
-                    {formatCurrency(doc.grand_total, doc.currency)}
-                  </td>
-                  <td className="py-4 px-6">
-                    {doc.kono_state === 'GREEN' && (
-                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px]">
-                        <IconCircleCheck className="w-3.5 h-3.5" />
-                        <span>100% Auditada y Cuadrada</span>
-                      </span>
-                    )}
-                    {doc.kono_state === 'YELLOW' && (
-                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px]">
-                        <IconAlertTriangle className="w-3.5 h-3.5" />
-                        <span>Revisión Pendiente</span>
-                      </span>
-                    )}
-                    {doc.kono_state === 'RED' && (
-                      <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px]">
-                        <IconCircleX className="w-3.5 h-3.5" />
-                        <span>Alerta de Descuadre / Duplicado</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button
-                        onClick={() => navigate(`/audit/${doc.id}`)}
-                        className="px-3.5 py-1.5 rounded-xl liquid-glass-card hover:bg-white/10 text-alabaster-100 text-xs transition border border-white/10 font-medium shadow-sm flex items-center space-x-1"
-                      >
-                        <span>Auditar Visor</span>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDocToDelete({
-                            id: doc.id,
-                            name: doc.invoice_number || doc.file_name || 'Comprobante',
-                          });
-                        }}
-                        disabled={deletingIds.has(doc.id)}
-                        className="p-1.5 rounded-xl hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 border border-transparent hover:border-rose-500/20 transition disabled:opacity-40"
-                        title="Eliminar factura"
-                      >
-                        {deletingIds.has(doc.id) ? (
-                          <IconLoader2 className="w-4 h-4 animate-spin text-rose-400" />
-                        ) : (
-                          <IconTrash className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/[0.02] text-[11px] font-semibold text-zinc-400 uppercase tracking-wider font-mono">
+                  <th className="py-3.5 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === documents.length && documents.length > 0}
+                      onChange={handleSelectAll}
+                      className="rounded border-white/20 bg-white/5 text-rose-500 focus:ring-0 cursor-pointer"
+                      title="Seleccionar todas las facturas de la página"
+                    />
+                  </th>
+                  <th className="py-3.5 px-4">Comprobante</th>
+                  <th className="py-3.5 px-6">Emisor & NIT</th>
+                  <th className="py-3.5 px-6">Fecha</th>
+                  <th className="py-3.5 px-6">Total Extraído</th>
+                  <th className="py-3.5 px-6">Estado & Diagnóstico</th>
+                  <th className="py-3.5 px-6 text-right">Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-xs text-alabaster-200">
+                {documents.map((doc) => {
+                  const isSelected = selectedIds.has(doc.id);
+                  return (
+                    <tr
+                      key={doc.id}
+                      onClick={() => navigate(`/audit/${doc.id}`)}
+                      className={`hover:bg-white/[0.04] transition duration-150 group cursor-pointer ${
+                        isSelected ? 'bg-rose-500/[0.05]' : ''
+                      }`}
+                    >
+                      <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleToggleSelect(doc.id, e as any)}
+                          className="rounded border-white/20 bg-white/5 text-rose-500 focus:ring-0 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-4 px-4 font-mono font-medium text-alabaster-100 flex items-center space-x-2.5">
+                        <IconFileText className="w-4 h-4 text-kono-silver group-hover:text-white transition" />
+                        <span>{doc.invoice_number || doc.file_name || 'DOC-PENDING'}</span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <p className="font-medium text-alabaster-100">{doc.vendor_name || 'Proveedor General'}</p>
+                        <p className="text-[10px] text-zinc-400 font-mono">{doc.vendor_tax_id || 'NIT Pendiente'}</p>
+                      </td>
+                      <td className="py-4 px-6 font-mono text-zinc-300">
+                        {formatDate(doc.issue_date || doc.created_at)}
+                      </td>
+                      <td className="py-4 px-6 font-mono font-bold text-alabaster-100">
+                        {formatCurrency(doc.grand_total, doc.currency)}
+                      </td>
+                      <td className="py-4 px-6">
+                        {doc.kono_state === 'GREEN' && (
+                          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px]">
+                            <IconCircleCheck className="w-3.5 h-3.5" />
+                            <span>100% Auditada y Cuadrada</span>
+                          </span>
+                        )}
+                        {doc.kono_state === 'YELLOW' && (
+                          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px]">
+                            <IconAlertTriangle className="w-3.5 h-3.5" />
+                            <span>Revisión Pendiente</span>
+                          </span>
+                        )}
+                        {doc.kono_state === 'RED' && (
+                          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px]">
+                            <IconCircleX className="w-3.5 h-3.5" />
+                            <span>Alerta de Descuadre / Duplicado</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => navigate(`/audit/${doc.id}`)}
+                            className="px-3.5 py-1.5 rounded-xl liquid-glass-card hover:bg-white/10 text-alabaster-100 text-xs transition border border-white/10 font-medium shadow-sm flex items-center space-x-1"
+                          >
+                            <span>Auditar Visor</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDocToDelete({
+                                id: doc.id,
+                                name: doc.invoice_number || doc.file_name || 'Comprobante',
+                              });
+                            }}
+                            disabled={deletingIds.has(doc.id)}
+                            className="p-1.5 rounded-xl hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 border border-transparent hover:border-rose-500/20 transition disabled:opacity-40"
+                            title="Eliminar factura"
+                          >
+                            {deletingIds.has(doc.id) ? (
+                              <IconLoader2 className="w-4 h-4 animate-spin text-rose-400" />
+                            ) : (
+                              <IconTrash className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination Footer */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-white/10 flex items-center justify-between text-xs text-zinc-400 bg-white/[0.01]">
+            <span>Página {currentPage} de {totalPages}</span>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg liquid-glass-card hover:bg-white/5 border border-white/10 text-zinc-300 disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg liquid-glass-card hover:bg-white/5 border border-white/10 text-zinc-300 disabled:opacity-40"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Delete Confirmation Liquid Glass Modal */}
+      {/* Single Delete Confirmation Liquid Glass Modal */}
       <DeleteConfirmationModal
         isOpen={Boolean(docToDelete)}
         onClose={() => setDocToDelete(null)}
@@ -366,6 +543,17 @@ export const DashboardPage: React.FC = () => {
         itemIdentifier={docToDelete?.name}
         description="Esta acción es irreversible y eliminará permanentemente el comprobante y todos sus registros."
         isDeleting={Boolean(docToDelete && deletingIds.has(docToDelete.id))}
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={handleConfirmBulkDelete}
+        title="¿Eliminar lote de comprobantes?"
+        itemIdentifier={`${selectedIds.size} facturas seleccionadas`}
+        description="Esta acción eliminará permanentemente todos los comprobantes seleccionados de la base de datos."
+        isDeleting={isBulkDeleting}
       />
     </div>
   );
