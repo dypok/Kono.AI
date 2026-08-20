@@ -9,10 +9,11 @@ import redis.asyncio as aioredis
 from sqlalchemy.future import select
 
 from app.core.config import get_settings
-from app.core.database import get_sessionmaker
+from app.core.database import AsyncSessionLocal, init_engine
 from app.models.document import Document, InvoiceItem, Discrepancy
 from app.schemas.spatial import SpatialWord, BoundingBox
-from app.schemas.audit import ExtractedInvoice, InvoiceItem as AuditItem
+from app.schemas.items import ExtractedInvoiceItem
+from app.schemas.audit import ExtractedInvoice
 from app.engine.spatial_engine import SpatialEngine
 from app.engine.table_parser import DeterministicTableParser
 from app.engine.validator import DeterministicValidator
@@ -103,38 +104,27 @@ class RedisPipelineConsumer:
             parsed_total = round(parsed_subtotal + parsed_tax, 2)
 
         # 4. Arithmetic & State Audit via DeterministicValidator
-        audit_items = [
-            AuditItem(
-                line_number=it.line_number,
-                description=it.description,
-                quantity=it.quantity,
-                unit_price=it.unit_price,
-                total_price=it.total_price,
-            )
-            for it in extracted_table.items
-        ]
-
         extracted_invoice = ExtractedInvoice(
             document_id=doc_id,
             invoice_number=inv_num_field.parsed_value if inv_num_field else f"FAC-{file_hash[:6].upper()}",
-            vendor_name="Proveedor Detectado (Rust)",
+            supplier_name="Proveedor Detectado (Rust)",
             tax_id=tax_id_field.parsed_value if tax_id_field else "900123456-1",
             issue_date=date_field.parsed_value if date_field else datetime.utcnow().strftime("%Y-%m-%d"),
-            currency="COP",
             parsed_subtotal=parsed_subtotal or 0.0,
             parsed_tax_total=parsed_tax,
             parsed_withholding_total=0.0,
             parsed_total=parsed_total or 0.0,
             confidence_score=0.98 if spatial_words else 0.5,
-            items=audit_items,
+            items=extracted_table.items,
         )
 
         validator = DeterministicValidator()
         audit_result = validator.validate_invoice(extracted_invoice)
 
         # 5. Persist to DB
-        SessionLocal = get_sessionmaker()
-        async with SessionLocal() as db:
+        if AsyncSessionLocal is None:
+            init_engine()
+        async with AsyncSessionLocal() as db:
             # Check if document already exists
             stmt = select(Document).where((Document.id == doc_id) | (Document.file_hash_sha256 == file_hash))
             existing_doc = (await db.execute(stmt)).scalars().first()

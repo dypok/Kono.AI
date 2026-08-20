@@ -1,5 +1,4 @@
 use std::path::Path;
-
 use lopdf::content::Content;
 use lopdf::{Document, Object};
 use sha2::{Digest, Sha256};
@@ -9,16 +8,10 @@ use uuid::Uuid;
 use crate::errors::KonoError;
 use crate::types::{DocumentPayload, Word};
 
-/// Minimum number of extractable characters per document to consider that a
-/// PDF carries a real vectorial text layer (digital) instead of a scan.
 const DIGITAL_TEXT_THRESHOLD_CHARS: usize = 50;
-
-/// Average glyph width used to approximate the visual width of a word when
-/// precise font metrics are not resolved (Helvetica-like proportion, 0.5 em).
 const AVG_GLYPH_WIDTH_EM: f32 = 0.5;
 
-/// Inspects a PDF, decides whether it contains a vectorial text layer and,
-/// when it does, extracts every word with its bounding box in PDF points.
+/// Inspects a PDF, decides whether it contains a vectorial text layer and extracts words with bounding boxes.
 pub fn inspect_and_extract_pdf(path: &Path) -> Result<DocumentPayload, KonoError> {
     let document = Document::load(path)?;
     let file_hash = hash_file(path)?;
@@ -47,10 +40,7 @@ pub fn inspect_and_extract_pdf(path: &Path) -> Result<DocumentPayload, KonoError
     let is_digital = total_chars > DIGITAL_TEXT_THRESHOLD_CHARS;
     debug!(
         "pdf triage: pages={} chars={} digital={} path={}",
-        pages_count,
-        total_chars,
-        is_digital,
-        path.display()
+        pages_count, total_chars, is_digital, path.display()
     );
 
     let document_id = Uuid::new_v4().to_string();
@@ -64,9 +54,6 @@ pub fn inspect_and_extract_pdf(path: &Path) -> Result<DocumentPayload, KonoError
     ))
 }
 
-/// Decodes one page content stream into words by tracking the text matrix
-/// (`Tm`), relative moves (`Td`/`TD`/`T*`), font size (`Tf`) and the text
-/// showing operators `Tj` and `TJ`.
 fn extract_page_words(
     document: &Document,
     page_id: lopdf::ObjectId,
@@ -76,7 +63,6 @@ fn extract_page_words(
 
     let mut words: Vec<Word> = Vec::new();
     let mut chars = 0usize;
-
     let mut text_matrix: [f32; 6] = [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
     let mut cursor_x: f32 = 0.0;
     let mut font_size: f32 = 12.0;
@@ -137,7 +123,6 @@ fn extract_page_words(
                             );
                             chars += pushed_chars;
                         } else if let Ok(kerning) = element.as_float() {
-                            // Kerning adjustment in thousandths of an em.
                             cursor_x -= kerning / 1000.0 * font_size;
                         }
                     }
@@ -149,15 +134,12 @@ fn extract_page_words(
     }
 
     if chars == 0 {
-        // A scan/empty page: not an error at document level, callers decide.
         return Err(KonoError::EmptyDocument("no vectorial text found".into()));
     }
 
     Ok((words, chars))
 }
 
-/// Splits a decoded text run into words, pushing each one with a computed
-/// bounding box and advancing the horizontal cursor.
 fn push_words(
     text: &str,
     words: &mut Vec<Word>,
@@ -187,14 +169,12 @@ fn push_words(
         pushed += 1;
     }
 
-    // Advance the cursor past inter-word spacing when the run had multiple tokens.
     if pushed > 0 {
         *cursor_x += font_size * 0.2;
     }
     (pushed, chars)
 }
 
-/// Parses the six operands of the `Tm` operator into a text matrix.
 fn parse_text_matrix(operands: &[Object]) -> Option<[f32; 6]> {
     if operands.len() < 6 {
         return None;
@@ -206,7 +186,6 @@ fn parse_text_matrix(operands: &[Object]) -> Option<[f32; 6]> {
     Some(matrix)
 }
 
-/// Parses the `tx ty` operands of `Td`/`TD`.
 fn parse_translation(operands: &[Object]) -> Option<(f32, f32)> {
     if operands.len() < 2 {
         return None;
@@ -214,12 +193,10 @@ fn parse_translation(operands: &[Object]) -> Option<(f32, f32)> {
     Some((operands[0].as_float().ok()?, operands[1].as_float().ok()?))
 }
 
-/// Parses the font size operand of `Tf`.
 fn parse_font_size(operands: &[Object]) -> Option<f32> {
     operands.get(1).and_then(|operand| operand.as_float().ok())
 }
 
-/// Decodes a PDF string object (UTF-16BE or plain bytes) into UTF-8 text.
 fn decode_string(obj: &Object) -> Option<String> {
     match obj {
         Object::String(bytes, _) => {
@@ -237,7 +214,6 @@ fn decode_string(obj: &Object) -> Option<String> {
     }
 }
 
-/// SHA-256 digest used for flash deduplication; included in the payload.
 pub fn hash_file(path: &Path) -> Result<String, KonoError> {
     let mut hasher = Sha256::new();
     let mut file = std::fs::File::open(path)?;
