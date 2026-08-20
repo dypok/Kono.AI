@@ -43,6 +43,29 @@ class Settings:
         )
     )
 
+    # ---- Inbound Webhooks (n8n / external sources) ----
+    # MUST match the header sent by the n8n workflow (US-INT-001) so the
+    # inbound flow works without re-editing the imported JSON template:
+    # X-Kono-Webhook-Secret = kono_secret_n8n_key_2026
+    webhook_secret: str = field(
+        default_factory=lambda: os.environ.get(
+            "WEBHOOK_SECRET", "kono_secret_n8n_key_2026"
+        )
+    )
+    # Max accepted inbound file size (bytes).
+    max_inbound_bytes: int = field(
+        default_factory=lambda: int(os.environ.get("MAX_INBOUND_BYTES", str(15 * 1024 * 1024)))
+    )
+
+    # ---- Inbound email / IMAP poller ----
+    imap_host: str = field(default_factory=lambda: os.environ.get("IMAP_HOST", "imap.gmail.com"))
+    imap_port: int = field(default_factory=lambda: int(os.environ.get("IMAP_PORT", "993")))
+    imap_user: str = field(default_factory=lambda: os.environ.get("IMAP_USER", ""))
+    imap_password: str = field(default_factory=lambda: os.environ.get("IMAP_PASSWORD", ""))
+    imap_poll_interval_sec: int = field(
+        default_factory=lambda: int(os.environ.get("IMAP_POLL_INTERVAL_SEC", "60"))
+    )
+
     @property
     def cors_origins(self) -> list:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]

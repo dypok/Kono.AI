@@ -39,11 +39,20 @@ Esta guía detalla cómo opera el flujo de **extracción 100% desatendida de fac
 
 ## 🚀 1. Importar el Flujo de Gmail en n8n (1-Click)
 
-1. Abre tu n8n en el navegador:
-   👉 **`http://localhost:5678`**
-2. Haz clic en **"Import from File"** en el lienzo superior derecho.
-3. Selecciona la plantilla creada:
-   📁 [n8n/workflows/kono_gmail_auto_fetch_workflow.json](file:///home/dypok/Projects/Kono.AI/n8n/workflows/kono_gmail_auto_fetch_workflow.json)
+En la raíz del proyecto se encuentra la plantilla lista para importar:
+📁 [n8n/workflows/kono_inbound_workflow.json](file:///home/dypok/Projects/Kono.AI/n8n/workflows/kono_inbound_workflow.json)
+
+### Pasos en la interfaz de n8n (dónde se arma el flujo visual):
+1. Abre `http://localhost:5678` en tu navegador y completa la configuración inicial de cuenta.
+2. En el menú superior derecho, haz clic en **"Import from File"** (o arrastra el archivo `.json`).
+3. Selecciona `n8n/workflows/kono_inbound_workflow.json`.
+4. **El flujo visual se dibuja en el canvas del editor** de n8n (nodos arrastrables y conectables).
+5. Para **activarlo**, marca el trigger webhook como **Active**. Puedes probarlo primero con
+   la URL `/webhook-test/kono-inbound-invoice` y, cuando funcione, activarlo en la URL de
+   producción `/webhook/kono-inbound-invoice`.
+
+> El flujo visual se edita en la interfaz de n8n; el `.json` es solo la plantilla
+> importable que lo reproduce.
 
 ---
 
@@ -58,10 +67,35 @@ Esta guía detalla cómo opera el flujo de **extracción 100% desatendida de fac
 
 ## ⚡ 3. ¿Qué ocurre a partir de ese momento?
 
-- **Cero intervención manual:** Cada vez que un proveedor envíe un correo con una factura adjunta (`.pdf`, `.png`, `.jpg`), n8n:
-  1. Detecta el correo en tiempo real.
-  2. Extrae el archivo adjunto y el remitente.
-  3. Lo envía automáticamente al puerto `80` de Kono.ai.
-  4. Rust realiza el **triage flash y hashing SHA-256** en menos de $1\text{ ms}$.
-  5. Python ejecuta la **auditoría determinista** ($\Delta = \$0.00$).
-  6. La factura aparece de inmediato en tu **Dashboard Liquid Glass** (`http://localhost/dashboard`) con su estado Kono (🟢 Verde, 🟡 Amarillo, 🔴 Rojo) lista para aprobación en 1-Click.
+El flujo procesará el archivo binario, lo transferirá a la API de Kono.ai y retornará el identificador del documento procesado en milisegundos.
+
+---
+
+## 🔐 5. Endpoint Backend (US-PY-004) — Implementado
+
+El receptor del webhook está **implementado** en FastAPI (US-PY-004):
+
+```
+POST /api/v1/inbound/webhook
+Header: X-Kono-Webhook-Secret: <valor de WEBHOOK_SECRET>
+Body (multipart/form-data): file=<archivo pdf/png/jpg>, source_tag=<origen>
+```
+
+- **Auth**: valida el header `X-Kono-Webhook-Secret` contra `WEBHOOK_SECRET` (default
+  `kono_secret_n8n_key_2026`, coincidiendo con la plantilla de n8n).
+- **MIME**: solo `application/pdf`, `image/png`, `image/jpeg`.
+- **Persistencia**: guarda el archivo en `STORAGE_DIR/inbound`, registra un `Document`
+  (estado `PENDING`) y notifica por WebSocket.
+- **Procesamiento**: el archivo en `inbound/` es tomado por el pipeline (watcher/triage)
+  → validador → estado Kono.
+
+> Si cambias `WEBHOOK_SECRET` en el entorno, actualiza también el nodo HTTP de n8n
+> (`X-Kono-Webhook-Secret`) para que ambos coincidan.
+
+### Probar el endpoint directamente (sin n8n):
+```bash
+curl -X POST http://localhost:8000/api/v1/inbound/webhook \
+  -H "X-Kono-Webhook-Secret: kono_secret_n8n_key_2026" \
+  -F "file=@scripts/factura_valida.pdf" \
+  -F "source_tag=manual_test"
+```

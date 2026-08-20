@@ -11,6 +11,7 @@ httpx>=0.27.0
 aiofiles>=23.2.0
 python-dotenv>=0.10.1
 websockets>=12.0
+aioimaplib>=1.0.0
 # Optional: only required when the selective AI fallback is enabled.
 # openai>=1.0.0
 
