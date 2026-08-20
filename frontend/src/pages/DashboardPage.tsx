@@ -502,35 +502,48 @@ export const DashboardPage: React.FC = () => {
                       </td>
                       <td className="py-4 px-4 font-mono font-medium text-alabaster-100 flex items-center space-x-2.5">
                         <IconFileText className="w-4 h-4 text-kono-silver group-hover:text-white transition" />
-                        <span>{doc.invoice_number || doc.file_name || 'DOC-PENDING'}</span>
+                        <span className={doc.invoice_number ? 'text-alabaster-100' : 'text-rose-400 italic'}>
+                          {doc.invoice_number || 'Folio No Encontrado'}
+                        </span>
                       </td>
                       <td className="py-4 px-6">
-                        <p className="font-medium text-alabaster-100">{doc.vendor_name || 'Proveedor General'}</p>
-                        <p className="text-[10px] text-zinc-400 font-mono">{doc.vendor_tax_id || 'NIT Pendiente'}</p>
+                        <p className={`font-medium ${doc.vendor_name ? 'text-alabaster-100' : 'text-rose-400 italic'}`}>
+                          {doc.vendor_name || 'Emisor No Encontrado'}
+                        </p>
+                        <p className={`text-[10px] font-mono ${doc.vendor_tax_id ? 'text-zinc-400' : 'text-rose-400/80 italic'}`}>
+                          {doc.vendor_tax_id || 'NIT No Detectado'}
+                        </p>
                       </td>
                       <td className="py-4 px-6 font-mono text-zinc-300">
-                        {formatDate(doc.issue_date || doc.created_at)}
+                        {doc.issue_date ? (
+                          formatDate(doc.issue_date)
+                        ) : (
+                          <span className="text-rose-400/80 text-[11px] italic">Fecha no detectada</span>
+                        )}
                       </td>
-                      <td className="py-4 px-6 font-mono font-bold text-alabaster-100">
-                        {formatCurrency(doc.grand_total, doc.currency)}
+                      <td className="py-4 px-6 font-mono font-bold">
+                        {(doc.grand_total || 0) > 0 ? (
+                          <span className="text-alabaster-100">{formatCurrency(doc.grand_total, doc.currency)}</span>
+                        ) : (
+                          <span className="text-rose-400 text-xs font-medium">Sin total detectado</span>
+                        )}
                       </td>
                       <td className="py-4 px-6">
-                        {doc.kono_state === 'GREEN' && (
+                        {/* Estado real: Solo GREEN si tiene emisor, NIT, número y total > 0 */}
+                        {doc.kono_state === 'GREEN' && doc.vendor_name && doc.vendor_tax_id && (doc.grand_total || 0) > 0 && doc.invoice_number ? (
                           <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px]">
                             <IconCircleCheck className="w-3.5 h-3.5" />
                             <span>100% Auditada y Cuadrada</span>
                           </span>
-                        )}
-                        {doc.kono_state === 'YELLOW' && (
+                        ) : (doc.kono_state === 'RED' || !doc.vendor_name || !doc.vendor_tax_id || !(doc.grand_total || 0) || !doc.invoice_number) ? (
+                          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px]">
+                            <IconCircleX className="w-3.5 h-3.5" />
+                            <span>Faltan Datos / Requiere IA</span>
+                          </span>
+                        ) : (
                           <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px]">
                             <IconAlertTriangle className="w-3.5 h-3.5" />
                             <span>Revisión Pendiente</span>
-                          </span>
-                        )}
-                        {doc.kono_state === 'RED' && (
-                          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px]">
-                            <IconCircleX className="w-3.5 h-3.5" />
-                            <span>Alerta de Descuadre / Duplicado</span>
                           </span>
                         )}
                       </td>
