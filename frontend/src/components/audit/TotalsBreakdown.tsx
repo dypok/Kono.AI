@@ -10,7 +10,24 @@ interface TotalsBreakdownProps {
 
 /** Section 3: totals & tax breakdown glass card, with the Grand Total in glowing large type. */
 export function TotalsBreakdown({ invoice, activeFieldKey, onSelectField }: TotalsBreakdownProps) {
-  const hasTotals = (invoice.grandTotal > 0 || invoice.subtotal > 0);
+  const hasItems = invoice.lineItems && invoice.lineItems.length > 0;
+  const hasTotals = hasItems && (invoice.grandTotal > 0 || invoice.subtotal > 0);
+
+  if (!hasItems) {
+    return (
+      <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 shadow-glass">
+        <div className="flex items-center justify-between border-b border-white/5 pb-2 text-xs font-semibold text-zinc-300">
+          <span>Desglose de Totales e Impuestos</span>
+          <span className="font-mono text-[11px] text-amber-400/90">Pendiente de extracción</span>
+        </div>
+        <div className="py-4 text-center">
+          <p className="text-xs text-zinc-400">
+            Los totales de la factura se validarán automáticamente tras escanear los ítems y productos con IA.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 shadow-glass">
