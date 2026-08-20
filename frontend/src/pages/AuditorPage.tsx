@@ -291,6 +291,12 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
               activeFieldKey={activeFieldKey}
               onSelectField={setActiveFieldKey}
               pdfUrl={pdfUrl}
+              onUnlocked={() => {
+                showToast('🔓 Factura desbloqueada y re-extraída con éxito.');
+                if (invoice?.id) {
+                  window.location.reload();
+                }
+              }}
             />
           </section>
 

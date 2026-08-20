@@ -581,8 +581,88 @@ async def delete_document(
 
 
 # -------------------------------------------------------------------------- #
-# POST /api/v1/documents/{id}/approve-and-export (Atomic 1-Click Fast-Forward)
+# POST /api/v1/documents/{id}/unlock (Manual Password Unlocker & Re-Extraction)
 # -------------------------------------------------------------------------- #
+@router.post("/{document_id}/unlock")
+async def unlock_document(
+    document_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: SupabaseUser = Depends(get_current_user),
+):
+    """Decrypts a password-protected PDF invoice with user password and re-extracts data."""
+    doc = await db.get(Document, document_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    password = body.get("password", "")
+
+    if not doc.file_path or not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=400, detail="Binary document file not found on disk")
+
+    try:
+        pdf_doc = pymupdf.open(doc.file_path)
+        if pdf_doc.is_encrypted:
+            auth_res = pdf_doc.authenticate(password)
+            if auth_res <= 0:
+                pdf_doc.close()
+                raise HTTPException(status_code=400, detail="Contraseña incorrecta para desbloquear el PDF.")
+
+            # Save clean decrypted file
+            decrypted_bytes = pdf_doc.tobytes(garbage=4, deflate=True)
+            with open(doc.file_path, "wb") as f_out:
+                f_out.write(decrypted_bytes)
+            pdf_doc.close()
+
+        # Re-run deterministic visual extractor
+        extracted = pdf_extractor_service.extract_document(doc.file_path)
+        doc.invoice_number = extracted.get("invoice_number") or doc.invoice_number
+        doc.vendor_name = extracted.get("vendor_name") or doc.vendor_name
+        doc.vendor_tax_id = extracted.get("vendor_tax_id") or doc.vendor_tax_id
+        doc.subtotal = extracted.get("subtotal") or doc.subtotal
+        doc.tax_total = extracted.get("tax_total") or doc.tax_total
+        doc.grand_total = extracted.get("grand_total") or doc.grand_total
+        doc.kono_state = extracted.get("kono_state", "GREEN")
+        doc.processing_status = "AUDITED" if doc.kono_state == "GREEN" else "PENDING"
+        doc.bounding_boxes = extracted.get("bounding_boxes")
+
+        # Delete existing items and discrepancies and insert fresh ones
+        await db.execute(delete(InvoiceItem).where(InvoiceItem.document_id == document_id))
+        await db.execute(delete(Discrepancy).where(Discrepancy.document_id == document_id))
+
+        for it in extracted.get("items", []):
+            db.add(InvoiceItem(
+                document_id=doc.id,
+                line_number=it.get("line_number", 1),
+                description=it.get("description", "Ítem Facturado"),
+                quantity=it.get("quantity", 1.0),
+                unit_price=it.get("unit_price", 0.0),
+                total_price=it.get("total_price", 0.0),
+                is_math_valid=it.get("is_math_valid", True),
+            ))
+
+        for disc in extracted.get("discrepancies", []):
+            db.add(Discrepancy(
+                document_id=doc.id,
+                field_name=disc.get("field_name", ""),
+                alert_type=disc.get("alert_type", "WARNING"),
+                description=disc.get("description", ""),
+            ))
+
+        await db.commit()
+        await db.refresh(doc)
+
+        return {
+            "status": "SUCCESS",
+            "message": "Factura desbloqueada y re-extraída exitosamente.",
+            "document_id": doc.id,
+            "kono_state": doc.kono_state,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al desbloquear documento: {str(exc)}")
 @router.post("/{document_id}/approve-and-export")
 async def approve_and_export_document(
     document_id: str,

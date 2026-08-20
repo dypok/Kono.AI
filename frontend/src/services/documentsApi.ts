@@ -319,7 +319,23 @@ export const documentsApi = {
     return res.json();
   },
 
-  /** Obtiene resumen financiero en tiempo real y conciliación contable */
+  /** Desbloquea un PDF protegido por contraseña y re-extrae todos los campos */
+  async unlockDocument(documentId: string, password: string): Promise<any> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/documents/${documentId}/unlock`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al desbloquear documento' }));
+      throw new Error(err.detail || 'Fallo al desbloquear PDF');
+    }
+    return res.json();
+  },
   async getReconciliationSummary(): Promise<{
     total_invoiced: number;
     total_tax: number;

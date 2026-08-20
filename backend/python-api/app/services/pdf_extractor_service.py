@@ -50,6 +50,50 @@ class PDFExtractorService:
 
         try:
             doc = pymupdf.open(file_path)
+
+            # 🔓 Auto PDF Unlocker: Automatic Password Decryptor for Encrypted Invoices
+            if doc.is_encrypted:
+                logger.info("Encrypted PDF detected at %s. Running Auto PDF Unlocker...", file_path)
+                unlocked = False
+
+                # Common heuristics for financial invoice passwords (tax IDs, clean pass, dates, user NIT)
+                candidate_passwords = [
+                    "",                    # Empty / default permissions
+                    "900123456",           # Standard generic company NIT
+                    "900.123.456",
+                    "123456789",
+                    "1234",
+                    "0000",
+                    datetime.utcnow().strftime("%Y"),  # Current year
+                ]
+
+                for pwd in candidate_passwords:
+                    auth_res = doc.authenticate(pwd)
+                    if auth_res > 0:
+                        logger.info("✅ PDF unlocked successfully with candidate password.")
+                        unlocked = True
+                        # Save decrypted version to file_path to allow previewing without password prompt
+                        try:
+                            decrypted_data = doc.tobytes(garbage=4, deflate=True)
+                            with open(file_path, "wb") as f_out:
+                                f_out.write(decrypted_data)
+                            doc.close()
+                            doc = pymupdf.open(file_path)
+                        except Exception as save_err:
+                            logger.warning("Could not persist decrypted bytes: %s", save_err)
+                        break
+
+                if not unlocked:
+                    logger.warning("Could not auto-decrypt PDF %s with standard heuristics.", file_path)
+                    result["kono_state"] = "RED"
+                    result["discrepancies"].append({
+                        "field_name": "pdf_encryption",
+                        "alert_type": "PASSWORD_PROTECTED",
+                        "description": "PDF protegido por contraseña del proveedor.",
+                    })
+                    doc.close()
+                    return result
+
             page = doc[0]
             raw_text = page.get_text("text")
             words = page.get_text("words")
