@@ -106,6 +106,29 @@ export const SettingsPage: React.FC = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  const [isResettingLabels, setIsResettingLabels] = useState(false);
+
+  const handleResetAndRescan = async () => {
+    setIsResettingLabels(true);
+    setSyncFeedback(null);
+    try {
+      const { supabase } = await import('../lib/supabaseClient');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const providerToken = sessionData?.session?.provider_token;
+
+      if (providerToken) {
+        const res = await documentsApi.resetAndRescanEmail(providerToken, user?.email);
+        setSyncFeedback(res.message || '✅ Etiquetas removidas de Gmail y facturas re-procesadas exitosamente en la base de datos.');
+      } else {
+        setSyncFeedback('⚠️ Por favor vuelve a conectar tu cuenta de Gmail para renovar el token de acceso.');
+      }
+    } catch (err: any) {
+      setSyncFeedback(`Error al re-procesar correos: ${err.message}`);
+    } finally {
+      setIsResettingLabels(false);
+    }
+  };
+
   const handleSyncAllNow = async () => {
     setIsSyncingAll(true);
     setSyncFeedback(null);
@@ -379,7 +402,17 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              onClick={handleResetAndRescan}
+              disabled={isResettingLabels}
+              className="px-3.5 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-semibold text-alabaster-200 transition shadow-sm flex items-center space-x-2 disabled:opacity-50"
+              title="Remueve la etiqueta KONO_INVOICE de Gmail y vuelve a procesar todos los correos entrantes a PostgreSQL"
+            >
+              <IconRefresh className={`w-4 h-4 text-cyan-400 ${isResettingLabels ? 'animate-spin' : ''}`} />
+              <span>{isResettingLabels ? 'Limpiando & Procesando...' : 'Re-procesar Correos'}</span>
+            </button>
+
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="px-4 py-2.5 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition duration-200 shadow-sm flex items-center space-x-2"

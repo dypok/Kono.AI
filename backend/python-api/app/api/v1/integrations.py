@@ -56,6 +56,25 @@ async def sync_with_google_oauth(
         "details": scan_result,
     }
 
+@router.post("/email/reset-and-rescan", summary="Remove KONO_INVOICE label from Gmail and re-process all messages into PostgreSQL")
+async def reset_and_rescan_email(
+    req: OAuthSyncRequest,
+    current_user: SupabaseUser = Depends(get_current_user),
+):
+    """
+    Clears KONO_INVOICE labels in Gmail and performs a fresh deterministic extraction cycle.
+    """
+    scan_result = await gmail_oauth_service.reset_and_rescan_invoices(
+        access_token=req.provider_token,
+        user_id=current_user.id,
+    )
+
+    return {
+        "status": scan_result.get("status", "COMPLETED"),
+        "message": f"Etiquetas removidas ({scan_result.get('messages_untagged', 0)} correos). {scan_result.get('invoices_found', 0)} facturas re-procesadas e ingresadas a la base de datos.",
+        "details": scan_result,
+    }
+
 @router.post("/email/connect", summary="Connect and save a user Gmail/IMAP account")
 async def connect_email_account(
     req: ConnectEmailRequest,

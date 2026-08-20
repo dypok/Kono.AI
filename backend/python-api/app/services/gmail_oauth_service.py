@@ -40,7 +40,62 @@ class GmailOAuthService:
                 return create_res.json().get("id")
         except Exception as e:
             logger.warning("Could not create/fetch label %s in Gmail: %s", label_name, e)
-        return None
+    async def reset_and_rescan_invoices(
+        self,
+        access_token: str,
+        user_id: str,
+        label_name: str = "KONO_INVOICE",
+    ) -> Dict[str, Any]:
+        """
+        Removes the 'KONO_INVOICE' label from all previously tagged messages in Gmail
+        and re-triggers a fresh scan & extraction cycle into PostgreSQL.
+        """
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        }
+        cleared_count = 0
+        async with httpx.AsyncClient(headers=headers, timeout=25.0) as client:
+            try:
+                # 1. Find the label ID
+                label_id = None
+                labels_res = await client.get(f"{GMAIL_API_BASE}/labels")
+                if labels_res.status_code == 200:
+                    labels = labels_res.json().get("labels", [])
+                    for lbl in labels:
+                        if lbl.get("name", "").upper() == label_name.upper():
+                            label_id = lbl.get("id")
+                            break
+
+                # 2. Search all messages currently having this label
+                if label_id:
+                    msgs_res = await client.get(
+                        f"{GMAIL_API_BASE}/messages",
+                        params={"labelIds": label_id, "maxResults": 50},
+                    )
+                    if msgs_res.status_code == 200:
+                        messages = msgs_res.json().get("messages", [])
+                        for msg in messages:
+                            m_id = msg.get("id")
+                            # Remove the label from each message
+                            await client.post(
+                                f"{GMAIL_API_BASE}/messages/{m_id}/modify",
+                                json={"removeLabelIds": [label_id]},
+                            )
+                            cleared_count += 1
+
+                logger.info("Cleared %s label from %d messages for user %s", label_name, cleared_count, user_id)
+            except Exception as err:
+                logger.error("Error clearing Gmail label %s: %s", label_name, err)
+
+        # 3. Immediately re-trigger full fresh scan & PostgreSQL ingestion
+        scan_res = await self.scan_and_fetch_invoices(
+            access_token=access_token,
+            user_id=user_id,
+            max_results=30,
+        )
+        scan_res["messages_untagged"] = cleared_count
+        return scan_res
 
     async def scan_and_fetch_invoices(
         self,

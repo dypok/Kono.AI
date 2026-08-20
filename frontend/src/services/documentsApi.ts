@@ -389,4 +389,25 @@ export const documentsApi = {
       document.body.removeChild(a);
     }
   },
+
+  /** Remueve la etiqueta KONO_INVOICE de Gmail y vuelve a procesar todos los correos e ingresarlos a la base de datos */
+  async resetAndRescanEmail(providerToken: string, accountEmail?: string): Promise<any> {
+    const headers = await getAuthHeader();
+    const res = await fetch('/api/v1/integrations/email/reset-and-rescan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({
+        provider_token: providerToken,
+        account_email: accountEmail,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al re-escanear Gmail' }));
+      throw new Error(err.detail || 'Fallo al re-escanear');
+    }
+    return res.json();
+  },
 };
