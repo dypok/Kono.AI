@@ -128,7 +128,7 @@ export const HistoryPage: React.FC = () => {
       <div className="liquid-glass rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
         {isLoading ? (
           <div className="py-20">
-            <KonoCyclingLoader message="Consultando histórico contable en PostgreSQL..." size="md" />
+            <KonoCyclingLoader message="Consultando histórico contable..." size="md" />
           </div>
         ) : documents.length === 0 ? (
           <div className="py-20 text-center space-y-4 p-8">

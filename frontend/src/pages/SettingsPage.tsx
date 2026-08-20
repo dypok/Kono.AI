@@ -118,7 +118,7 @@ export const SettingsPage: React.FC = () => {
 
       if (providerToken) {
         const res = await documentsApi.resetAndRescanEmail(providerToken, user?.email);
-        setSyncFeedback(res.message || '✅ Etiquetas removidas de Gmail y facturas re-procesadas exitosamente en la base de datos.');
+        setSyncFeedback(res.message || '✅ Etiquetas removidas de Gmail y facturas re-procesadas exitosamente.');
       } else {
         setSyncFeedback('⚠️ Por favor vuelve a conectar tu cuenta de Gmail para renovar el token de acceso.');
       }
@@ -407,7 +407,7 @@ export const SettingsPage: React.FC = () => {
               onClick={handleResetAndRescan}
               disabled={isResettingLabels}
               className="px-3.5 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-xs font-semibold text-alabaster-200 transition shadow-sm flex items-center space-x-2 disabled:opacity-50"
-              title="Remueve la etiqueta KONO_INVOICE de Gmail y vuelve a procesar todos los correos entrantes a PostgreSQL"
+              title="Remueve la etiqueta KONO_INVOICE de Gmail y vuelve a procesar todos los correos entrantes"
             >
               <IconRefresh className={`w-4 h-4 text-cyan-400 ${isResettingLabels ? 'animate-spin' : ''}`} />
               <span>{isResettingLabels ? 'Limpiando & Procesando...' : 'Re-procesar Correos'}</span>

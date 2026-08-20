@@ -358,7 +358,7 @@ export const DashboardPage: React.FC = () => {
         onConfirm={handleConfirmDelete}
         title="¿Eliminar comprobante?"
         itemIdentifier={docToDelete?.name}
-        description="Esta acción eliminará el archivo PDF original, las tablas de partidas y los registros de auditoría de la base de datos de PostgreSQL."
+        description="Esta acción es irreversible y eliminará permanentemente el comprobante y todos sus registros."
         isDeleting={Boolean(deletingId)}
       />
     </div>

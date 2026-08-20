@@ -163,7 +163,7 @@ export const TemplatesPage: React.FC = () => {
         onConfirm={handleConfirmDeleteTemplate}
         title="¿Eliminar plantilla de extracción?"
         itemIdentifier={templateToDelete?.name}
-        description="Esta acción eliminará las reglas de auto-aprendizaje y los vectores espaciales de este proveedor en PostgreSQL."
+        description="Esta acción eliminará permanentemente las reglas de auto-aprendizaje y los vectores espaciales de este proveedor."
         isDeleting={Boolean(deletingId)}
       />
     </div>

@@ -406,7 +406,7 @@ export const documentsApi = {
     }
   },
 
-  /** Remueve la etiqueta KONO_INVOICE de Gmail y vuelve a procesar todos los correos e ingresarlos a la base de datos */
+  /** Remueve la etiqueta KONO_INVOICE de Gmail y vuelve a procesar todos los correos e ingresarlos */
   async resetAndRescanEmail(providerToken: string, accountEmail?: string): Promise<any> {
     const headers = await getAuthHeader();
     const res = await fetch('/api/v1/integrations/email/reset-and-rescan', {

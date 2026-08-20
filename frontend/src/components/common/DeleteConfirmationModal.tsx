@@ -17,7 +17,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
   onConfirm,
   title = '¿Eliminar comprobante?',
   itemIdentifier,
-  description = 'Esta acción es irreversible y eliminará el archivo fuente, las comprobaciones contables y los registros asociados de la base de datos.',
+  description = 'Esta acción es irreversible y eliminará permanentemente el comprobante y todos sus datos asociados.',
   isDeleting = false,
 }) => {
   if (!isOpen) return null;

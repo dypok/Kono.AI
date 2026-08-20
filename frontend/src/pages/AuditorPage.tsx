@@ -31,7 +31,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
         setIsLoading(true);
         let targetId = documentId;
 
-        // Si no se pasó ID o se pasó el antiguo mock id, buscar el documento más reciente de PostgreSQL
+        // Si no se pasó ID o se pasó el antiguo mock id, buscar el documento más reciente
         if (!targetId || targetId === 'INV-2026-8891' || targetId === 'inv-001') {
           const listRes = await documentsApi.listDocuments({ page: 1, pageSize: 1 });
           if (listRes.items && listRes.items.length > 0) {
@@ -145,7 +145,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
           learned_from_document_id: invoice.id,
         },
       });
-      showToast(`💾 Plantilla espacial para "${invoice.issuerName}" guardada en base de datos.`);
+      showToast(`💾 Plantilla espacial para "${invoice.issuerName}" guardada correctamente.`);
     } catch (err: any) {
       showToast(`Error al guardar plantilla: ${err.message}`);
     }
@@ -264,7 +264,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center liquid-glass rounded-3xl border border-white/10">
           <KonoCyclingLoader 
-            message="Cargando factura y comprobaciones matemáticas en PostgreSQL..." 
+            message="Cargando factura y comprobaciones matemáticas..." 
             size="md" 
           />
         </div>
@@ -272,7 +272,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
         <div className="flex-1 flex flex-col items-center justify-center space-y-4 liquid-glass rounded-3xl border border-white/10 text-center p-8">
           <h3 className="text-sm font-semibold text-alabaster-100">No se encontró el comprobante seleccionado</h3>
           <p className="text-xs text-zinc-400 max-w-sm">
-            El archivo o registro de la factura no existe en la base de datos o fue eliminado.
+            El archivo o registro de la factura no existe o fue eliminado.
           </p>
           <button
             onClick={() => navigate('/dashboard')}

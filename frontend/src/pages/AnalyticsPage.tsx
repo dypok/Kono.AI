@@ -201,12 +201,12 @@ export const AnalyticsPage: React.FC = () => {
         {/* Live Reconciled Invoices Table */}
         {isLoading ? (
           <KonoCyclingLoader 
-            message="Calculando balances y asientos contables en PostgreSQL..." 
+            message="Calculando balances y asientos contables..." 
             size="md" 
           />
         ) : !summary?.reconciled_items || summary.reconciled_items.length === 0 ? (
           <div className="py-16 text-center text-zinc-400 text-xs">
-            No hay comprobantes pendientes por sincronizar en la base de datos.
+            No hay comprobantes pendientes por sincronizar.
           </div>
         ) : (
           <table className="w-full text-left border-collapse">
