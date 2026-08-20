@@ -1,15 +1,13 @@
 import re
 from typing import List, Optional, Tuple
+from app.engine.knowledge_loader import get_anchors, get_header_keywords
 from app.schemas.spatial import SpatialWord, BoundingBox
 from app.schemas.items import ExtractedInvoiceItem, ExtractedTable
 
-# Common table header keywords
-HEADER_KEYWORDS = {
-    "DESCRIPTION": [r"descripci[oó]n", r"concepto", r"detalle", r"item", r"producto", r"servicio"],
-    "QUANTITY": [r"cant(?:idad)?", r"qty", r"unidades"],
-    "UNIT_PRICE": [r"precio\s+unit(?:ario)?", r"val(?:or)?\s+unit(?:ario)?", r"p\.\s*unit", r"unit\s+price"],
-    "TOTAL": [r"total", r"importe", r"valor\s+total", r"subtotal\s+l[ií]nea", r"total\s+l[ií]nea"],
-}
+# Header keywords loaded from JSON knowledge base (extensible without recompilation).
+HEADER_KEYWORDS = get_header_keywords()
+# Keep ANCHOR_SYNONYMS available here for document-type helpers if needed
+ANCHOR_SYNONYMS = get_anchors()
 
 NUMERIC_CLEAN_PATTERN = re.compile(r"[^\d.,\-]")
 

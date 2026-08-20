@@ -1,60 +1,11 @@
 import re
 from typing import List, Optional, Tuple, Pattern
+from app.engine.knowledge_loader import get_anchors
 from app.schemas.spatial import SpatialWord, BoundingBox, ExtractedField
 
-# Multiregional regex dictionary for financial anchor terms
-ANCHOR_SYNONYMS = {
-    "TOTAL": [
-        r"total\s+a\s+pagar",
-        r"gran\s+total",
-        r"importe\s+total",
-        r"valor\s+total",
-        r"total\s+factura",
-        r"total\s+general",
-        r"total",
-    ],
-    "SUBTOTAL": [
-        r"subtotal",
-        r"sub-total",
-        r"sub\s+total",
-        r"base\s+imponible",
-        r"valor\s+antes\s+de\s+iva",
-        r"importe\s+neto",
-        r"neto",
-    ],
-    "TAX": [
-        r"iva\s*\(?\d+%\)?",
-        r"iva",
-        r"impuesto",
-        r"vat",
-        r"tax",
-        r"igv",
-    ],
-    "INVOICE_NUMBER": [
-        r"factura\s*n[°oº\.]*",
-        r"factura\s*electr[oó]nica\s*de\s*venta",
-        r"factura\s*electr[oó]nica",
-        r"invoice\s*no[\.]*",
-        r"folio",
-        r"nro[\.]*\s*factura",
-    ],
-    "DATE": [
-        r"fecha\s+de\s+emisi[oó]n",
-        r"fecha\s+emisi[oó]n",
-        r"fecha\s+de\s+expedici[oó]n",
-        r"fecha\s+factura",
-        r"fecha",
-        r"date",
-    ],
-    "TAX_ID": [
-        r"nit[\/:\s]*rut",
-        r"nit[\/:\s]*",
-        r"rut[\/:\s]*",
-        r"rfc[\/:\s]*",
-        r"cif[\/:\s]*",
-        r"tax\s*id",
-    ],
-}
+# Anchors loaded from JSON knowledge base (backward compatible fallback).
+# Adding a synonym to knowledge_base.json requires no recompilation.
+ANCHOR_SYNONYMS = get_anchors()
 
 # Regex for financial numbers and dates
 MONEY_PATTERN = re.compile(r"[\$€£]?\s*([0-9]{1,3}(?:[.,][0-9]{3})*(?:[.,][0-9]{2}))")
