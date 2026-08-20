@@ -44,8 +44,8 @@ class InvoiceItemRead(BaseModel):
 class DiscrepancyRead(BaseModel):
     field_name: str
     alert_type: str
-    expected_value: Optional[float] = None
-    extracted_value: Optional[float] = None
+    expected_value: Optional[str] = None
+    extracted_value: Optional[str] = None
     delta_amount: Optional[float] = None
     description: Optional[str] = None
 

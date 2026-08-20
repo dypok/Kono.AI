@@ -99,8 +99,8 @@ class Discrepancy(Base):
     document_id = Column(String(36), ForeignKey("documents.id"), nullable=False)
     field_name = Column(String(60), nullable=False)
     alert_type = Column(String(40), nullable=False)
-    expected_value = Column(Float, nullable=True)
-    extracted_value = Column(Float, nullable=True)
+    expected_value = Column(String(255), nullable=True)
+    extracted_value = Column(String(255), nullable=True)
     delta_amount = Column(Float, nullable=True)
     description = Column(String(500), default="")
 
