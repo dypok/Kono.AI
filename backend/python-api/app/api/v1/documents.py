@@ -86,6 +86,25 @@ async def upload_document(
     # Deterministic extraction via PyMuPDF (zero-token fast path)
     extracted = pdf_extractor_service.extract_document(str(target_path))
 
+    # Idempotent deduplication check
+    existing_doc = None
+    if extracted.get("file_hash_sha256"):
+        existing_stmt = select(Document).where(Document.file_hash_sha256 == extracted.get("file_hash_sha256"))
+        existing_doc = (await db.execute(existing_stmt)).scalars().first()
+
+    if existing_doc:
+        existing_doc.file_path = str(target_path)
+        existing_doc.file_name = file.filename or existing_doc.file_name
+        db.add(existing_doc)
+        await db.commit()
+        await db.refresh(existing_doc)
+        return ActionResponse(
+            id=existing_doc.id,
+            kono_state=existing_doc.kono_state,
+            processing_status=existing_doc.processing_status,
+            message="Comprobante existente actualizado y re-procesado determinísticamente",
+        )
+
     doc = Document(
         id=doc_id,
         user_id=current_user.id,
@@ -99,10 +118,10 @@ async def upload_document(
         vendor_tax_id=extracted.get("vendor_tax_id"),
         issue_date=extracted.get("issue_date"),
         currency=extracted.get("currency", "COP"),
-        subtotal=extracted.get("subtotal"),
-        tax_total=extracted.get("tax_total"),
-        withholding_total=extracted.get("withholding_total", 0.0),
-        grand_total=extracted.get("grand_total"),
+        subtotal=extracted.get("subtotal") or 0.0,
+        tax_total=extracted.get("tax_total") or 0.0,
+        withholding_total=extracted.get("withholding_total") or 0.0,
+        grand_total=extracted.get("grand_total") or 0.0,
         processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
         kono_state=extracted.get("kono_state", "GREEN"),
         extraction_method=extracted.get("extraction_method", "DETERMINISTIC"),
@@ -177,95 +196,143 @@ async def batch_upload_documents(
 
     processed_items = []
 
-    for file in files:
-        mime = file.content_type or "application/octet-stream"
-        ext = ALLOWED_MIME.get(mime, "pdf" if file.filename.lower().endswith(".pdf") else "png")
-        raw = await file.read()
-        if len(raw) == 0:
-            continue
+    try:
+        for file in files:
+            mime = file.content_type or "application/octet-stream"
+            ext = ALLOWED_MIME.get(mime, "pdf" if (file.filename or "").lower().endswith(".pdf") else "png")
+            raw = await file.read()
+            if len(raw) == 0:
+                continue
 
-        doc_id = str(uuid.uuid4())
-        target_name = f"{doc_id}.{ext}"
-        target_path = processed_dir / target_name
-        with open(target_path, "wb") as fh:
-            fh.write(raw)
+            doc_id = str(uuid.uuid4())
+            target_name = f"{doc_id}.{ext}"
+            target_path = processed_dir / target_name
+            with open(target_path, "wb") as fh:
+                fh.write(raw)
 
-        extracted = pdf_extractor_service.extract_document(str(target_path))
+            try:
+                extracted = pdf_extractor_service.extract_document(str(target_path))
+            except Exception as ext_err:
+                logger.warning(f"Failed extraction on batch file {file.filename}: {ext_err}")
+                extracted = {
+                    "file_hash_sha256": None,
+                    "invoice_number": None,
+                    "vendor_name": None,
+                    "vendor_tax_id": None,
+                    "issue_date": None,
+                    "currency": "COP",
+                    "subtotal": 0.0,
+                    "tax_total": 0.0,
+                    "withholding_total": 0.0,
+                    "grand_total": 0.0,
+                    "kono_state": "YELLOW",
+                    "extraction_method": "DETERMINISTIC",
+                    "items": [],
+                    "bounding_boxes": {},
+                    "discrepancies": [],
+                }
 
-        doc = Document(
-            id=doc_id,
-            user_id=current_user.id,
-            file_name=file.filename or target_name,
-            file_path=str(target_path),
-            file_hash_sha256=extracted.get("file_hash_sha256"),
-            mime_type=mime,
-            file_size_bytes=len(raw),
-            invoice_number=extracted.get("invoice_number"),
-            vendor_name=extracted.get("vendor_name"),
-            vendor_tax_id=extracted.get("vendor_tax_id"),
-            issue_date=extracted.get("issue_date"),
-            currency=extracted.get("currency", "COP"),
-            subtotal=extracted.get("subtotal"),
-            tax_total=extracted.get("tax_total"),
-            withholding_total=extracted.get("withholding_total", 0.0),
-            grand_total=extracted.get("grand_total"),
-            processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
-            kono_state=extracted.get("kono_state", "GREEN"),
-            extraction_method=extracted.get("extraction_method", "DETERMINISTIC"),
-            bounding_boxes=extracted.get("bounding_boxes"),
-        )
-        db.add(doc)
+            # Check if document already exists by sha256 to prevent duplicate constraint violation
+            existing_doc = None
+            if extracted.get("file_hash_sha256"):
+                existing_stmt = select(Document).where(Document.file_hash_sha256 == extracted.get("file_hash_sha256"))
+                existing_doc = (await db.execute(existing_stmt)).scalars().first()
 
-        for it in extracted.get("items", []):
-            item_obj = InvoiceItem(
-                document_id=doc_id,
-                line_number=it["line_number"],
-                description=it.get("description", ""),
-                quantity=it.get("quantity", 1.0),
-                unit_price=it.get("unit_price", 0.0),
-                tax_rate=it.get("tax_rate", 19.0),
-                total_price=it.get("total_price", 0.0),
-                is_math_valid=it.get("is_math_valid", True),
+            if existing_doc:
+                # Update existing document path/status
+                existing_doc.file_path = str(target_path)
+                existing_doc.file_name = file.filename or existing_doc.file_name
+                db.add(existing_doc)
+                processed_items.append({
+                    "id": existing_doc.id,
+                    "file_name": file.filename,
+                    "invoice_number": existing_doc.invoice_number,
+                    "kono_state": existing_doc.kono_state,
+                    "grand_total": existing_doc.grand_total,
+                })
+                continue
+
+            doc = Document(
+                id=doc_id,
+                user_id=current_user.id,
+                file_name=file.filename or target_name,
+                file_path=str(target_path),
+                file_hash_sha256=extracted.get("file_hash_sha256"),
+                mime_type=mime,
+                file_size_bytes=len(raw),
+                invoice_number=extracted.get("invoice_number"),
+                vendor_name=extracted.get("vendor_name"),
+                vendor_tax_id=extracted.get("vendor_tax_id"),
+                issue_date=extracted.get("issue_date"),
+                currency=extracted.get("currency", "COP"),
+                subtotal=extracted.get("subtotal") or 0.0,
+                tax_total=extracted.get("tax_total") or 0.0,
+                withholding_total=extracted.get("withholding_total") or 0.0,
+                grand_total=extracted.get("grand_total") or 0.0,
+                processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
+                kono_state=extracted.get("kono_state", "GREEN"),
+                extraction_method=extracted.get("extraction_method", "DETERMINISTIC"),
+                bounding_boxes=extracted.get("bounding_boxes"),
             )
-            db.add(item_obj)
+            db.add(doc)
 
-        for disc in extracted.get("discrepancies", []):
-            disc_obj = Discrepancy(
-                document_id=doc_id,
-                field_name=disc["field_name"],
-                alert_type=disc["alert_type"],
-                expected_value=disc.get("expected_value"),
-                extracted_value=disc.get("extracted_value"),
-                delta_amount=disc.get("delta_amount"),
-                description=disc.get("description", ""),
+            for it in extracted.get("items", []):
+                item_obj = InvoiceItem(
+                    document_id=doc_id,
+                    line_number=it.get("line_number", 1),
+                    description=it.get("description", ""),
+                    quantity=it.get("quantity", 1.0),
+                    unit_price=it.get("unit_price", 0.0),
+                    tax_rate=it.get("tax_rate", 19.0),
+                    total_price=it.get("total_price", 0.0),
+                    is_math_valid=it.get("is_math_valid", True),
+                )
+                db.add(item_obj)
+
+            for disc in extracted.get("discrepancies", []):
+                disc_obj = Discrepancy(
+                    document_id=doc_id,
+                    field_name=disc.get("field_name", "general"),
+                    alert_type=disc.get("alert_type", "INFO"),
+                    expected_value=disc.get("expected_value"),
+                    extracted_value=disc.get("extracted_value"),
+                    delta_amount=disc.get("delta_amount"),
+                    description=disc.get("description", ""),
+                )
+                db.add(disc_obj)
+
+            processed_items.append({
+                "id": doc_id,
+                "file_name": file.filename,
+                "invoice_number": doc.invoice_number,
+                "kono_state": doc.kono_state,
+                "grand_total": doc.grand_total,
+            })
+
+        await db.commit()
+
+        # Broadcast batch event
+        try:
+            await _get_manager(request).broadcast(
+                {
+                    "type": "BATCH_DOCUMENTS_PROCESSED",
+                    "count": len(processed_items),
+                    "user_id": current_user.id,
+                }
             )
-            db.add(disc_obj)
+        except Exception:
+            pass
 
-        processed_items.append({
-            "id": doc_id,
-            "file_name": file.filename,
-            "invoice_number": doc.invoice_number,
-            "kono_state": doc.kono_state,
-            "grand_total": doc.grand_total,
-        })
-
-    await db.commit()
-
-    # Broadcast batch event
-    await _get_manager(request).broadcast(
-        {
-            "type": "BATCH_DOCUMENTS_PROCESSED",
-            "count": len(processed_items),
-            "user_id": current_user.id,
+        return {
+            "status": "SUCCESS",
+            "processed_count": len(processed_items),
+            "items": processed_items,
+            "message": f"Se procesaron {len(processed_items)} facturas exitosamente.",
         }
-    )
-
-    return {
-        "status": "SUCCESS",
-        "processed_count": len(processed_items),
-        "items": processed_items,
-        "message": f"Se procesaron {len(processed_items)} facturas exitosamente.",
-    }
+    except Exception as e:
+        logger.error(f"Error in batch_upload_documents: {e}", exc_info=True)
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error procesando lote: {str(e)}")
 
 
 # -------------------------------------------------------------------------- #

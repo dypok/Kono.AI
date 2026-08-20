@@ -90,4 +90,5 @@
 - [Wednesday]-[19/08/2026]-[19:14] : Implemented automated SHA-256 fingerprint search and persistent volume fallback in `GET /api/v1/documents/:id/file`. Verified binary PDF streaming directly from `/data/storage/processed/`.
 - [Wednesday]-[19/08/2026]-[19:16] : Redesigned Auditor Visor (`DocumentViewer.tsx`, `AuditForm.tsx`, `TotalsBreakdown.tsx`, `GlassInput.tsx`, `fieldColors.ts`) to align with Titanium Dark (#0D1117), Alabaster and Liquid Glass palette, removing high-contrast blue/slate tones.
 - [Wednesday]-[19/08/2026]-[19:23] : Completely unmocked Vendor Templates (`/templates`) and ERP integration (`POST /api/v1/documents/:id/export-erp`). Connected real database CRUD for learned spatial templates and real accounting journal export.
+- [Wednesday]-[19/08/2026]-[19:27] : Resolved batch & folder upload 500 error by pointing persistent `database_url` to `/data/storage/kono.db` and implementing idempotent SHA-256 deduplication and fallback handling in `POST /api/v1/documents/batch-upload`.
 

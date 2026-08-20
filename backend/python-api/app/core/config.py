@@ -15,13 +15,17 @@ class Settings:
     # ---- Persistence ----
     database_url: str = field(
         default_factory=lambda: os.environ.get(
-            "DATABASE_URL", "sqlite+aiosqlite:///./kono.db"
+            "DATABASE_URL", 
+            "sqlite+aiosqlite:////data/storage/kono.db" if os.path.exists("/data/storage") else "sqlite+aiosqlite:///./data/storage/kono.db"
         )
     )
 
     # ---- Storage ----
     storage_dir: str = field(
-        default_factory=lambda: os.environ.get("STORAGE_DIR", "./data/storage")
+        default_factory=lambda: os.environ.get(
+            "STORAGE_DIR", 
+            "/data/storage" if os.path.exists("/data/storage") else "./data/storage"
+        )
     )
 
     # ---- Streaming / Broker ----
