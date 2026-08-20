@@ -18,6 +18,8 @@ services:
       - kono_storage:/data/storage
     environment:
       - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres
+      - DATABASE_SYNC_URL=postgresql+psycopg2://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - KONO_WEBHOOK_SECRET=${KONO_WEBHOOK_SECRET:-kono_secret_key_2026}
       - SUPABASE_URL=${SUPABASE_URL:-https://avkxhplapmibhyleywzd.supabase.co}

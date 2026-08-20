@@ -12,11 +12,11 @@ class Settings:
     docker-compose (REDIS_URL, DATABASE_URL, STORAGE_DIR, WEBHOOK_SECRET).
     """
 
-    # ---- Persistence ----
+    # ---- Persistence (PostgreSQL Supabase) ----
     database_url: str = field(
         default_factory=lambda: os.environ.get(
             "DATABASE_URL", 
-            "sqlite+aiosqlite:////data/storage/kono.db" if os.path.exists("/data/storage") else "sqlite+aiosqlite:///./data/storage/kono.db"
+            "postgresql+asyncpg://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
         )
     )
 
