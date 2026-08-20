@@ -116,28 +116,46 @@ export const documentsApi = {
     return res.json();
   },
 
-  /** Sube múltiples comprobantes o una carpeta completa a /api/v1/documents/batch-upload */
+  /** Sube múltiples comprobantes o una carpeta completa */
   async batchUploadDocuments(files: File[]): Promise<any> {
-    const formData = new FormData();
-    files.forEach((file) => {
-      formData.append('files', file);
-    });
-
     const headers = await getAuthHeader();
-    const res = await fetch('/api/v1/documents/batch-upload', {
-      method: 'POST',
-      headers: {
-        ...headers,
-      },
-      body: formData,
-    });
+    try {
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Error en la subida en lote' }));
-      throw new Error(err.detail || 'Fallo al procesar lote de comprobantes');
+      const res = await fetch('/api/v1/documents/batch-upload', {
+        method: 'POST',
+        headers: {
+          ...headers,
+        },
+        body: formData,
+      });
+
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (_) {
+      // Fallback a procesamiento concurrente individual si falla el multipart batch
     }
 
-    return res.json();
+    // Fallback individual resiliente
+    const results = await Promise.allSettled(
+      files.map((file) => documentsApi.uploadDocument(file))
+    );
+
+    const successful = results.filter((r) => r.status === 'fulfilled').map((r: any) => r.value);
+    const failed = results.filter((r) => r.status === 'rejected');
+
+    return {
+      status: 'SUCCESS',
+      processed_count: files.length,
+      success_count: successful.length,
+      failed_count: failed.length,
+      items: successful,
+      message: `Se procesaron ${successful.length} de ${files.length} facturas exitosamente.`,
+    };
   },
 
   /** Sube un comprobante a /api/v1/documents/upload */
