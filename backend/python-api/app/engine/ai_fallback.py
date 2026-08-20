@@ -123,6 +123,37 @@ class AiFallback:
         except json.JSONDecodeError:
             return {}
 
+    def estimate_cost(
+        self, invoice: ExtractedInvoice, conflicting_fields: List[str]
+    ) -> Dict[str, Any]:
+        """Estimates token usage and USD cost for a fallback call.
+
+        Uses ~4 chars per token heuristic and gpt-4o-mini pricing:
+        $0.15 / 1M input tokens, $0.60 / 1M output tokens.
+        Returns a dict with input/output/total tokens and cost.
+        """
+        prompt = self.build_prompt(invoice, conflicting_fields)
+        prompt_text = prompt["system"] + "\n" + prompt["user"]
+        # Heuristic: ~4 chars per token
+        input_tokens = max(1, len(prompt_text) // 4)
+        # Output: JSON with requested fields, ~ 10 tokens per field + overhead
+        output_tokens = 50 + len(conflicting_fields) * 10
+        # Clamp to max_tokens
+        output_tokens = min(output_tokens, 400)
+        total_tokens = input_tokens + output_tokens
+        # Pricing for gpt-4o-mini
+        input_cost = (input_tokens / 1_000_000) * 0.15
+        output_cost = (output_tokens / 1_000_000) * 0.60
+        total_cost = round(input_cost + output_cost, 6)
+        return {
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": total_tokens,
+            "estimated_cost_usd": total_cost,
+            "model": self.MODEL,
+            "conflicting_fields": conflicting_fields,
+        }
+
     @staticmethod
     def _conflict_snippet(invoice: ExtractedInvoice) -> str:
         """Reconstructs a compact, token-light text of the invoice fields."""

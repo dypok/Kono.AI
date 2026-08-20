@@ -1,0 +1,195 @@
+{
+  "anchors": {
+    "TOTAL": [
+      "total\\s+a\\s+pagar",
+      "gran\\s+total",
+      "importe\\s+total",
+      "valor\\s+total",
+      "total\\s+factura",
+      "total\\s+general",
+      "amount\\s+paid",
+      "total\\s+paid",
+      "payment\\s+due",
+      "amount\\s+due",
+      "balance\\s+due",
+      "total\\s+amount",
+      "monto\\s+total",
+      "importe\\s+pagado",
+      "valor\\s+a\\s+pagar",
+      "total\\s+a\\s+pagar",
+      "total\\s+pagado",
+      "total\\s+neto",
+      "\\btotal\\b"
+    ],
+    "SUBTOTAL": [
+      "subtotal",
+      "sub-total",
+      "sub\\s+total",
+      "base\\s+imponible",
+      "valor\\s+antes\\s+de\\s+iva",
+      "importe\\s+neto",
+      "neto",
+      "sub\\s+total\\s+sin\\s+iva"
+    ],
+    "TAX": [
+      "iva\\s*\\(?\\d+%?\\)?",
+      "\\biva\\b",
+      "impuesto",
+      "vat",
+      "tax",
+      "igv",
+      "reteiva",
+      "rete\\s*iva",
+      "retenci[oó]n"
+    ],
+    "INVOICE_NUMBER": [
+      "factura\\s*n[°oº\\.]*",
+      "factura\\s*electr[oó]nica\\s*de\\s+venta",
+      "factura\\s*electr[oó]nica",
+      "invoice\\s*no[\\.]*",
+      "invoice\\s*number",
+      "bill\\s*no[\\.]*",
+      "folio",
+      "nro[\\.]*\\s*factura",
+      "numero\\s+factura",
+      "comprobante\\s*n[°oº\\.]*",
+      "recibo\\s*n[°oº\\.]*",
+      "receipt\\s*no[\\.]*"
+    ],
+    "DATE": [
+      "fecha\\s+de\\s+emisi[oó]n",
+      "fecha\\s+emisi[oó]n",
+      "fecha\\s+de\\s+expedici[oó]n",
+      "fecha\\s+factura",
+      "fecha\\s+vencimiento",
+      "fecha\\s+pago",
+      "issue\\s+date",
+      "due\\s+date",
+      "\\bfecha\\b",
+      "\\bdate\\b",
+      "billing\\s+date"
+    ],
+    "TAX_ID": [
+      "nit[\\/\\:\\s]*rut",
+      "nit[\\/\\:\\s]*",
+      "rut[\\/\\:\\s]*",
+      "rfc[\\/\\:\\s]*",
+      "cif[\\/\\:\\s]*",
+      "tax\\s*id",
+      "rnc[\\/\\:\\s]*",
+      "ruc[\\/\\:\\s]*",
+      "cuil[\\/\\:\\s]*",
+      "cuit[\\/\\:\\s]*"
+    ],
+    "DOCUMENT_TYPE": [
+      "\\bfactura\\b",
+      "\\binvoice\\b",
+      "\\bbill\\b",
+      "\\brecibo\\b",
+      "\\breceipt\\b",
+      "\\bcomprobante\\b",
+      "\\bcuenta\\s+de\\s+cobro\\b",
+      "\\bbilling\\b",
+      "electronic\\s+invoice",
+      "\\bdian\\b",
+      "nota\\s+d[eé]bito",
+      "nota\\s+cr[eé]dito",
+      "orden\\s+de\\s+compra",
+      "purchase\\s+order"
+    ],
+    "SUPPLIER": [
+      "proveedor",
+      "emisor",
+      "vendedor",
+      "supplier",
+      "vendor",
+      "empresa"
+    ],
+    "CUSTOMER": [
+      "cliente",
+      "comprador",
+      "customer",
+      "consignatario"
+    ]
+  },
+  "header_keywords": {
+    "DESCRIPTION": [
+      "descripci[oó]n",
+      "concepto",
+      "detalle",
+      "item",
+      "producto",
+      "servicio",
+      "description",
+      "article"
+    ],
+    "QUANTITY": [
+      "cant(?:idad)?",
+      "qty",
+      "unidades",
+      "quantity",
+      "qtd"
+    ],
+    "UNIT_PRICE": [
+      "precio\\s+unit(?:ario)?",
+      "val(?:or)?\\s+unit(?:ario)?",
+      "p\\.\\s*unit",
+      "unit\\s+price",
+      "price",
+      "valor\\s+unitario"
+    ],
+    "TOTAL": [
+      "\\btotal\\b",
+      "importe",
+      "valor\\s+total",
+      "subtotal\\s+l[ií]nea",
+      "total\\s+l[ií]nea",
+      "amount",
+      "line\\s+total"
+    ]
+  },
+  "document_type_keywords": {
+    "INVOICE": [
+      "factura",
+      "invoice",
+      "comprobante",
+      "cuenta de cobro",
+      "billing",
+      "dian"
+    ],
+    "RECEIPT": [
+      "recibo",
+      "receipt",
+      "comprobante de pago",
+      "payment receipt"
+    ],
+    "BILL": [
+      "bill",
+      "cuenta",
+      "estado de cuenta"
+    ]
+  },
+  "categories": {
+    "intencion": [
+      "comida",
+      "restaurante",
+      "alimentacion",
+      "compras",
+      "supermercado",
+      "reabastecimiento",
+      "inventario",
+      "servicios",
+      "transporte",
+      "combustible",
+      "oficina",
+      "tecnologia",
+      "otros"
+    ],
+    "tipo_facturacion": [
+      "debito",
+      "credito",
+      "nota debito",
+      "nota credito"
+    ]
+  }
+}
