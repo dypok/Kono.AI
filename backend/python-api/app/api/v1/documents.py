@@ -539,12 +539,22 @@ async def stream_file(document_id: str, db: AsyncSession = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Original file missing")
             
     media_type = doc.mime_type or "application/pdf"
+    file_size = path.stat().st_size if path.exists() else None
+
+    headers = {
+        "Cache-Control": "public, max-age=86400, immutable",
+        "Accept-Ranges": "bytes",
+    }
+    if doc.file_hash_sha256:
+        headers["ETag"] = f'"{doc.file_hash_sha256}"'
+    if file_size:
+        headers["Content-Length"] = str(file_size)
 
     def iter_file():
         with open(path, "rb") as fh:
             yield from fh
 
-    return StreamingResponse(iter_file(), media_type=media_type)
+    return StreamingResponse(iter_file(), media_type=media_type, headers=headers)
 
 
 # -------------------------------------------------------------------------- #

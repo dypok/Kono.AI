@@ -31,10 +31,26 @@ export interface DocumentsResponse {
   };
 }
 
+let _cachedToken: string | null = null;
+
+// Suscripción reactiva para mantener el token en memoria siempre actualizado (0ms lookup)
+if (typeof window !== 'undefined') {
+  supabase.auth.getSession().then(({ data }) => {
+    _cachedToken = data?.session?.access_token || null;
+  });
+  supabase.auth.onAuthStateChange((_event, session) => {
+    _cachedToken = session?.access_token || null;
+  });
+}
+
 async function getAuthHeader(): Promise<Record<string, string>> {
+  if (_cachedToken) {
+    return { Authorization: `Bearer ${_cachedToken}` };
+  }
   const { data } = await supabase.auth.getSession();
   const token = data?.session?.access_token;
   if (token) {
+    _cachedToken = token;
     return { Authorization: `Bearer ${token}` };
   }
   return {};
