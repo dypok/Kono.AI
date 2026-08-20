@@ -44,16 +44,21 @@ export const TemplatesPage: React.FC = () => {
 
   const handleConfirmDeleteTemplate = async () => {
     if (!templateToDelete) return;
+    const toDeleteId = templateToDelete.id;
+    const toDeleteName = templateToDelete.name;
+
+    // ⚡ Optimistic UI: Remover de inmediato en 0ms
+    setTemplateToDelete(null);
+    setTemplates((prev) => prev.filter((t) => t.id !== toDeleteId));
+    setToastMsg(`🗑️ Plantilla de "${toDeleteName}" eliminada.`);
+    setTimeout(() => setToastMsg(null), 3000);
 
     try {
-      setDeletingId(templateToDelete.id);
-      await documentsApi.deleteVendorTemplate(templateToDelete.id);
-      setToastMsg(`🗑️ Plantilla de "${templateToDelete.name}" eliminada.`);
-      setTemplateToDelete(null);
-      fetchTemplates();
-      setTimeout(() => setToastMsg(null), 3000);
+      setDeletingId(toDeleteId);
+      await documentsApi.deleteVendorTemplate(toDeleteId);
     } catch (err: any) {
       alert(`Error al eliminar: ${err.message}`);
+      fetchTemplates();
     } finally {
       setDeletingId(null);
     }

@@ -567,24 +567,11 @@ async def delete_document(
     current_user: SupabaseUser = Depends(get_current_user),
 ):
     """Deletes a document, its line items, discrepancies, and binary file."""
-    doc = await db.get(Document, document_id)
-    if doc is None:
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    # Optional: Delete binary file from disk if present
-    if doc.file_path:
-        try:
-            p = Path(doc.file_path)
-            if p.exists() and p.is_file():
-                p.unlink()
-        except Exception:
-            pass
-
-    # Delete related records
+    # Delete document (cascades or single atomic execution)
+    await db.execute(delete(AuditLog).where(AuditLog.document_id == document_id))
     await db.execute(delete(InvoiceItem).where(InvoiceItem.document_id == document_id))
     await db.execute(delete(Discrepancy).where(Discrepancy.document_id == document_id))
-    await db.execute(delete(AuditLog).where(AuditLog.document_id == document_id))
-    await db.delete(doc)
+    await db.execute(delete(Document).where(Document.id == document_id))
     await db.commit()
 
     return {"status": "SUCCESS", "message": "Document deleted successfully", "id": document_id}

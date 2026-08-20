@@ -91,14 +91,23 @@ export const DashboardPage: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (!docToDelete) return;
+    const toDeleteId = docToDelete.id;
+
+    // ⚡ Optimistic UI Update: Remover inmediatamente de la lista local en 0ms
+    setDocToDelete(null);
+    setDocuments((prev) => prev.filter((d) => d.id !== toDeleteId));
+    setCounts((prev) => ({
+      ...prev,
+      all: Math.max(0, prev.all - 1),
+    }));
 
     try {
-      setDeletingId(docToDelete.id);
-      await documentsApi.deleteDocument(docToDelete.id);
-      setDocToDelete(null);
-      fetchDocuments();
+      setDeletingId(toDeleteId);
+      await documentsApi.deleteDocument(toDeleteId);
     } catch (err: any) {
       alert(`Error al eliminar: ${err.message}`);
+      // Revertir en caso de falla
+      fetchDocuments();
     } finally {
       setDeletingId(null);
     }
