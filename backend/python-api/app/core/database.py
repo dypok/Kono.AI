@@ -42,7 +42,9 @@ def init_engine(database_url: str | None = None) -> None:
     # Sync Engine for metadata and DDL assertions (lazy fallback if psycopg2 is installed)
     sync_url = os.environ.get(
         "DATABASE_SYNC_URL",
-        url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        url.replace("postgresql+asyncpg://", "postgresql+psycopg2://").replace(
+            "sqlite+aiosqlite://", "sqlite://"
+        ),
     )
     try:
         sync_engine = create_engine(sync_url, future=True, pool_pre_ping=True)

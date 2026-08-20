@@ -105,6 +105,9 @@ async def upload_document(
             message="Comprobante existente actualizado y re-procesado determinísticamente",
         )
 
+    # Handle document_type from classifier (US-REQ-001)
+    doc_type = extracted.get("document_type", "INVOICE")
+    is_other = doc_type == "OTHER"
     doc = Document(
         id=doc_id,
         user_id=current_user.id,
@@ -118,16 +121,27 @@ async def upload_document(
         vendor_tax_id=extracted.get("vendor_tax_id"),
         issue_date=extracted.get("issue_date"),
         currency=extracted.get("currency", "COP"),
-        subtotal=extracted.get("subtotal") or 0.0,
-        tax_total=extracted.get("tax_total") or 0.0,
-        withholding_total=extracted.get("withholding_total") or 0.0,
-        grand_total=extracted.get("grand_total") or 0.0,
-        processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
+        subtotal=extracted.get("subtotal") if not is_other else None,
+        tax_total=extracted.get("tax_total") if not is_other else None,
+        withholding_total=extracted.get("withholding_total") if not is_other else None,
+        grand_total=extracted.get("grand_total") if not is_other else None,
+        processing_status="REJECTED" if is_other else ("AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING"),
         kono_state=extracted.get("kono_state", "GREEN"),
+        document_type=doc_type,
+        classifier_score=extracted.get("classifier_score"),
         extraction_method=extracted.get("extraction_method", "DETERMINISTIC"),
         bounding_boxes=extracted.get("bounding_boxes"),
     )
     db.add(doc)
+
+    # For non-invoices, add visible discrepancy (US-REQ-001)
+    if is_other:
+        db.add(Discrepancy(
+            document_id=doc_id,
+            field_name="document_type",
+            alert_type="NOT_INVOICE",
+            description="No se encontraron datos de factura. El documento no contiene anclas de factura.",
+        ))
 
     # Persist extracted line items
     for it in extracted.get("items", []):
@@ -252,6 +266,8 @@ async def batch_upload_documents(
                 })
                 continue
 
+            doc_type_batch = extracted.get("document_type", "INVOICE")
+            is_other_batch = doc_type_batch == "OTHER"
             doc = Document(
                 id=doc_id,
                 user_id=current_user.id,
@@ -265,16 +281,27 @@ async def batch_upload_documents(
                 vendor_tax_id=extracted.get("vendor_tax_id"),
                 issue_date=extracted.get("issue_date"),
                 currency=extracted.get("currency", "COP"),
-                subtotal=extracted.get("subtotal") or 0.0,
-                tax_total=extracted.get("tax_total") or 0.0,
-                withholding_total=extracted.get("withholding_total") or 0.0,
-                grand_total=extracted.get("grand_total") or 0.0,
-                processing_status="AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING",
+                subtotal=extracted.get("subtotal") if not is_other_batch else None,
+                tax_total=extracted.get("tax_total") if not is_other_batch else None,
+                withholding_total=extracted.get("withholding_total") if not is_other_batch else None,
+                grand_total=extracted.get("grand_total") if not is_other_batch else None,
+                processing_status="REJECTED" if is_other_batch else ("AUDITED" if extracted.get("kono_state") == "GREEN" else "PENDING"),
                 kono_state=extracted.get("kono_state", "GREEN"),
+                document_type=doc_type_batch,
+                classifier_score=extracted.get("classifier_score"),
                 extraction_method=extracted.get("extraction_method", "DETERMINISTIC"),
                 bounding_boxes=extracted.get("bounding_boxes"),
             )
             db.add(doc)
+
+            # Add discrepancy for non-invoice in batch
+            if is_other_batch:
+                db.add(Discrepancy(
+                    document_id=doc_id,
+                    field_name="document_type",
+                    alert_type="NOT_INVOICE",
+                    description="No se encontraron datos de factura. El documento no contiene anclas de factura.",
+                ))
 
             for it in extracted.get("items", []):
                 item_obj = InvoiceItem(
@@ -343,6 +370,7 @@ async def list_documents(
     kono_state: Optional[str] = Query(None, pattern="^(GREEN|YELLOW|RED)$"),
     scope: Optional[str] = Query("all", pattern="^(inbox|history|all)$"),
     q: Optional[str] = Query(None, description="Search in invoice number / vendor name / NIT"),
+    document_type: Optional[str] = Query(None, pattern="^(INVOICE|RECEIPT|OTHER)$"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: SupabaseUser = Depends(get_current_user),
@@ -368,6 +396,8 @@ async def list_documents(
     stmt = base_stmt.order_by(Document.created_at.desc())
     if kono_state:
         stmt = stmt.where(Document.kono_state == kono_state.upper())
+    if document_type:
+        stmt = stmt.where(Document.document_type == document_type.upper())
     if q:
         like = f"%{q}%"
         stmt = stmt.where(
@@ -993,13 +1023,6 @@ async def bulk_approve_documents(
         "approved_count": count,
         "message": f"Se han aprobado {count} comprobante(s) exitosamente.",
     }
-
-
-# -------------------------------------------------------------------------- #
-# GET /api/v1/documents/export?format=csv|json
-# -------------------------------------------------------------------------- #
-# -------------------------------------------------------------------------- #
-
 
 
 # -------------------------------------------------------------------------- #

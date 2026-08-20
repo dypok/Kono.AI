@@ -24,6 +24,8 @@ class DocumentListItem(BaseModel):
     kono_state: Optional[str] = None
     processing_status: Optional[str] = None
     extraction_method: Optional[str] = None
+    document_type: Optional[str] = None
+    classifier_score: Optional[float] = None
     created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
@@ -71,6 +73,8 @@ class DocumentDetail(BaseModel):
     extraction_method: Optional[str] = None
     kono_state: Optional[str] = None
     processing_status: Optional[str] = None
+    document_type: Optional[str] = None
+    classifier_score: Optional[float] = None
     processing_time_ms: Optional[float] = None
     bounding_boxes: Optional[dict] = None
     items: List[InvoiceItemRead] = Field(default_factory=list)

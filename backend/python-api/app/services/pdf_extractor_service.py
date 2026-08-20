@@ -292,7 +292,37 @@ class PDFExtractorService:
                             if clean_piece:
                                 pending_desc_parts.append(clean_piece)
 
-            # 5. Fallbacks and Mathematical Validation
+            # 5. Classify document type before fabricating (US-REQ-001)
+            try:
+                from app.engine.document_classifier import DocumentClassifier, DocumentType
+                from app.schemas.spatial import BoundingBox, SpatialWord
+
+                classifier_words = []
+                for w in words:
+                    try:
+                        classifier_words.append(
+                            SpatialWord(
+                                text=str(w[4]),
+                                bbox=BoundingBox(x0=float(w[0]), y0=float(w[1]), x1=float(w[2]), y1=float(w[3])),
+                                page=1,
+                                confidence=1.0,
+                            )
+                        )
+                    except Exception:
+                        continue
+                _classifier = DocumentClassifier()
+                _doc_type, _score, _anchors = _classifier.classify(classifier_words)
+                result["document_type"] = _doc_type.value
+                result["classifier_score"] = _score
+                result["matched_anchors"] = _anchors
+                is_other_pdf = _doc_type == DocumentType.OTHER
+            except Exception as _cls_err:
+                logger.warning("Classifier failed, defaulting to INVOICE: %s", _cls_err)
+                result["document_type"] = "INVOICE"
+                result["classifier_score"] = 0.5
+                is_other_pdf = False
+
+            # 6. Fallbacks and Mathematical Validation (skip fabrication for OTHER)
             if result["grand_total"] == 0.0 and result["subtotal"] > 0:
                 result["grand_total"] = round(result["subtotal"] + result["tax_total"], 2)
             elif result["subtotal"] == 0.0 and result["items"]:
@@ -300,14 +330,25 @@ class PDFExtractorService:
                 if result["grand_total"] == 0.0:
                     result["grand_total"] = round(result["subtotal"] + result["tax_total"], 2)
 
-            if not result["vendor_name"]:
-                result["vendor_name"] = "Proveedor General"
-            if not result["vendor_tax_id"]:
-                result["vendor_tax_id"] = "900.123.456-1"
-            if not result["invoice_number"]:
-                result["invoice_number"] = f"FAC-{result['file_hash_sha256'][:6].upper()}"
-            if not result["issue_date"]:
-                result["issue_date"] = datetime.utcnow().strftime("%Y-%m-%d")
+            if not is_other_pdf:
+                if not result["vendor_name"]:
+                    result["vendor_name"] = "Proveedor General"
+                if not result["vendor_tax_id"]:
+                    result["vendor_tax_id"] = "900.123.456-1"
+                if not result["invoice_number"]:
+                    result["invoice_number"] = f"FAC-{result['file_hash_sha256'][:6].upper()}"
+                if not result["issue_date"]:
+                    result["issue_date"] = datetime.utcnow().strftime("%Y-%m-%d")
+            else:
+                # For non-invoices, keep fields as None and ensure message is visible
+                if not result["vendor_name"]:
+                    result["vendor_name"] = None
+                if not result["vendor_tax_id"]:
+                    result["vendor_tax_id"] = None
+                if not result["invoice_number"]:
+                    result["invoice_number"] = None
+                if not result["issue_date"]:
+                    result["issue_date"] = None
 
             # Check math consistency
             expected_total = round(

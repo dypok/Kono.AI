@@ -14,6 +14,7 @@ from app.models.document import Document, InvoiceItem, Discrepancy
 from app.schemas.spatial import SpatialWord, BoundingBox
 from app.schemas.items import ExtractedInvoiceItem
 from app.schemas.audit import ExtractedInvoice
+from app.engine.document_classifier import DocumentClassifier, DocumentType
 from app.engine.spatial_engine import SpatialEngine
 from app.engine.table_parser import DeterministicTableParser
 from app.engine.validator import DeterministicValidator
@@ -62,7 +63,12 @@ class RedisPipelineConsumer:
                 )
             )
 
-        # 2. Extract Key Fields via SpatialEngine Ray-Casting
+        # 2. Classify document type before extraction (US-REQ-001)
+        classifier = DocumentClassifier()
+        doc_type, classifier_score, matched_anchors = classifier.classify(spatial_words)
+        logger.info("Document %s classified as %s (score %.2f) anchors=%s", doc_id, doc_type.value, classifier_score, matched_anchors)
+
+        # 2b. Extract Key Fields via SpatialEngine Ray-Casting (skip fabrication for OTHER)
         engine = SpatialEngine(spatial_words)
         total_field = engine.extract_field("TOTAL", value_type="money")
         subtotal_field = engine.extract_field("SUBTOTAL", value_type="money")
@@ -103,17 +109,34 @@ class RedisPipelineConsumer:
         if parsed_total is None and parsed_subtotal is not None:
             parsed_total = round(parsed_subtotal + parsed_tax, 2)
 
-        # 4. Arithmetic & State Audit via DeterministicValidator
+        # 4. Build ExtractedInvoice without fabricating data for OTHER (US-REQ-001)
+        is_other = doc_type == DocumentType.OTHER
+        if is_other:
+            invoice_number_val = inv_num_field.parsed_value if inv_num_field else None
+            tax_id_val = tax_id_field.parsed_value if tax_id_field else None
+            issue_date_val = date_field.parsed_value if date_field else None
+            supplier_name_val = None
+            # Keep totals as None when not found, not 0.0 fabrication
+            subtotal_val = parsed_subtotal
+            total_val = parsed_total
+        else:
+            invoice_number_val = inv_num_field.parsed_value if inv_num_field else f"FAC-{file_hash[:6].upper()}"
+            supplier_name_val = "Proveedor Detectado (Rust)"
+            tax_id_val = tax_id_field.parsed_value if tax_id_field else "900123456-1"
+            issue_date_val = date_field.parsed_value if date_field else datetime.utcnow().strftime("%Y-%m-%d")
+            subtotal_val = parsed_subtotal or 0.0
+            total_val = parsed_total or 0.0
+
         extracted_invoice = ExtractedInvoice(
             document_id=doc_id,
-            invoice_number=inv_num_field.parsed_value if inv_num_field else f"FAC-{file_hash[:6].upper()}",
-            supplier_name="Proveedor Detectado (Rust)",
-            tax_id=tax_id_field.parsed_value if tax_id_field else "900123456-1",
-            issue_date=date_field.parsed_value if date_field else datetime.utcnow().strftime("%Y-%m-%d"),
-            parsed_subtotal=parsed_subtotal or 0.0,
+            invoice_number=invoice_number_val,
+            supplier_name=supplier_name_val,
+            tax_id=tax_id_val,
+            issue_date=issue_date_val,
+            parsed_subtotal=subtotal_val,
             parsed_tax_total=parsed_tax,
             parsed_withholding_total=0.0,
-            parsed_total=parsed_total or 0.0,
+            parsed_total=total_val,
             confidence_score=0.98 if spatial_words else 0.5,
             items=extracted_table.items,
         )
@@ -121,7 +144,24 @@ class RedisPipelineConsumer:
         validator = DeterministicValidator()
         audit_result = validator.validate_invoice(extracted_invoice)
 
-        # 5. Persist to DB
+        # 5. Handle non-invoice documents (US-REQ-001): do not fabricate, mark as OTHER
+        if is_other:
+            from app.schemas.audit import Discrepancy, DiscrepancyKind, KonoState
+
+            # Force YELLOW/REJECTED for non-invoices with clear message
+            audit_result.kono_state = KonoState.YELLOW
+            audit_result.discrepancies.append(
+                Discrepancy(
+                    field="document_type",
+                    kind=DiscrepancyKind.MISSING_FIELD,
+                    expected=None,
+                    extracted=None,
+                    delta=None,
+                    message="No se encontraron datos de factura. El documento no contiene anclas de factura.",
+                )
+            )
+
+        # 6. Persist to DB
         if AsyncSessionLocal is None:
             init_engine()
         async with AsyncSessionLocal() as db:
@@ -136,7 +176,9 @@ class RedisPipelineConsumer:
                 doc.tax_total = audit_result.tax_total
                 doc.grand_total = audit_result.extracted_total
                 doc.kono_state = audit_result.kono_state.value
-                doc.processing_status = "AUDITED" if audit_result.kono_state.value == "GREEN" else "PENDING"
+                doc.document_type = doc_type.value
+                doc.classifier_score = classifier_score
+                doc.processing_status = "REJECTED" if is_other else ("AUDITED" if audit_result.kono_state.value == "GREEN" else "PENDING")
             else:
                 doc = Document(
                     id=doc_id,
@@ -154,10 +196,12 @@ class RedisPipelineConsumer:
                     tax_total=audit_result.tax_total,
                     withholding_total=0.0,
                     grand_total=audit_result.extracted_total,
-                    processing_status="AUDITED" if audit_result.kono_state.value == "GREEN" else "PENDING",
+                    processing_status="REJECTED" if is_other else ("AUDITED" if audit_result.kono_state.value == "GREEN" else "PENDING"),
                     kono_state=audit_result.kono_state.value,
+                    document_type=doc_type.value,
+                    classifier_score=classifier_score,
                     extraction_method="RUST_GEOMETRIC_TRIAGE",
-                    bounding_boxes={"words": [w.dict() for w in spatial_words[:400]]},
+                    bounding_boxes={"words": [w.dict() for w in spatial_words[:400]], "matched_anchors": matched_anchors},
                 )
                 db.add(doc)
 

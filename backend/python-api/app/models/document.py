@@ -58,6 +58,8 @@ class Document(Base):
     processing_status = Column(
         String(20), default="AUDITED"
     )  # PENDING | PROCESSING | AUDITED | APPROVED | REJECTED
+    document_type = Column(String(20), default="INVOICE", index=True)  # INVOICE | RECEIPT | OTHER
+    classifier_score = Column(Float, nullable=True)
     processing_time_ms = Column(Float, nullable=True)
     bounding_boxes = Column(JSON, nullable=True)
 

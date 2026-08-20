@@ -29,9 +29,16 @@ async def client():
         yield ac
 
 
-def png_bytes() -> bytes:
+_png_counter = 0
+
+def png_bytes(seed: int | None = None) -> bytes:
     # Minimal PNG header + payload so the upload MIME/persist path works.
-    return b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+    # Make each call unique to avoid deduplication in batch tests.
+    global _png_counter
+    if seed is None:
+        _png_counter += 1
+        seed = _png_counter
+    return b"\x89PNG\r\n\x1a\n" + seed.to_bytes(4, "big") + b"\x00" * 60
 
 
 def make_files(count: int):
