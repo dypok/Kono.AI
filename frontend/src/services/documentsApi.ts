@@ -185,6 +185,12 @@ export const documentsApi = {
       },
     });
 
+    if (!res.ok) {
+      throw new Error('Error al aprobar facturas en lote');
+    }
+    return res.json();
+  },
+
   /** Elimina un documento y sus registros asociados */
   async deleteDocument(documentId: string): Promise<any> {
     const headers = await getAuthHeader();
