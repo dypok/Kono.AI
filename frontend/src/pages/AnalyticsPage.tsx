@@ -13,6 +13,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { documentsApi } from '../services/documentsApi';
+import { KonoCyclingLoader } from '../components/common/KonoCyclingLoader';
 
 export const AnalyticsPage: React.FC = () => {
   const [summary, setSummary] = useState<any>(null);
@@ -199,10 +200,10 @@ export const AnalyticsPage: React.FC = () => {
 
         {/* Live Reconciled Invoices Table */}
         {isLoading ? (
-          <div className="py-16 flex flex-col items-center justify-center space-y-3">
-            <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-            <p className="text-xs text-zinc-400 font-mono">Calculando balances contables en PostgreSQL...</p>
-          </div>
+          <KonoCyclingLoader 
+            message="Calculando balances y asientos contables en PostgreSQL..." 
+            size="md" 
+          />
         ) : !summary?.reconciled_items || summary.reconciled_items.length === 0 ? (
           <div className="py-16 text-center text-zinc-400 text-xs">
             No hay comprobantes pendientes por sincronizar en la base de datos.

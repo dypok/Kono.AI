@@ -14,6 +14,7 @@ import {
 } from '@tabler/icons-react';
 import { documentsApi, DocumentListItem } from '../services/documentsApi';
 import { useAuthStore } from '../store/authStore';
+import { KonoCyclingLoader } from '../components/common/KonoCyclingLoader';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -257,10 +258,10 @@ export const DashboardPage: React.FC = () => {
       {/* Structured Invoices Datagrid Table */}
       <div className="liquid-glass rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
         {isLoading ? (
-          <div className="py-20 flex flex-col items-center justify-center space-y-3">
-            <IconLoader2 className="w-8 h-8 text-emerald-400 animate-spin" />
-            <p className="text-xs text-zinc-400 font-mono">Consultando facturas de la base de datos...</p>
-          </div>
+          <KonoCyclingLoader 
+            message="Consultando y auditando facturas en tiempo real..." 
+            size="md" 
+          />
         ) : documents.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center space-y-3 text-center px-4">
             <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400">

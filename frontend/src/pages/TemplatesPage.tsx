@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layers, Plus, Trash2, CheckCircle, Loader2, Sparkles, X } from 'lucide-react';
 import { documentsApi } from '../services/documentsApi';
+import { KonoCyclingLoader } from '../components/common/KonoCyclingLoader';
 
 interface TemplateItem {
   id: string;
@@ -120,10 +121,10 @@ export const TemplatesPage: React.FC = () => {
       )}
 
       {isLoading ? (
-        <div className="py-20 flex flex-col items-center justify-center space-y-3">
-          <Loader2 className="w-8 h-8 text-kono-silver animate-spin" />
-          <p className="text-xs text-zinc-400 font-mono">Cargando plantillas de proveedores...</p>
-        </div>
+        <KonoCyclingLoader 
+          message="Sincronizando plantillas espaciales de proveedores..." 
+          size="md" 
+        />
       ) : templates.length === 0 ? (
         <div className="py-16 text-center liquid-glass rounded-3xl p-8 border border-white/10 space-y-3">
           <Layers className="w-10 h-10 text-zinc-500 mx-auto" />
