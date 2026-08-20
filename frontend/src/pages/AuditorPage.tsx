@@ -95,15 +95,15 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
             taxRate: 0.19,
             taxAmount: doc.tax_total || 0,
             grandTotal: doc.grand_total || 0,
-            lineItems: lineItems.length > 0 ? lineItems : baseInvoice.lineItems,
-            fields: fields.length > 0 ? fields : baseInvoice.fields,
+            lineItems: lineItems,
+            fields: fields,
             auditState: mappedAuditState,
             processingStatus: doc.processing_status || 'PENDING',
             deltaAmount: 0,
             auditMessage:
               mappedAuditState === 'ok'
                 ? 'Extracción determinista y comprobación matemática 100% cuadrada.'
-                : 'Se detectaron discrepancias que requieren revisión humana.',
+                : 'Se detectaron discrepancias o ausencia de datos que requieren revisión.',
           };
 
           setInvoice(record);
@@ -191,15 +191,15 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
       taxRate: 0.19,
       taxAmount: doc.tax_total || 0,
       grandTotal: doc.grand_total || 0,
-      lineItems: lineItems.length > 0 ? lineItems : baseInvoice.lineItems,
-      fields: fields.length > 0 ? fields : baseInvoice.fields,
+      lineItems: lineItems,
+      fields: fields,
       auditState: mappedAuditState,
       processingStatus: doc.processing_status || 'PENDING',
       deltaAmount: 0,
       auditMessage:
         mappedAuditState === 'ok'
           ? 'Extracción determinista y comprobación matemática 100% cuadrada.'
-          : 'Se detectaron discrepancias que requieren revisión humana.',
+          : 'Se detectaron discrepancias o ausencia de datos que requieren revisión.',
     };
   }
 

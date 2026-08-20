@@ -454,6 +454,61 @@ export const documentsApi = {
     }
   },
 
+  /** Estima el costo en USD y tokens de analizar un documento con IA (gpt-4o-mini) sin ejecutarla */
+  async estimateAiCost(documentId: string, conflictingFields?: string[]): Promise<{
+    document_id: string;
+    needs_ai: boolean;
+    estimated_cost_usd: number;
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    model: string;
+    message?: string;
+  }> {
+    const headers = await getAuthHeader();
+    const res = await fetch('/api/v1/ai/cost-estimate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({
+        document_id: documentId,
+        conflicting_fields: conflictingFields,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al estimar costo IA' }));
+      throw new Error(err.detail || 'Fallo en la estimación de costo IA');
+    }
+    return res.json();
+  },
+
+  /** Ejecuta el análisis bajo demanda con IA para extraer datos de un documento sin ítems */
+  async analyzeWithAi(documentId: string, force = true): Promise<{
+    document_id: string;
+    status: string;
+    message: string;
+    estimated_cost_usd: number;
+    total_tokens: number;
+    document?: any;
+  }> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/ai/analyze/${documentId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ force }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Error al analizar con IA' }));
+      throw new Error(err.detail || 'Fallo en el análisis con IA');
+    }
+    return res.json();
+  },
+
   /** Remueve la etiqueta KONO_INVOICE de Gmail y vuelve a procesar todos los correos e ingresarlos */
   async resetAndRescanEmail(providerToken: string, accountEmail?: string): Promise<any> {
     const headers = await getAuthHeader();
