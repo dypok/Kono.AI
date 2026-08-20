@@ -15,3 +15,4 @@
   * Auditor & Viewer: Added dynamic split-screen layout with 'Mostrar/Ocultar Visor PDF' toggle and direct 'Abrir en Pestaña' button.
   * Successfully compiled and verified frontend production build (Vite + TypeScript).
 - [Thursday]-[20/08/2026]-[12:21] : Applied missing Supabase schema columns (`document_type`, `classifier_score`, `needs_ai_fallback`, `ai_tokens`, `ai_cost_usd`, `ai_model`) directly via Supabase MCP migration executor. Verified HTTP `/api/v1/documents/?scope=inbox` returning all 14 records immediately.
+- [Thursday]-[20/08/2026]-[13:43] : Generated and ingested 10 new synthetic Colombian invoices (`factura_col_7520.pdf` to `factura_col_7529.pdf`) with authentic layout and line items into PostgreSQL Supabase DB. Verified HTTP endpoint returning all 10 invoices in GREEN status (100% auditted and squared).
