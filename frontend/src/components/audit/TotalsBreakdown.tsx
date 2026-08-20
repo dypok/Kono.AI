@@ -11,33 +11,33 @@ interface TotalsBreakdownProps {
 /** Section 3: totals & tax breakdown glass card, with the Grand Total in glowing large type. */
 export function TotalsBreakdown({ invoice, activeFieldKey, onSelectField }: TotalsBreakdownProps) {
   return (
-    <div className="space-y-3 rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/90 p-4 shadow-glass">
-      <div className="flex items-center justify-between border-b border-white/5 pb-2 text-xs font-semibold text-slate-300">
-        <span>Totals &amp; Tax Breakdown</span>
-        <span className="font-mono text-[11px] text-cyan-400">Tolerance ±$0.02</span>
+    <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 shadow-glass">
+      <div className="flex items-center justify-between border-b border-white/5 pb-2 text-xs font-semibold text-zinc-300">
+        <span>Desglose de Totales e Impuestos</span>
+        <span className="font-mono text-[11px] text-zinc-400">Tolerancia ±$0.02</span>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <TotalTile
-          label="Subtotal"
+          label="Subtotal Extraído"
           value={`$${invoice.subtotal.toFixed(2)}`}
-          hint="🔵 Mapped Field"
-          hintClass="text-sky-400"
+          hint="🔵 Campo Mapeado"
+          hintClass="text-zinc-400"
           isActive={activeFieldKey === 'subtotal'}
-          activeClass="border-sky-400/50 bg-sky-950/30 shadow-[0_0_12px_rgba(56,189,248,0.2)]"
+          activeClass="border-white/40 bg-white/10 shadow-[0_0_12px_rgba(255,255,255,0.1)]"
           onClick={() => onSelectField('subtotal')}
         />
 
         <TotalTile
           label={
             <span className="flex items-center justify-between">
-              <span>VAT ({(invoice.taxRate * 100).toFixed(0)}%)</span>
+              <span>IVA ({(invoice.taxRate * 100).toFixed(0)}%)</span>
               <Percent className="h-3 w-3 text-emerald-400" />
             </span>
           }
           value={`$${invoice.taxAmount.toFixed(2)}`}
-          valueClass="text-emerald-400"
-          hint="🟢 Rate Determined"
+          valueClass="text-emerald-400 font-mono"
+          hint="🟢 Tarifa Determinada"
           hintClass="text-emerald-400"
           isActive={activeFieldKey === 'taxAmount'}
           activeClass="border-emerald-400/50 bg-emerald-950/30 shadow-[0_0_12px_rgba(52,211,153,0.2)]"
@@ -45,15 +45,15 @@ export function TotalsBreakdown({ invoice, activeFieldKey, onSelectField }: Tota
         />
 
         <TotalTile
-          label="Grand Total"
+          label="Gran Total"
           value={`$${invoice.grandTotal.toFixed(2)}`}
-          labelClass="text-cyan-300"
-          valueClass="text-cyan-300 text-xl font-extrabold"
-          hint="✓ Exact Match"
-          hintClass="text-cyan-400 font-semibold"
+          labelClass="text-alabaster-100"
+          valueClass="text-alabaster-50 text-xl font-extrabold font-mono"
+          hint="✓ Conciliación Exacta"
+          hintClass="text-emerald-400 font-semibold"
           isActive={activeFieldKey === 'grandTotal'}
-          activeClass="border-cyan-400/60 bg-cyan-950/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]"
-          defaultClass="border-cyan-500/20 bg-cyan-950/20 hover:border-cyan-400/30"
+          activeClass="border-white/50 bg-white/15 shadow-[0_0_15px_rgba(255,255,255,0.15)]"
+          defaultClass="border-white/10 bg-white/[0.04] hover:border-white/20"
           onClick={() => onSelectField('grandTotal')}
         />
       </div>
