@@ -449,7 +449,7 @@ async def get_document(document_id: str, db: AsyncSession = Depends(get_db)):
             selectinload(Document.discrepancies),
             selectinload(Document.audit_logs),
         )
-        .where(Document.id == document_id)
+        .where((Document.id == document_id) | (Document.invoice_number == document_id))
     )
     doc = (await db.execute(stmt)).scalars().first()
     if doc is None:
@@ -462,7 +462,8 @@ async def get_document(document_id: str, db: AsyncSession = Depends(get_db)):
 # -------------------------------------------------------------------------- #
 @router.get("/{document_id}/file")
 async def stream_file(document_id: str, db: AsyncSession = Depends(get_db)):
-    doc = await db.get(Document, document_id)
+    stmt = select(Document).where((Document.id == document_id) | (Document.invoice_number == document_id))
+    doc = (await db.execute(stmt)).scalars().first()
     if doc is None:
         raise HTTPException(status_code=404, detail="Document not found")
     

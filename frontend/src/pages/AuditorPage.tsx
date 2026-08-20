@@ -8,6 +8,7 @@ import { useToast } from '../hooks/useToast';
 import { documentsApi } from '../services/documentsApi';
 import { baseInvoice } from '../lib/mockData';
 import { InvoiceRecord, AuditState } from '../types/invoice';
+import { KonoCyclingLoader } from '../components/common/KonoCyclingLoader';
 
 interface AuditorPageProps {
   onBackToSite?: () => void;
@@ -17,33 +18,36 @@ interface AuditorPageProps {
 export function AuditorPage({ onBackToSite }: AuditorPageProps) {
   const { documentId } = useParams<{ documentId?: string }>();
   const navigate = useNavigate();
-  const [invoice, setInvoice] = useState<InvoiceRecord>(baseInvoice);
+  const [invoice, setInvoice] = useState<InvoiceRecord | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [activeFieldKey, setActiveFieldKey] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const { message: toastMessage, showToast } = useToast();
 
   useEffect(() => {
     async function loadDocumentData() {
-      if (!documentId) {
-        // Si no hay id específico, buscar el documento más reciente del usuario
-        try {
-          setIsLoading(true);
-          const listRes = await documentsApi.listDocuments({ pageSize: 1 });
+      try {
+        setIsLoading(true);
+        let targetId = documentId;
+
+        // Si no se pasó ID o se pasó el antiguo mock id, buscar el documento más reciente de PostgreSQL
+        if (!targetId || targetId === 'INV-2026-8891' || targetId === 'inv-001') {
+          const listRes = await documentsApi.listDocuments({ page: 1, pageSize: 1 });
           if (listRes.items && listRes.items.length > 0) {
-            const firstDoc = listRes.items[0];
-            await fetchAndMapDocument(firstDoc.id);
+            targetId = listRes.items[0].id;
           }
-        } catch (err) {
-          console.warn('No se encontraron comprobantes previos:', err);
-        } finally {
+        }
+
+        if (targetId) {
+          await fetchAndMapDocument(targetId);
+        } else {
           setIsLoading(false);
         }
-        return;
+      } catch (err: any) {
+        console.warn('Error resolviendo comprobante para auditoría:', err);
+        setIsLoading(false);
       }
-
-      await fetchAndMapDocument(documentId);
     }
 
     async function fetchAndMapDocument(id: string) {
@@ -186,12 +190,14 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
           <div>
             <h1 className="text-base font-bold text-alabaster-100 flex items-center space-x-2">
               <span>Auditor Visor & Resumen</span>
-              <span className="text-xs px-2 py-0.5 rounded-md bg-white/10 text-zinc-300 font-mono">
-                {invoice.invoiceNumber}
-              </span>
+              {invoice?.invoiceNumber && (
+                <span className="text-xs px-2 py-0.5 rounded-md bg-white/10 text-zinc-300 font-mono">
+                  {invoice.invoiceNumber}
+                </span>
+              )}
             </h1>
             <p className="text-[11px] text-zinc-400 font-mono">
-              Comprobante: <strong className="text-zinc-200">{invoice.issuerName}</strong> • {invoice.issuerTaxId}
+              Comprobante: <strong className="text-zinc-200">{invoice?.issuerName || 'Factura'}</strong> • {invoice?.issuerTaxId || ''}
             </p>
           </div>
         </div>
@@ -199,7 +205,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
         <div className="flex items-center space-x-3">
           <button
             onClick={handleApproveAndExport}
-            disabled={isApproving || invoice.auditState === 'critical'}
+            disabled={isApproving || !invoice || invoice.auditState === 'critical'}
             className="px-4 py-2 rounded-xl bg-alabaster-100 hover:bg-white text-titanium-950 font-semibold text-xs transition shadow flex items-center space-x-1.5 disabled:opacity-50"
           >
             {isApproving ? (
@@ -213,14 +219,29 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
       </div>
 
       {isLoading ? (
-        <div className="flex-1 flex flex-col items-center justify-center space-y-3 liquid-glass rounded-3xl border border-white/10">
-          <IconLoader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-          <p className="text-xs text-zinc-400 font-mono">Cargando PDF y datos extraídos del comprobante...</p>
+        <div className="flex-1 flex items-center justify-center liquid-glass rounded-3xl border border-white/10">
+          <KonoCyclingLoader 
+            message="Cargando factura y comprobaciones matemáticas en PostgreSQL..." 
+            size="md" 
+          />
+        </div>
+      ) : !invoice ? (
+        <div className="flex-1 flex flex-col items-center justify-center space-y-4 liquid-glass rounded-3xl border border-white/10 text-center p-8">
+          <h3 className="text-sm font-semibold text-alabaster-100">No se encontró el comprobante seleccionado</h3>
+          <p className="text-xs text-zinc-400 max-w-sm">
+            El archivo o registro de la factura no existe en la base de datos o fue eliminado.
+          </p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-4 py-2 rounded-xl bg-alabaster-100 text-titanium-950 font-semibold text-xs hover:bg-white transition"
+          >
+            Ir al Dashboard de Facturas
+          </button>
         </div>
       ) : (
         /* Split Screen: Left: PDF Viewer | Right: Audit Summary & Extracted Data */
         <main className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 overflow-hidden min-h-0">
-          {/* Left Panel: PDF Canvas */}
+          {/* Left Panel: Authentic PDF Viewer */}
           <section className="h-full overflow-hidden">
             <DocumentViewer
               invoice={invoice}
