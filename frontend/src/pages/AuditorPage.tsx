@@ -115,7 +115,26 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
   }, [documentId]);
 
   async function handleSaveTemplate() {
-    showToast(`💾 Plantilla de extracción para "${invoice.issuerName}" guardada en la base de datos.`);
+    try {
+      if (!invoice.issuerTaxId) {
+        showToast('⚠️ No se puede guardar plantilla sin NIT del emisor.');
+        return;
+      }
+      await documentsApi.saveVendorTemplate({
+        vendor_tax_id: invoice.issuerTaxId,
+        vendor_name: invoice.issuerName,
+        spatial_anchors: {
+          invoice_number: invoice.invoiceNumber,
+          tax_rate: invoice.taxRate,
+          subtotal: invoice.subtotal,
+          fields_count: invoice.fields.length,
+          deterministic_mode: true,
+        },
+      });
+      showToast(`💾 Plantilla para "${invoice.issuerName}" guardada en base de datos con éxito.`);
+    } catch (err: any) {
+      showToast(`Error al guardar plantilla: ${err.message}`);
+    }
   }
 
   async function handleApproveAndExport() {
@@ -124,8 +143,9 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
       setIsApproving(true);
       if (invoice.id && invoice.id !== 'inv-001') {
         await documentsApi.approveDocument(invoice.id);
+        await documentsApi.exportToErp(invoice.id, 'generic');
       }
-      showToast(`✅ Factura ${invoice.invoiceNumber} aprobada y conciliada exitosamente.`);
+      showToast(`✅ Factura ${invoice.invoiceNumber} aprobada y exportada al ERP contable.`);
       setTimeout(() => {
         if (onBackToSite) onBackToSite();
         else navigate('/dashboard');

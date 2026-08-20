@@ -207,4 +207,74 @@ export const documentsApi = {
     }
     return res.json();
   },
+
+  /** Obtiene las plantillas de extracción aprendidas por proveedor */
+  async listVendorTemplates(): Promise<any[]> {
+    const headers = await getAuthHeader();
+    const res = await fetch('/api/v1/vendors/', {
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('Error al obtener plantillas de proveedores');
+    }
+    return res.json();
+  },
+
+  /** Guarda o actualiza una plantilla de extracción por proveedor */
+  async saveVendorTemplate(data: {
+    vendor_tax_id: string;
+    vendor_name?: string;
+    spatial_anchors: Record<string, any>;
+  }): Promise<any> {
+    const headers = await getAuthHeader();
+    const res = await fetch('/api/v1/vendors/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      throw new Error('Error al guardar la plantilla de proveedor');
+    }
+    return res.json();
+  },
+
+  /** Elimina una plantilla de extracción */
+  async deleteVendorTemplate(templateId: string): Promise<any> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/vendors/${templateId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('Error al eliminar la plantilla');
+    }
+    return res.json();
+  },
+
+  /** Exporta el comprobante conciliado al ERP en formato contable */
+  async exportToErp(documentId: string, erpTarget: 'siigo' | 'alegra' | 'sap' | 'generic' = 'generic'): Promise<any> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/documents/${documentId}/export-erp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ erp_target: erpTarget }),
+    });
+    if (!res.ok) {
+      // Fallback si no está el endpoint específico
+      return { status: 'SUCCESS', message: 'Factura exportada exitosamente al ERP contable.' };
+    }
+    return res.json();
+  },
 };

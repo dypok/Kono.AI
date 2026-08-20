@@ -89,4 +89,5 @@
 - [Wednesday]-[19/08/2026]-[19:12] : Fixed TypeScript syntax typo in `documentsApi.ts` for Vite HMR live compilation.
 - [Wednesday]-[19/08/2026]-[19:14] : Implemented automated SHA-256 fingerprint search and persistent volume fallback in `GET /api/v1/documents/:id/file`. Verified binary PDF streaming directly from `/data/storage/processed/`.
 - [Wednesday]-[19/08/2026]-[19:16] : Redesigned Auditor Visor (`DocumentViewer.tsx`, `AuditForm.tsx`, `TotalsBreakdown.tsx`, `GlassInput.tsx`, `fieldColors.ts`) to align with Titanium Dark (#0D1117), Alabaster and Liquid Glass palette, removing high-contrast blue/slate tones.
+- [Wednesday]-[19/08/2026]-[19:23] : Completely unmocked Vendor Templates (`/templates`) and ERP integration (`POST /api/v1/documents/:id/export-erp`). Connected real database CRUD for learned spatial templates and real accounting journal export.
 

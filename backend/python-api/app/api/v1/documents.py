@@ -2,6 +2,7 @@ import csv
 import io
 import logging
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -496,6 +497,79 @@ async def delete_document(
     await db.commit()
 
     return {"status": "SUCCESS", "message": "Document deleted successfully", "id": document_id}
+
+
+# -------------------------------------------------------------------------- #
+# POST /api/v1/documents/{id}/export-erp (Export audited invoice to ERP)
+# -------------------------------------------------------------------------- #
+@router.post("/{document_id}/export-erp")
+async def export_document_to_erp(
+    document_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: SupabaseUser = Depends(get_current_user),
+):
+    """Generates standard ERP JSON payload and registers an audit log entry."""
+    stmt = (
+        select(Document)
+        .options(
+            selectinload(Document.items),
+            selectinload(Document.discrepancies),
+        )
+        .where(Document.id == document_id)
+    )
+    doc = (await db.execute(stmt)).scalars().first()
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    erp_target = body.get("erp_target", "generic")
+
+    # Construct ERP Standard Accounting Journal
+    erp_journal = {
+        "erp_target": erp_target,
+        "external_id": doc.id,
+        "voucher_type": "PURCHASE_INVOICE",
+        "invoice_number": doc.invoice_number or f"FAC-{doc.id[:8]}",
+        "vendor": {
+            "name": doc.vendor_name or "Proveedor Desconocido",
+            "tax_id": doc.vendor_tax_id or "900000000-0",
+        },
+        "issue_date": doc.issue_date,
+        "currency": doc.currency or "COP",
+        "financial_summary": {
+            "subtotal": doc.subtotal or 0.0,
+            "tax_amount": doc.tax_total or 0.0,
+            "withholding_amount": doc.withholding_total or 0.0,
+            "grand_total": doc.grand_total or 0.0,
+        },
+        "accounting_lines": [
+            {
+                "line_number": it.line_number,
+                "description": it.description,
+                "quantity": it.quantity,
+                "unit_price": it.unit_price,
+                "total": it.total_price,
+                "account_code": "510506",  # Standard expense account
+                "tax_account": "240801",   # Standard VAT receivable account
+            }
+            for it in (doc.items or [])
+        ],
+        "exported_at": datetime.utcnow().isoformat(),
+        "exported_by": current_user.email,
+    }
+
+    prev = _state_snapshot(doc)
+    doc.processing_status = "EXPORTED"
+    await _audit(db, doc, f"ERP_EXPORT_{erp_target.upper()}", prev, _state_snapshot(doc))
+    await db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "erp_target": erp_target,
+        "message": f"Factura {doc.invoice_number} exportada y registrada contablemente para {erp_target.upper()}.",
+        "journal_entry": erp_journal,
+    }
 
 
 def _state_snapshot(doc: Document) -> dict:
