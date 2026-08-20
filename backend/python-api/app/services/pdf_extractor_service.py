@@ -138,43 +138,57 @@ class PDFExtractorService:
                 btxt = b[4].strip()
                 blines = [l.strip() for l in btxt.splitlines() if l.strip()]
 
-                # Vendor details (usually in the header area)
-                if b[0] > 200 and b[1] < 220:
+                # Vendor details (in top area y0 < 180)
+                if b[1] < 180:
                     for l in blines:
                         if any(k in l for k in ["NIF/CIF:", "CIF:", "NIT:"]):
-                            result["vendor_tax_id"] = l.split(":")[-1].strip()
+                            m_nit = re.search(r"(?:NIT|CIF|NIF)[:\s]*([0-9.\-]+)", l)
+                            if m_nit and not result["vendor_tax_id"]:
+                                result["vendor_tax_id"] = m_nit.group(1).strip()
                         elif not result["vendor_name"] and not any(
-                            c in l
+                            c in l.upper()
                             for c in [
                                 "@",
                                 "+34",
                                 "+57",
-                                "Calle",
-                                "Paseo",
+                                "CALLE",
+                                "CARRERA",
+                                "AVENIDA",
+                                "PASEO",
                                 "C.",
-                                "Apt",
-                                "Glorieta",
-                                "Alameda",
-                                "Av.",
+                                "CRA",
+                                "APT",
+                                "DIRECCIÓN",
+                                "DIRECCION",
+                                "FACTURA ELECTRÓNICA",
+                                "FACTURA ELECTRONICA",
+                                "FACTURA DE VENTA",
+                                "N°:",
+                                "NÚMERO",
+                                "FECHA",
+                                "CLIENTE",
                             ]
-                        ):
+                        ) and len(l) > 3:
                             result["vendor_name"] = l
 
                 # Customer details
-                if "Cliente:" in btxt:
+                if "CLIENTE" in btxt.upper():
                     for i, l in enumerate(blines):
-                        if l.startswith("Cliente:"):
-                            if i + 1 < len(blines):
+                        if "CLIENTE" in l.upper():
+                            c_name = re.sub(r"^CLIENTE\s*(?:/\s*ADQUIRIENTE)?:\s*", "", l, flags=re.IGNORECASE).strip()
+                            if c_name:
+                                result["customer_name"] = c_name
+                            elif i + 1 < len(blines):
                                 result["customer_name"] = blines[i + 1]
                             break
 
-                if "ID/NIF:" in btxt or "NIT Cliente:" in btxt:
-                    m = re.search(r"(?:ID/NIF|NIT Cliente):\s*([A-Za-z0-9\-_]+)", btxt)
-                    if m:
-                        result["customer_tax_id"] = m.group(1)
+                if "ID/NIF:" in btxt or "NIT Cliente:" in btxt or ("NIT:" in btxt and b[1] >= 140 and b[1] <= 220):
+                    m = re.search(r"(?:ID/NIF|NIT Cliente|NIT):\s*([0-9.\-]+)", btxt)
+                    if m and not result["customer_tax_id"]:
+                        result["customer_tax_id"] = m.group(1).strip()
 
                 # Invoice folio from block
-                if "FACTURA" in btxt:
+                if "FACTURA" in btxt.upper():
                     m = re.search(r"\b(FAC-[0-9]+|INV-[0-9]+|FE-[0-9]+)\b", btxt)
                     if m:
                         result["invoice_number"] = m.group(1)
@@ -193,42 +207,50 @@ class PDFExtractorService:
                         result["invoice_number"] = m.group(1)
 
                 # Issue Date
-                if "Fecha:" in t and not result["issue_date"]:
-                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4})", t)
+                if ("Fecha" in t or "Emisión" in t or "Emision" in t) and not result["issue_date"]:
+                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})", t)
                     if m:
                         result["issue_date"] = m.group(1)
 
                 # Due Date
-                if "Vencimiento:" in t and not result["due_date"]:
-                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4})", t)
+                if ("Vencimiento" in t or "Vence" in t) and not result["due_date"]:
+                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})", t)
                     if m:
                         result["due_date"] = m.group(1)
 
                 # Subtotal
-                if "Subtotal:" in t:
+                if "SUBTOTAL" in t.upper():
                     table_footer_y = l["y"]
-                    m = re.search(r"Subtotal:\s*[\$\€]?\s*([0-9]+(?:[.,][0-9]{2})?)", t)
+                    m = re.search(r"(?:SUBTOTAL)[:\s]*[\$\€]?\s*([0-9.,]+)", t, re.IGNORECASE)
                     if m:
-                        result["subtotal"] = float(m.group(1).replace(",", "."))
+                        val_str = m.group(1).replace(".", "").replace(",", ".") if "," in m.group(1) and "." in m.group(1) else m.group(1).replace(",", "")
+                        try:
+                            result["subtotal"] = float(val_str)
+                        except ValueError:
+                            pass
 
                 # IVA / Tax
-                if "IVA" in t:
-                    m = re.search(r"IVA.*?:?\s*[\$\€]?\s*([0-9]+(?:\.[0-9]{2})|(?:\,[0-9]{2}))", t)
-                    if not m:
-                        amts = re.findall(r"[\$\€]?\s*([0-9]+[.,][0-9]{2})", t)
-                        if amts:
-                            result["tax_total"] = float(amts[-1].replace(",", "."))
-                    else:
-                        result["tax_total"] = float(m.group(1).replace(",", "."))
+                if "IVA" in t.upper():
+                    m = re.search(r"IVA.*?:?\s*[\$\€]?\s*([0-9.,]+)", t, re.IGNORECASE)
+                    if m:
+                        val_str = m.group(1).replace(".", "").replace(",", ".") if "," in m.group(1) and "." in m.group(1) else m.group(1).replace(",", "")
+                        try:
+                            result["tax_total"] = float(val_str)
+                        except ValueError:
+                            pass
 
                 # Grand Total
-                if "Total:" in t and "Total Item" not in t:
-                    m = re.search(r"Total:\s*[\$\€]?\s*([0-9]+(?:[.,][0-9]{2})?)", t)
+                if "TOTAL" in t.upper() and "TOTAL ITEM" not in t.upper() and "UNIT" not in t.upper():
+                    m = re.search(r"(?:TOTAL A PAGAR|TOTAL)[:\s]*[\$\€]?\s*([0-9.,]+)", t, re.IGNORECASE)
                     if m:
-                        result["grand_total"] = float(m.group(1).replace(",", "."))
+                        val_str = m.group(1).replace(".", "").replace(",", ".") if "," in m.group(1) and "." in m.group(1) else m.group(1).replace(",", "")
+                        try:
+                            result["grand_total"] = float(val_str)
+                        except ValueError:
+                            pass
 
                 # Table Header marker
-                if "Descripci" in t and ("Cant" in t or "Precio" in t or "Total" in t):
+                if any(k in t.upper() for k in ["DESCRIPCI", "CANT", "PRECIO", "VALOR"]):
                     table_header_y = l["y"]
 
             # 4. Table Line Items Extraction
@@ -322,33 +344,13 @@ class PDFExtractorService:
                 result["classifier_score"] = 0.5
                 is_other_pdf = False
 
-            # 6. Fallbacks and Mathematical Validation (skip fabrication for OTHER)
+            # 6. Mathematical Consistency Check
             if result["grand_total"] == 0.0 and result["subtotal"] > 0:
                 result["grand_total"] = round(result["subtotal"] + result["tax_total"], 2)
             elif result["subtotal"] == 0.0 and result["items"]:
                 result["subtotal"] = round(sum(it["total_price"] for it in result["items"]), 2)
                 if result["grand_total"] == 0.0:
                     result["grand_total"] = round(result["subtotal"] + result["tax_total"], 2)
-
-            if not is_other_pdf:
-                if not result["vendor_name"]:
-                    result["vendor_name"] = "Proveedor General"
-                if not result["vendor_tax_id"]:
-                    result["vendor_tax_id"] = "900.123.456-1"
-                if not result["invoice_number"]:
-                    result["invoice_number"] = f"FAC-{result['file_hash_sha256'][:6].upper()}"
-                if not result["issue_date"]:
-                    result["issue_date"] = datetime.utcnow().strftime("%Y-%m-%d")
-            else:
-                # For non-invoices, keep fields as None and ensure message is visible
-                if not result["vendor_name"]:
-                    result["vendor_name"] = None
-                if not result["vendor_tax_id"]:
-                    result["vendor_tax_id"] = None
-                if not result["invoice_number"]:
-                    result["invoice_number"] = None
-                if not result["issue_date"]:
-                    result["issue_date"] = None
 
             # Check math consistency
             expected_total = round(
