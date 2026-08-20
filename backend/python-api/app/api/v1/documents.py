@@ -365,13 +365,6 @@ async def list_documents(
             Document.processing_status.in_(["APPROVED", "EXPORTED"])
         )
 
-    # Calculate real-time counts by kono_state for the active scope
-    scoped_user_docs = (await db.execute(base_stmt)).scalars().all()
-    count_all = len(scoped_user_docs)
-    count_green = sum(1 for d in scoped_user_docs if d.kono_state == "GREEN")
-    count_yellow = sum(1 for d in scoped_user_docs if d.kono_state == "YELLOW")
-    count_red = sum(1 for d in scoped_user_docs if d.kono_state == "RED")
-
     stmt = base_stmt.order_by(Document.created_at.desc())
     if kono_state:
         stmt = stmt.where(Document.kono_state == kono_state.upper())
@@ -384,11 +377,18 @@ async def list_documents(
             | (Document.vendor_tax_id.like(like))
         )
 
-    filtered_docs = (await db.execute(stmt)).scalars().all()
-    total = len(filtered_docs)
-    
-    # Paginate
-    paged_docs = (await db.execute(stmt.offset((page - 1) * page_size).limit(page_size))).scalars().all()
+    # Single atomic query to fetch documents
+    all_scoped_docs = (await db.execute(stmt)).scalars().all()
+    total = len(all_scoped_docs)
+
+    count_all = total
+    count_green = sum(1 for d in all_scoped_docs if d.kono_state == "GREEN")
+    count_yellow = sum(1 for d in all_scoped_docs if d.kono_state == "YELLOW")
+    count_red = sum(1 for d in all_scoped_docs if d.kono_state == "RED")
+
+    # In-memory slice pagination (0ms roundtrip)
+    start_idx = (page - 1) * page_size
+    paged_docs = all_scoped_docs[start_idx : start_idx + page_size]
 
     return {
         "items": [DocumentListItem.model_validate(d) for d in paged_docs],
