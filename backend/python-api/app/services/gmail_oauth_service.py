@@ -40,6 +40,32 @@ class GmailOAuthService:
                 return create_res.json().get("id")
         except Exception as e:
             logger.warning("Could not create/fetch label %s in Gmail: %s", label_name, e)
+        return None
+
+    def _classify_empresa_tipo(self, sender: str, subject: str, vendor_name: str | None = None) -> tuple[str, str]:
+        """Classify email by empresa and tipo (Debito/Credito) for renta declaration according to US-REQ-005.
+
+        Empresa: extracted from vendor_name or sender domain, sanitized for label.
+        Tipo: Debito (default) vs Credito (if nota credito / credit note).
+        """
+        empresa = "General"
+        if vendor_name and vendor_name.strip() and vendor_name != "Proveedor General":
+            empresa = vendor_name.strip().split()[0]
+        elif sender and "@" in sender:
+            try:
+                domain = sender.split("@")[-1].split(">")[0].strip().lower()
+                empresa = domain.split(".")[0].capitalize() if domain else "General"
+            except Exception:
+                pass
+        empresa = "".join(c if c.isalnum() else "_" for c in empresa)[:30] or "General"
+
+        text_lower = f"{subject} {vendor_name or ''}".lower()
+        if any(k in text_lower for k in ["nota credito", "nota crédito", "credit note", "credito"]):
+            tipo = "Credito"
+        else:
+            tipo = "Debito"
+        return empresa, tipo
+
     async def reset_and_rescan_invoices(
         self,
         access_token: str,
@@ -215,6 +241,11 @@ class GmailOAuthService:
                                     has_attachment = True
                                     results["invoices_found"] += 1
 
+                                    # 🏷️ Clasificación Jerárquica Empresa → Tipo (Débito/Crédito) según US-REQ-005
+                                    empresa, tipo = self._classify_empresa_tipo(sender, subject, extracted.get("vendor_name"))
+                                    hierarchical_label = f"KONO_INVOICE/{empresa}/{tipo}"
+                                    label_id = await self.get_or_create_label(client, hierarchical_label)
+
                                     if AsyncSessionLocal is not None:
                                         async with AsyncSessionLocal() as db:
                                             # Check if file hash already exists to prevent duplicates
@@ -248,7 +279,7 @@ class GmailOAuthService:
                                                     document_type=doc_type,
                                                     classifier_score=extracted.get("classifier_score"),
                                                     extraction_method="DETERMINISTIC",
-                                                    bounding_boxes=extracted.get("bounding_boxes"),
+                                                    bounding_boxes={**extracted.get("bounding_boxes", {}), "gmail_label": hierarchical_label},
                                                 )
                                                 db.add(doc_obj)
 
@@ -272,7 +303,7 @@ class GmailOAuthService:
                                                     ))
 
                                                 await db.commit()
-                                                logger.info("Successfully ingested genuine Gmail invoice into PostgreSQL: %s (Doc ID: %s)", filename, doc_id)
+                                                logger.info("Successfully ingested genuine Gmail invoice into PostgreSQL: %s (Doc ID: %s, Label: %s)", filename, doc_id, hierarchical_label)
                                 except Exception as db_err:
                                     logger.error("Error saving Gmail invoice to database: %s", db_err)
 
@@ -281,15 +312,17 @@ class GmailOAuthService:
                                     "file_path": file_path,
                                     "subject": subject,
                                     "sender": sender,
-                                    "label": "KONO_INVOICE",
+                                    "label": hierarchical_label,
+                                    "empresa": empresa,
+                                    "tipo": tipo,
                                 })
 
-                    # 3. Apply KONO_INVOICE label
-                    if has_attachment and label_id:
-                        await client.post(
-                            f"{GMAIL_API_BASE}/messages/{msg_id}/modify",
-                            json={"addLabelIds": [label_id]},
-                        )
+                                # 3. Apply hierarchical label in Gmail
+                                if label_id:
+                                    await client.post(
+                                        f"{GMAIL_API_BASE}/messages/{msg_id}/modify",
+                                        json={"addLabelIds": [label_id]},
+                                    )
 
             except Exception as e:
                 logger.error("Error during Gmail OAuth scanning: %s", str(e))
