@@ -14,3 +14,4 @@
   * Frontend: Implemented multi-selection checkbox UI, floating batch action bar for bulk delete, accounting year filter (2024-2026), 250ms search debounce, and full responsive pagination.
   * Auditor & Viewer: Added dynamic split-screen layout with 'Mostrar/Ocultar Visor PDF' toggle and direct 'Abrir en Pestaña' button.
   * Successfully compiled and verified frontend production build (Vite + TypeScript).
+- [Thursday]-[20/08/2026]-[12:21] : Applied missing Supabase schema columns (`document_type`, `classifier_score`, `needs_ai_fallback`, `ai_tokens`, `ai_cost_usd`, `ai_model`) directly via Supabase MCP migration executor. Verified HTTP `/api/v1/documents/?scope=inbox` returning all 14 records immediately.

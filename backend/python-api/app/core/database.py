@@ -48,7 +48,12 @@ def init_engine(database_url: str | None = None) -> None:
             url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
         )
     try:
-        sync_engine = create_engine(sync_url, future=True, pool_pre_ping=True)
+        sync_engine = create_engine(
+            sync_url,
+            future=True,
+            pool_pre_ping=True,
+            connect_args={"connect_timeout": 3} if "postgresql" in sync_url else {}
+        )
         # Lightweight migration for new columns (US-REQ-001/002)
         try:
             from sqlalchemy import text
