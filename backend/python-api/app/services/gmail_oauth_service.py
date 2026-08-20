@@ -290,6 +290,7 @@ class GmailOAuthService:
                                                         description=it.get("description", "Ítem Facturado"),
                                                         quantity=it.get("quantity", 1.0),
                                                         unit_price=it.get("unit_price", 0.0),
+                                                        tax_rate=it.get("tax_rate", 19.0) or 19.0,
                                                         total_price=it.get("total_price", 0.0),
                                                         is_math_valid=it.get("is_math_valid", True),
                                                     ))
