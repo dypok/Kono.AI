@@ -7,12 +7,13 @@ import { KonoCyclingLoader } from './components/common/KonoCyclingLoader';
 import { useAuthStore } from './store/authStore';
 import { supabase } from './lib/supabaseClient';
 
-// Lazy-loaded routes for optimal bundle splitting and performance
+import { HistoryPage } from './pages/HistoryPage';
+
+// Lazy-loaded secondary routes for optimal bundle splitting
 const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const AuditorPage = lazy(() => import('./pages/AuditorPage').then(m => ({ default: m.AuditorPage })));
-const HistoryPage = lazy(() => import('./pages/HistoryPage').then(m => ({ default: m.HistoryPage })));
 const TemplatesPage = lazy(() => import('./pages/TemplatesPage').then(m => ({ default: m.TemplatesPage })));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));

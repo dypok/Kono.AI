@@ -164,6 +164,15 @@ export const DashboardPage: React.FC = () => {
         {/* Quick Action Buttons */}
         <div className="flex items-center space-x-3 shrink-0">
           <button
+            onClick={() => navigate('/history')}
+            className="px-4 py-2.5 rounded-xl liquid-glass-card hover:bg-white/5 border border-white/10 text-xs text-alabaster-200 flex items-center space-x-2 transition"
+            title="Ver facturas aprobadas y asientos contables exportados"
+          >
+            <IconFileText className="w-4 h-4 text-emerald-400" />
+            <span>Ver Historial ERP</span>
+          </button>
+
+          <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
             className="px-4 py-2.5 rounded-xl liquid-glass-card hover:bg-white/5 border border-white/10 text-xs text-alabaster-200 flex items-center space-x-2 transition disabled:opacity-50"
