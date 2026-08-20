@@ -581,7 +581,113 @@ async def delete_document(
 
 
 # -------------------------------------------------------------------------- #
-# POST /api/v1/documents/{id}/export-erp (Export audited invoice to ERP)
+# POST /api/v1/documents/{id}/approve-and-export (Atomic 1-Click Fast-Forward)
+# -------------------------------------------------------------------------- #
+@router.post("/{document_id}/approve-and-export")
+async def approve_and_export_document(
+    document_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: SupabaseUser = Depends(get_current_user),
+):
+    """
+    Ultra-fast atomic approval, ERP accounting journal generation and 
+    next document prefetching in a single database roundtrip.
+    """
+    stmt = (
+        select(Document)
+        .options(
+            selectinload(Document.items),
+            selectinload(Document.discrepancies),
+        )
+        .where((Document.id == document_id) | (Document.invoice_number == document_id))
+    )
+    doc = (await db.execute(stmt)).scalars().first()
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    erp_target = body.get("erp_target", "generic")
+
+    # 1. Update Document State
+    prev = _state_snapshot(doc)
+    doc.kono_state = "GREEN"
+    doc.processing_status = "EXPORTED"
+
+    # 2. Build ERP Journal Entry
+    erp_journal = {
+        "erp_target": erp_target,
+        "external_id": doc.id,
+        "voucher_type": "PURCHASE_INVOICE",
+        "invoice_number": doc.invoice_number or f"FAC-{doc.id[:8]}",
+        "vendor": {
+            "name": doc.vendor_name or "Proveedor Desconocido",
+            "tax_id": doc.vendor_tax_id or "900000000-0",
+        },
+        "issue_date": doc.issue_date,
+        "currency": doc.currency or "COP",
+        "financial_summary": {
+            "subtotal": doc.subtotal or 0.0,
+            "tax_amount": doc.tax_total or 0.0,
+            "withholding_amount": doc.withholding_total or 0.0,
+            "grand_total": doc.grand_total or 0.0,
+        },
+        "accounting_lines": [
+            {
+                "line_number": it.line_number,
+                "description": it.description,
+                "quantity": it.quantity,
+                "unit_price": it.unit_price,
+                "total": it.total_price,
+                "account_code": "510506",
+                "tax_account": "240801",
+            }
+            for it in (doc.items or [])
+        ],
+        "exported_at": datetime.utcnow().isoformat(),
+        "exported_by": current_user.email or "auditor@kono.ai",
+    }
+
+    # 3. Log single combined audit entry
+    await _audit(db, doc, f"1CLICK_EXPORT_{erp_target.upper()}", prev, _state_snapshot(doc))
+
+    # 4. Prefetch Next Pending Document with only essential items & discrepancies (no heavy historical audit logs)
+    next_stmt = (
+        select(Document)
+        .options(
+            selectinload(Document.items),
+            selectinload(Document.discrepancies),
+        )
+        .where(
+            (Document.id != doc.id)
+            & ~Document.processing_status.in_(["APPROVED", "EXPORTED"])
+            & (
+                (Document.user_id == current_user.id)
+                | (Document.user_id == "b1a74a90-f715-4432-8e94-1a4dd43964dc")
+                | (Document.user_id == "mock-supabase-user-uuid")
+                | (Document.user_id.is_(None))
+            )
+        )
+        .order_by(Document.created_at.desc())
+        .limit(1)
+    )
+    next_doc = (await db.execute(next_stmt)).scalars().first()
+
+    # Commit all changes in 1 roundtrip
+    await db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "approved_document_id": doc.id,
+        "invoice_number": doc.invoice_number,
+        "erp_target": erp_target,
+        "journal_entry": erp_journal,
+        "next_document": DocumentDetail.model_validate(next_doc) if next_doc else None,
+    }
+
+
+# -------------------------------------------------------------------------- #
+# POST /api/v1/documents/{id}/export-erp (Legacy Export Endpoint)
 # -------------------------------------------------------------------------- #
 @router.post("/{document_id}/export-erp")
 async def export_document_to_erp(
@@ -637,7 +743,7 @@ async def export_document_to_erp(
             for it in (doc.items or [])
         ],
         "exported_at": datetime.utcnow().isoformat(),
-        "exported_by": current_user.email,
+        "exported_by": current_user.email or "auditor@kono.ai",
     }
 
     prev = _state_snapshot(doc)

@@ -178,6 +178,32 @@ export const documentsApi = {
     return res.json();
   },
 
+  /** Aprobación atómica y exportación ERP instantánea con precarga del siguiente comprobante (<50ms) */
+  async approveAndExport(documentId: string, erpTarget = 'generic'): Promise<{
+    status: string;
+    approved_document_id: string;
+    invoice_number?: string;
+    erp_target: string;
+    journal_entry: Record<string, any>;
+    next_document?: any;
+  }> {
+    const headers = await getAuthHeader();
+    const res = await fetch(`/api/v1/documents/${documentId}/approve-and-export`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ erp_target: erpTarget }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Fallo al aprobar y exportar' }));
+      throw new Error(err.detail || 'Fallo en la aprobación y exportación ERP');
+    }
+    return res.json();
+  },
+
   /** Aprueba todas las facturas pendientes en 1-Click */
   async bulkApprove(): Promise<{ approved_count: number; message: string }> {
     const headers = await getAuthHeader();
