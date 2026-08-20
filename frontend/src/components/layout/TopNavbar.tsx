@@ -69,16 +69,6 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
           <IconClock className="w-3.5 h-3.5 text-kono-silver" />
           <span className="font-mono">{metrics?.avgLatencyMs || '12.4'} ms Latencia</span>
         </div>
-
-        <div className="h-4 w-[1px] bg-white/10 mx-1" />
-
-        <button
-          onClick={onBatchApprove}
-          className="px-3.5 py-1.5 rounded-xl bg-alabaster-100 text-titanium-950 font-medium text-xs hover:bg-white transition shadow-sm flex items-center space-x-1.5"
-        >
-          <IconSparkles className="w-3.5 h-3.5 text-titanium-950" />
-          <span>Aprobación 1-Click</span>
-        </button>
       </div>
     </header>
   );
