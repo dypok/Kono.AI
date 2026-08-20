@@ -100,4 +100,5 @@
 - [Wednesday]-[19/08/2026]-[20:00] : Removed manual template creation modal and forms in `TemplatesPage.tsx`. Replaced empty state action with a direct CTA to scan invoices (`/dashboard`). Updated `AuditorPage.tsx` to automatically capture and persist extracted spatial vector coordinates and bounding boxes in PostgreSQL.
 - [Wednesday]-[19/08/2026]-[20:03] : Streamlined `DocumentViewer.tsx` to exclusively render and stream the authentic original invoice file/PDF with direct "Ver Factura Completa" in new tab and direct download actions, completely removing synthetic mock canvas overlays.
 - [Wednesday]-[19/08/2026]-[20:05] : Replaced the verbose synthetic "Fully reconciled / Δ = $0.00" speech bubble in `AuditForm.tsx` with primary direct action buttons ("Guardar Plantilla" and "Aprobar & Exportar ERP") directly beside the Kono mascot header.
+- [Wednesday]-[19/08/2026]-[20:07] : Enhanced visual hierarchy, contrast, and responsive layout for the "Aprobar & Exportar ERP" action button (`bg-emerald-400`, bold typography, no clipping) in `AuditForm.tsx`.
 

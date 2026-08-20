@@ -22,7 +22,7 @@ export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvo
   return (
     <div className="flex h-full flex-col space-y-5 overflow-y-auto rounded-3xl border border-white/10 liquid-glass p-5 shadow-glass backdrop-blur-2xl">
       {/* Top Header Card: Kono Mascot + Primary Execution Buttons */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 shadow-inner">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-inner">
         <div className="flex items-center space-x-3.5 shrink-0">
           <KonoCoin state={invoice.auditState} size="md" pulse={true} />
           <div>
@@ -45,21 +45,21 @@ export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvo
                 )}
               </span>
             </div>
-            <p className="text-xs text-zinc-400 font-mono mt-0.5 truncate max-w-[200px]">
-              {invoice.issuerName || 'Proveedor'}
+            <p className="text-xs text-zinc-400 font-mono mt-0.5">
+              {invoice.issuerName || 'Proveedor General'}
             </p>
           </div>
         </div>
 
-        {/* Action Buttons Placed Directly Here */}
-        <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-end">
+        {/* Action Buttons with high contrast and solid buttons */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-start xl:justify-end">
           <button
             type="button"
             onClick={onSaveTemplate}
-            className="px-3.5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-medium text-alabaster-200 transition shadow-sm flex items-center space-x-2 active:scale-95"
+            className="px-3.5 py-2.5 rounded-xl border border-white/15 bg-white/10 hover:bg-white/15 text-xs font-semibold text-alabaster-100 transition shadow-sm flex items-center space-x-2 active:scale-95 shrink-0"
             title="Guardar coordenadas vectoriales para futuras extracciones a $0 tokens"
           >
-            <Save className="w-4 h-4 text-cyan-400" />
+            <Save className="w-4 h-4 text-cyan-400 shrink-0" />
             <span>Guardar Plantilla</span>
           </button>
 
@@ -68,15 +68,15 @@ export function AuditForm({ invoice, activeFieldKey, onSelectField, onUpdateInvo
             onClick={onApproveAndExport}
             disabled={isCritical}
             className={cn(
-              'px-4 py-2.5 rounded-xl text-xs font-semibold shadow-lg transition flex items-center space-x-2 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed',
+              'px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg transition flex items-center space-x-2 active:scale-95 shrink-0',
               isCritical
-                ? 'bg-zinc-800 text-zinc-500 border border-zinc-700'
-                : 'bg-alabaster-100 hover:bg-white text-titanium-950 shadow-white/10'
+                ? 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'
+                : 'bg-emerald-400 hover:bg-emerald-300 text-titanium-950 shadow-emerald-500/20 cursor-pointer'
             )}
           >
-            <CheckCircle2 className="w-4 h-4 text-titanium-950" />
+            <CheckCircle2 className="w-4 h-4 text-titanium-950 shrink-0" />
             <span>Aprobar &amp; Exportar ERP</span>
-            <ArrowRight className="w-3.5 h-3.5 text-titanium-950" />
+            <ArrowRight className="w-3.5 h-3.5 text-titanium-950 shrink-0" />
           </button>
         </div>
       </div>
