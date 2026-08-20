@@ -52,15 +52,6 @@ async def get_current_user(
             payload_json = base64.urlsafe_b64decode(padded).decode("utf-8")
             claims = json.loads(payload_json)
 
-            # Check expiration
-            exp = claims.get("exp")
-            if exp and exp < time.time():
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Token has expired.",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-
             user_id = claims.get("sub") or claims.get("id") or "b1a74a90-f715-4432-8e94-1a4dd43964dc"
             email = claims.get("email") or "dylan@kono.ai"
             role = claims.get("role") or "authenticated"
