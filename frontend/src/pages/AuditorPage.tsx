@@ -120,18 +120,27 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
         showToast('⚠️ No se puede guardar plantilla sin NIT del emisor.');
         return;
       }
+      // Guardar anclajes espaciales y coordenadas vectoriales reales encontradas en el escaneo
+      const spatialVectors = invoice.fields.reduce((acc: any, f) => {
+        acc[f.fieldKey] = {
+          box: f.box,
+          page: f.page,
+          sample_value: f.value,
+        };
+        return acc;
+      }, {});
+
       await documentsApi.saveVendorTemplate({
         vendor_tax_id: invoice.issuerTaxId,
         vendor_name: invoice.issuerName,
         spatial_anchors: {
-          invoice_number: invoice.invoiceNumber,
-          tax_rate: invoice.taxRate,
-          subtotal: invoice.subtotal,
+          vectors: spatialVectors,
           fields_count: invoice.fields.length,
           deterministic_mode: true,
+          learned_from_document_id: invoice.id,
         },
       });
-      showToast(`💾 Plantilla para "${invoice.issuerName}" guardada en base de datos con éxito.`);
+      showToast(`💾 Plantilla espacial para "${invoice.issuerName}" guardada en base de datos.`);
     } catch (err: any) {
       showToast(`Error al guardar plantilla: ${err.message}`);
     }

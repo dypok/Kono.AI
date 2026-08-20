@@ -97,4 +97,5 @@
 - [Wednesday]-[19/08/2026]-[19:43] : Created `KonoCyclingLoader.tsx` dynamic mascot loader cycling smoothly through Green (`ok`), Yellow (`warning`), and Red (`critical`) states and vice versa with halo pulses and status indicator dots across all loading screens (`DashboardPage`, `TemplatesPage`, `AnalyticsPage`).
 - [Wednesday]-[19/08/2026]-[19:44] : Unmocked TopNavbar header metrics (`TopNavbar.tsx`). Integrated dynamic polling and real-time query against Supabase PostgreSQL `GET /api/v1/documents/` total count for live invoice display.
 - [Wednesday]-[19/08/2026]-[19:55] : Removed hardcoded vendor template fallback (`tpl-1`, `tpl-2`, `tpl-3`) in `TemplatesPage.tsx`. Empty database states now strictly render the genuine "No hay plantillas registradas" empty state.
+- [Wednesday]-[19/08/2026]-[20:00] : Removed manual template creation modal and forms in `TemplatesPage.tsx`. Replaced empty state action with a direct CTA to scan invoices (`/dashboard`). Updated `AuditorPage.tsx` to automatically capture and persist extracted spatial vector coordinates and bounding boxes in PostgreSQL.
 
