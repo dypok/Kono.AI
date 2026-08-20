@@ -38,9 +38,9 @@ export default {
         'md': '8px',
         'lg': '10px',
         'xl': '12px',
-        '2xl': '14px',
-        '3xl': '16px',
-        '4xl': '20px',
+        '2xl': '12px',
+        '3xl': '12px',
+        '4xl': '12px',
         'full': '9999px',
       },
       fontFamily: {
