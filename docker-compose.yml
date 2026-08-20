@@ -5,20 +5,6 @@ services:
       dockerfile: Dockerfile.allinone
     container_name: kono-app
     restart: unless-stopped
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-    environment:
-      - ENVIRONMENT=development
-      - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=sqlite+aiosqlite:////data/storage/kono.db
-      - STORAGE_DIR=/data/storage
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-kono_secret_n8n_key_2026}
-      - MAX_INBOUND_BYTES=${MAX_INBOUND_BYTES:-15728640}
-      - IMAP_HOST=${IMAP_HOST:-imap.gmail.com}
-      - IMAP_PORT=${IMAP_PORT:-993}
-      - IMAP_USER=${IMAP_USER:-}
-      - IMAP_PASSWORD=${IMAP_PASSWORD:-}
-      - IMAP_POLL_INTERVAL_SEC=${IMAP_POLL_INTERVAL_SEC:-60}
     ports:
       - "80:80"
     volumes:
@@ -42,3 +28,4 @@ services:
 volumes:
   kono_storage:
     driver: local
+

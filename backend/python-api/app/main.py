@@ -19,13 +19,41 @@ from app.api.v1.websockets import ConnectionManager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("kono.api")
 
+# Initialize PostgreSQL engine on module import
+init_engine()
+
+from app.services.inbox_scheduler import inbox_scheduler
+from app.services.redis_pipeline_consumer import redis_pipeline_consumer
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure async engine is active
+    init_engine()
+
+    # Start the Redis -> WebSocket bridge in the background (non-blocking).
+    bridge = asyncio.create_task(
+        ws_manager.run_redis_bridge(settings.redis_url, settings.kono_feed_channel)
+    )
+    # Start the 60-second periodic background inbox scanner
+    inbox_scheduler.start()
+
+    # Start the Rust Core -> Python Spatial Engine Redis Stream consumer
+    redis_pipeline_consumer.start(settings.redis_url, ws_manager=ws_manager)
+    logger.info("🦀 Kono API started; Rust Redis Pipeline Consumer & WS bridge launched")
+    yield
+    bridge.cancel()
+    inbox_scheduler.stop()
+    redis_pipeline_consumer.stop()
+
+
+settings = get_settings()
+
 app = FastAPI(
     title="Kono.ai Financial Invoicing API",
     version="1.0.0",
     description="Deterministic Extractor, Validator and Financial Reconciler API",
+    lifespan=lifespan,
 )
-
-settings = get_settings()
 
 @app.middleware("http")
 async def add_process_time_header(request, call_next):
@@ -57,35 +85,6 @@ app.include_router(audit_router.router, prefix="/api/v1")
 app.include_router(auth_router.router, prefix="/api/v1")
 app.include_router(inbound_router.router, prefix="/api/v1")
 app.include_router(integrations_router.router, prefix="/api/v1")
-
-
-from app.services.inbox_scheduler import inbox_scheduler
-from app.services.redis_pipeline_consumer import redis_pipeline_consumer
-
-@contextlib.asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Initialize async engine for PostgreSQL Supabase
-    init_engine()
-
-    # Start the Redis -> WebSocket bridge in the background (non-blocking).
-    bridge = asyncio.create_task(
-        ws_manager.run_redis_bridge(settings.redis_url, settings.kono_feed_channel)
-    )
-    # Start the 60-second periodic background inbox scanner
-    inbox_scheduler.start()
-
-    # Start the Rust Core -> Python Spatial Engine Redis Stream consumer
-    redis_pipeline_consumer.start(settings.redis_url, ws_manager=ws_manager)
-    logger.info("🦀 Kono API started; Rust Redis Pipeline Consumer & WS bridge launched")
-    yield
-    bridge.cancel()
-    inbox_scheduler.stop()
-    redis_pipeline_consumer.stop()
-
-
-# FastAPI lifespan is the supported way to run startup/shutdown in modern
-# versions. We still expose `on_event` fallback for very old runtimes.
-app.router.lifespan_context = lifespan
 
 
 @app.get("/health")
