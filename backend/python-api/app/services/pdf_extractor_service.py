@@ -231,7 +231,7 @@ class PDFExtractorService:
 
                 # IVA / Tax
                 if "IVA" in t.upper():
-                    m = re.search(r"IVA.*?:?\s*[\$\€]?\s*([0-9.,]+)", t, re.IGNORECASE)
+                    m = re.search(r"IVA(?:\s*\([0-9]+%\))?[:\s]*[\$\€]?\s*([0-9.,]+)", t, re.IGNORECASE)
                     if m:
                         val_str = m.group(1).replace(".", "").replace(",", ".") if "," in m.group(1) and "." in m.group(1) else m.group(1).replace(",", "")
                         try:
