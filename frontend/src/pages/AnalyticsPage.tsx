@@ -4,12 +4,8 @@ import {
   TrendingUp, 
   DollarSign, 
   Cpu, 
-  CheckCircle2, 
-  Building2, 
-  Send, 
   Loader2, 
   FileSpreadsheet, 
-  ArrowUpRight,
   ShieldCheck
 } from 'lucide-react';
 import { documentsApi } from '../services/documentsApi';
@@ -20,9 +16,6 @@ export const AnalyticsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [exportFormat, setExportFormat] = useState<'csv' | 'json' | null>(null);
-  const [selectedErp, setSelectedErp] = useState<'siigo' | 'alegra' | 'sap' | 'generic'>('siigo');
-  const [exportingId, setExportingId] = useState<string | null>(null);
-  const [exportSuccessMsg, setExportSuccessMsg] = useState<string | null>(null);
 
   const fetchSummary = async () => {
     try {
@@ -53,33 +46,19 @@ export const AnalyticsPage: React.FC = () => {
     }
   };
 
-  const handleSingleErpExport = async (docId: string, invoiceNumber: string) => {
-    try {
-      setExportingId(docId);
-      const res = await documentsApi.exportToErp(docId, selectedErp);
-      setExportSuccessMsg(`Asiento de ${invoiceNumber} sincronizado con ${selectedErp.toUpperCase()}`);
-      await fetchSummary();
-      setTimeout(() => setExportSuccessMsg(null), 4000);
-    } catch (err) {
-      console.error('Error exporting to ERP:', err);
-    } finally {
-      setExportingId(null);
-    }
-  };
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-alabaster-100 flex items-center space-x-2">
-            <span>Conciliación & Conectores ERP</span>
+            <span>Conciliación & Reportes Financieros</span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               Live Postgres
             </span>
           </h1>
           <p className="text-xs text-zinc-400 mt-1 font-mono">
-            Reportes contables sincronizados y listos para exportar a Siigo, Alegra, SAP y Excel.
+            Reportes contables conciliados y listos para exportar en CSV y JSON.
           </p>
         </div>
 
@@ -112,14 +91,6 @@ export const AnalyticsPage: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Success Notification */}
-      {exportSuccessMsg && (
-        <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs flex items-center space-x-2 animate-fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{exportSuccessMsg}</span>
-        </div>
-      )}
 
       {/* Real-time KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -165,36 +136,14 @@ export const AnalyticsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ERP Target Selector & Reconciliation Datagrid */}
+      {/* Reconciliation Datagrid */}
       <div className="liquid-glass rounded-3xl border border-white/10 overflow-hidden shadow-2xl p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
           <div>
-            <h2 className="text-sm font-semibold text-alabaster-100">Bandeja de Sincronización ERP</h2>
+            <h2 className="text-sm font-semibold text-alabaster-100">Bandeja de Facturas Conciliadas</h2>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Envía asientos contables estructurados directamente al software contable de destino.
+              Comprobantes 100% auditados y conciliados contablemente.
             </p>
-          </div>
-
-          {/* ERP Selector Tabs */}
-          <div className="flex items-center space-x-2 p-1.5 liquid-glass-card rounded-2xl border border-white/5">
-            {[
-              { id: 'siigo', label: 'Siigo Cloud' },
-              { id: 'alegra', label: 'Alegra' },
-              { id: 'sap', label: 'SAP B1' },
-              { id: 'generic', label: 'JSON Estándar' },
-            ].map((erp) => (
-              <button
-                key={erp.id}
-                onClick={() => setSelectedErp(erp.id as any)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${
-                  selectedErp === erp.id
-                    ? 'bg-white/10 text-alabaster-50 border border-white/15'
-                    : 'text-zinc-400 hover:text-alabaster-200'
-                }`}
-              >
-                {erp.label}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -215,9 +164,8 @@ export const AnalyticsPage: React.FC = () => {
                 <th className="py-3 px-4">Comprobante</th>
                 <th className="py-3 px-4">Tercero / Proveedor</th>
                 <th className="py-3 px-4">Fecha</th>
-                <th className="py-3 px-4">Total</th>
-                <th className="py-3 px-4">Estado ERP</th>
-                <th className="py-3 px-4 text-right">Integración</th>
+                <th className="py-3 px-4">Total (COP)</th>
+                <th className="py-3 px-4 text-right">Estado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-xs text-alabaster-200">
@@ -232,30 +180,12 @@ export const AnalyticsPage: React.FC = () => {
                   </td>
                   <td className="py-3.5 px-4 font-mono text-zinc-400">{item.issue_date || '—'}</td>
                   <td className="py-3.5 px-4 font-mono font-semibold text-alabaster-100">
-                    ${(item.grand_total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono border ${
-                      item.processing_status === 'EXPORTED'
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                    }`}>
-                      {item.processing_status === 'EXPORTED' ? 'Sincronizado' : 'Listo para exportar'}
-                    </span>
+                    ${(item.grand_total || 0).toLocaleString('es-CO', { minimumFractionDigits: 2 })} COP
                   </td>
                   <td className="py-3.5 px-4 text-right">
-                    <button
-                      onClick={() => handleSingleErpExport(item.id, item.invoice_number)}
-                      disabled={exportingId === item.id}
-                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-medium text-alabaster-100 transition shadow inline-flex items-center space-x-1.5 disabled:opacity-50"
-                    >
-                      {exportingId === item.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Send className="w-3.5 h-3.5 text-cyan-400" />
-                      )}
-                      <span>Enviar a {selectedErp.toUpperCase()}</span>
-                    </button>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-mono border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                      Conciliada & Cuadrada
+                    </span>
                   </td>
                 </tr>
               ))}
