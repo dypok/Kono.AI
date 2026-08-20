@@ -252,12 +252,7 @@ export function AuditorPage({ onBackToSite }: AuditorPageProps) {
 
           <div>
             <h1 className="text-base font-bold text-alabaster-100 flex items-center space-x-2">
-              <span>Auditor Visor & Resumen</span>
-              {invoice?.invoiceNumber && (
-                <span className="text-xs px-2 py-0.5 rounded-md bg-white/10 text-zinc-300 font-mono">
-                  {invoice.invoiceNumber}
-                </span>
-              )}
+              <span>Auditor &amp; Visor Contable</span>
             </h1>
             <p className="text-[11px] text-zinc-400 font-mono">
               Comprobante: <strong className="text-zinc-200">{invoice?.issuerName || 'Factura'}</strong> • {invoice?.issuerTaxId || ''}
