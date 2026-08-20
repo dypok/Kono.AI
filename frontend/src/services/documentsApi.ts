@@ -493,13 +493,17 @@ export const documentsApi = {
     message: string;
   }> {
     const headers = await getAuthHeader();
+    const provider = localStorage.getItem('kono_ai_provider') || 'openai';
     const res = await fetch('/api/v1/ai/cost-estimate/batch', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...headers,
       },
-      body: JSON.stringify({ document_ids: documentIds }),
+      body: JSON.stringify({
+        document_ids: documentIds,
+        provider,
+      }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Error al estimar costo de lote IA' }));
@@ -516,7 +520,8 @@ export const documentsApi = {
     message: string;
   }> {
     const headers = await getAuthHeader();
-    const apiKey = localStorage.getItem('kono_openai_api_key') || undefined;
+    const provider = localStorage.getItem('kono_ai_provider') || 'openai';
+    const apiKey = localStorage.getItem(`kono_${provider}_api_key`) || localStorage.getItem('kono_openai_api_key') || undefined;
     const res = await fetch('/api/v1/ai/analyze/batch', {
       method: 'POST',
       headers: {
@@ -527,6 +532,7 @@ export const documentsApi = {
       body: JSON.stringify({
         document_ids: documentIds,
         api_key: apiKey,
+        provider,
       }),
     });
     if (!res.ok) {
@@ -546,7 +552,8 @@ export const documentsApi = {
     document?: any;
   }> {
     const headers = await getAuthHeader();
-    const apiKey = localStorage.getItem('kono_openai_api_key') || undefined;
+    const provider = localStorage.getItem('kono_ai_provider') || 'openai';
+    const apiKey = localStorage.getItem(`kono_${provider}_api_key`) || localStorage.getItem('kono_openai_api_key') || undefined;
     const res = await fetch(`/api/v1/ai/analyze/${documentId}`, {
       method: 'POST',
       headers: {
@@ -557,6 +564,7 @@ export const documentsApi = {
       body: JSON.stringify({
         force,
         api_key: apiKey,
+        provider,
       }),
     });
     if (!res.ok) {

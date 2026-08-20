@@ -30,9 +30,14 @@ interface ConnectedInbox {
 
 export const SettingsPage: React.FC = () => {
   const { user, signInWithGoogle } = useAuthStore();
-  const [openaiApiKey, setOpenaiApiKey] = useState<string>(() => {
-    return localStorage.getItem('kono_openai_api_key') || '';
+  const [selectedAiProvider, setSelectedAiProvider] = useState<'openai' | 'gemini' | 'claude'>(() => {
+    return (localStorage.getItem('kono_ai_provider') as any) || 'openai';
   });
+  const [apiKeys, setApiKeys] = useState<{ openai: string; gemini: string; claude: string }>(() => ({
+    openai: localStorage.getItem('kono_openai_api_key') || '',
+    gemini: localStorage.getItem('kono_gemini_api_key') || '',
+    claude: localStorage.getItem('kono_claude_api_key') || '',
+  }));
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeySavedFeedback, setApiKeySavedFeedback] = useState<string | null>(null);
   const [inboxes, setInboxes] = useState<ConnectedInbox[]>(() => {
@@ -483,7 +488,7 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 🤖 Card 3: Motor de Inteligencia Artificial & OpenAI API Key */}
+      {/* 🤖 Card 3: Selector de Proveedores de IA & API Keys */}
       <div className="liquid-glass rounded-3xl p-6 md:p-8 border border-white/10 space-y-6 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
@@ -491,23 +496,78 @@ export const SettingsPage: React.FC = () => {
               <IconKey className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-alabaster-100">Motor de Inteligencia Artificial (OpenAI)</h2>
+              <h2 className="text-base font-bold text-alabaster-100">Motor de Inteligencia Artificial</h2>
               <p className="text-xs text-zinc-400">
-                Configura tu clave de API privada para el escaneo bajo demanda de comprobantes complejos o sin tabla.
+                Selecciona tu proveedor preferido (OpenAI, Gemini o Claude) y configura tu clave privada.
               </p>
             </div>
           </div>
         </div>
 
+        {/* Provider Selector Tabs */}
+        <div className="grid grid-cols-3 gap-2.5 p-1.5 rounded-2xl bg-white/[0.03] border border-white/10">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedAiProvider('openai');
+              localStorage.setItem('kono_ai_provider', 'openai');
+            }}
+            className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-2 ${
+              selectedAiProvider === 'openai'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-sm'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>OpenAI (GPT-4o mini)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedAiProvider('gemini');
+              localStorage.setItem('kono_ai_provider', 'gemini');
+            }}
+            className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-2 ${
+              selectedAiProvider === 'gemini'
+                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 shadow-sm'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>Google Gemini (Flash)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedAiProvider('claude');
+              localStorage.setItem('kono_ai_provider', 'claude');
+            }}
+            className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-2 ${
+              selectedAiProvider === 'claude'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>Anthropic Claude (Haiku)</span>
+          </button>
+        </div>
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (openaiApiKey.trim()) {
-              localStorage.setItem('kono_openai_api_key', openaiApiKey.trim());
-              setApiKeySavedFeedback('✓ API Key guardada de forma segura en tu navegador local (localhost).');
+            const currentKey = apiKeys[selectedAiProvider].trim();
+            if (currentKey) {
+              localStorage.setItem(`kono_${selectedAiProvider}_api_key`, currentKey);
+              if (selectedAiProvider === 'openai') {
+                localStorage.setItem('kono_openai_api_key', currentKey);
+              }
+              setApiKeySavedFeedback(`✓ Clave de ${selectedAiProvider.toUpperCase()} guardada de forma segura en localhost.`);
             } else {
-              localStorage.removeItem('kono_openai_api_key');
-              setApiKeySavedFeedback('✓ API Key removida del almacenamiento local.');
+              localStorage.removeItem(`kono_${selectedAiProvider}_api_key`);
+              if (selectedAiProvider === 'openai') {
+                localStorage.removeItem('kono_openai_api_key');
+              }
+              setApiKeySavedFeedback(`✓ Clave de ${selectedAiProvider.toUpperCase()} removida del almacenamiento local.`);
             }
             setTimeout(() => setApiKeySavedFeedback(null), 4000);
           }}
@@ -515,14 +575,29 @@ export const SettingsPage: React.FC = () => {
         >
           <div>
             <label className="block text-[11px] font-medium text-alabaster-300 mb-1.5 uppercase tracking-wider">
-              OpenAI API Key (sk-...)
+              {selectedAiProvider === 'openai'
+                ? 'OpenAI API Key (sk-...)'
+                : selectedAiProvider === 'gemini'
+                ? 'Google Gemini API Key (AIzaSy...)'
+                : 'Anthropic Claude API Key (sk-ant-...)'}
             </label>
             <div className="relative">
               <input
                 type={showApiKey ? 'text' : 'password'}
-                value={openaiApiKey}
-                onChange={(e) => setOpenaiApiKey(e.target.value)}
-                placeholder="sk-proj-..."
+                value={apiKeys[selectedAiProvider]}
+                onChange={(e) =>
+                  setApiKeys((prev) => ({
+                    ...prev,
+                    [selectedAiProvider]: e.target.value,
+                  }))
+                }
+                placeholder={
+                  selectedAiProvider === 'openai'
+                    ? 'sk-proj-...'
+                    : selectedAiProvider === 'gemini'
+                    ? 'AIzaSy...'
+                    : 'sk-ant-...'
+                }
                 className="w-full liquid-glass-input px-3.5 py-2.5 pr-10 rounded-xl text-xs font-mono text-alabaster-100 placeholder:text-zinc-600"
               />
               <button
@@ -539,10 +614,10 @@ export const SettingsPage: React.FC = () => {
           <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 space-y-1.5 text-xs text-zinc-400">
             <div className="flex items-center space-x-2 text-alabaster-200 font-medium">
               <IconSparkles className="w-3.5 h-3.5 text-purple-400" />
-              <span>Privacidad &amp; Seguridad de tu Clave</span>
+              <span>Privacidad &amp; Flexibilidad Multi-Proveedor</span>
             </div>
             <p className="text-[11px] leading-relaxed text-zinc-300">
-              Tu API Key se almacena de forma inmutable y aislada en el <strong className="text-alabaster-100 font-mono">localStorage de tu navegador</strong> (localhost). Kono nunca expone ni comparte tu saldo con terceros; solo se utiliza cuando autorizas explícitamente una extracción por IA con <span className="text-purple-300 font-mono">gpt-4o-mini</span>.
+              Tu API Key para <strong className="text-alabaster-100 font-mono capitalize">{selectedAiProvider}</strong> se almacena exclusivamente en tu navegador (<span className="text-purple-300 font-mono">localhost</span>). Puedes alternar entre OpenAI, Google Gemini o Anthropic Claude en cualquier momento para escanear facturas bajo demanda.
             </p>
           </div>
 
@@ -555,14 +630,16 @@ export const SettingsPage: React.FC = () => {
 
           <div className="flex items-center justify-between pt-2">
             <span className="text-[11px] text-zinc-500 font-mono">
-              {openaiApiKey ? '● Clave activa en memoria local' : '○ Sin clave configurada'}
+              {apiKeys[selectedAiProvider]
+                ? `● Clave de ${selectedAiProvider.toUpperCase()} activa en memoria local`
+                : `○ Sin clave de ${selectedAiProvider.toUpperCase()} configurada`}
             </span>
             <button
               type="submit"
               className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition duration-200 shadow-lg shadow-purple-500/20 flex items-center space-x-2"
             >
               <IconCheck className="w-4 h-4 text-white" />
-              <span>Guardar API Key</span>
+              <span>Guardar API Key de {selectedAiProvider.toUpperCase()}</span>
             </button>
           </div>
         </form>

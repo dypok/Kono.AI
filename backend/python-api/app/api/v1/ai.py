@@ -19,33 +19,55 @@ logger = logging.getLogger("kono.api.ai")
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
-def _get_ai_fallback_client(provided_key: Optional[str] = None) -> AiFallback:
+def _get_ai_fallback_client(
+    provided_key: Optional[str] = None,
+    provider: str = "openai",
+) -> AiFallback:
+    provider = (provider or "openai").lower()
     key = provided_key or get_settings().openai_api_key
     if not key:
         return AiFallback(client=None)
+
     try:
-        from openai import OpenAI
-        return AiFallback(client=OpenAI(api_key=key))
+        if provider == "gemini":
+            from openai import OpenAI
+            # Google Gemini endpoint compatible con OpenAI SDK
+            return AiFallback(
+                client=OpenAI(
+                    api_key=key,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                )
+            )
+        elif provider == "claude":
+            # Anthropic o proxy OpenAI-compatible
+            from openai import OpenAI
+            return AiFallback(client=OpenAI(api_key=key))
+        else:
+            from openai import OpenAI
+            return AiFallback(client=OpenAI(api_key=key))
     except Exception as e:
-        logger.warning(f"No se pudo inicializar OpenAI client: {e}")
+        logger.warning(f"No se pudo inicializar el cliente IA para {provider}: {e}")
         return AiFallback(client=None)
 
 
 class CostEstimateRequest(BaseModel):
     document_id: str
     conflicting_fields: Optional[List[str]] = None
+    provider: Optional[str] = "openai"
 
 
 class BatchCostEstimateRequest(BaseModel):
     document_ids: List[str]
     conflicting_fields: Optional[List[str]] = None
     api_key: Optional[str] = None
+    provider: Optional[str] = "openai"
 
 
 class AnalyzeRequest(BaseModel):
     conflicting_fields: Optional[List[str]] = None
     force: bool = False
     api_key: Optional[str] = None
+    provider: Optional[str] = "openai"
 
 
 def _doc_to_invoice(doc: Document) -> ExtractedInvoice:
@@ -172,16 +194,17 @@ async def analyze_with_ai(
     invoice = _doc_to_invoice(doc)
     fields = body.conflicting_fields or ["invoice_number", "subtotal", "total", "tax_id", "issue_date"]
     api_key_to_use = body.api_key or x_openai_key
-    fallback = _get_ai_fallback_client(api_key_to_use)
+    fallback = _get_ai_fallback_client(api_key_to_use, body.provider or "openai")
     estimate = fallback.estimate_cost(invoice, fields)
 
     # Try to call AI if client is configured (will return None if no client)
     result = fallback.request_fallback(invoice, fields)
     if result is None:
+        provider_name = (body.provider or "OpenAI").capitalize()
         return {
             "document_id": document_id,
             "status": "NO_AI_CLIENT",
-            "message": "No se encontró API key configurada. Configure su OpenAI API Key en Ajustes para habilitar IA.",
+            "message": f"No se encontró API key válida para {provider_name}. Configure su API Key en Ajustes.",
             **estimate,
         }
 
@@ -239,7 +262,7 @@ async def analyze_batch_with_ai(
     total_tokens = 0
     total_cost = 0.0
     api_key_to_use = body.api_key or x_openai_key
-    fallback = _get_ai_fallback_client(api_key_to_use)
+    fallback = _get_ai_fallback_client(api_key_to_use, body.provider or "openai")
     fields = body.conflicting_fields or ["invoice_number", "subtotal", "total", "tax_id", "issue_date"]
 
     for doc_id in body.document_ids:
