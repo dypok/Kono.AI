@@ -6,3 +6,4 @@
   4. Backend: Created `storage_service.py` for canonical file resolution and modernized Pydantic V2 `.model_dump()` in `vendor_matcher.py` (0 warnings across 62 PyTests).
   5. Frontend: Modularized `InvoiceTable.tsx`, `DashboardFilters.tsx`, and `BulkActionBar.tsx` with clean TypeScript build.
   6. Consolidated seed and test invoice generators into `scripts/seed_invoices.py` and purged orphaned `index.html`.
+- [Friday]-[21/08/2026]-[07:38] : Generated and updated complete technical documentation and README.md with official repository link (https://github.com/dypok/Kono.IA.git) and group members: Dylan Gamero, Daniel Echeverría, and Sayder Carreño.
