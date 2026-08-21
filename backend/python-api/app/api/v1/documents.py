@@ -172,13 +172,15 @@ async def upload_document(
 
     # Persist discrepancies if any
     for disc in extracted.get("discrepancies", []):
+        exp_val = str(disc.get("expected_value")) if disc.get("expected_value") is not None else None
+        ext_val = str(disc.get("extracted_value")) if disc.get("extracted_value") is not None else None
         disc_obj = Discrepancy(
             document_id=doc_id,
             field_name=disc["field_name"],
             alert_type=disc["alert_type"],
-            expected_value=disc.get("expected_value"),
-            extracted_value=disc.get("extracted_value"),
-            delta_amount=disc.get("delta_amount"),
+            expected_value=exp_val,
+            extracted_value=ext_val,
+            delta_amount=float(disc.get("delta_amount")) if disc.get("delta_amount") is not None else 0.0,
             description=disc.get("description", ""),
         )
         db.add(disc_obj)
@@ -335,13 +337,15 @@ async def batch_upload_documents(
                 db.add(item_obj)
 
             for disc in extracted.get("discrepancies", []):
+                exp_val_b = str(disc.get("expected_value")) if disc.get("expected_value") is not None else None
+                ext_val_b = str(disc.get("extracted_value")) if disc.get("extracted_value") is not None else None
                 disc_obj = Discrepancy(
                     document_id=doc_id,
                     field_name=disc.get("field_name", "general"),
                     alert_type=disc.get("alert_type", "INFO"),
-                    expected_value=disc.get("expected_value"),
-                    extracted_value=disc.get("extracted_value"),
-                    delta_amount=disc.get("delta_amount"),
+                    expected_value=exp_val_b,
+                    extracted_value=ext_val_b,
+                    delta_amount=float(disc.get("delta_amount")) if disc.get("delta_amount") is not None else 0.0,
                     description=disc.get("description", ""),
                 )
                 db.add(disc_obj)

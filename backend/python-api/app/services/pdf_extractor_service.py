@@ -189,8 +189,12 @@ class PDFExtractorService:
                                 "AMOUNT",
                                 "PRICE",
                                 "QTY",
+                                "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+                                "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
+                                "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO",
+                                "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE",
                             ]
-                        ) and not re.search(r"\b[0-9]{5}\b", l) and len(l.strip()) > 2:
+                        ) and not re.search(r"\b[0-9]{4,5}\b", l) and len(l.strip()) > 2:
                             result["vendor_name"] = l.strip()
 
                 # Customer details (Spanish / English)
@@ -211,16 +215,23 @@ class PDFExtractorService:
 
                 # Invoice folio from block
                 if any(k in btxt.upper() for k in ["FACTURA", "INVOICE", "BILL", "RECEIPT", "FOLIO"]):
-                    # First check for typical invoice prefixes with multi-segment IDs
-                    m_pref = re.search(r"\b((?:FAC|INV|FE|FEV|NC|ND|SETP|SETT|BILL)(?:[-_][0-9A-Z]+)+)\b", btxt, re.IGNORECASE)
-                    if m_pref:
-                        result["invoice_number"] = m_pref.group(1).upper()
-                    else:
-                        m = re.search(r"(?:FACTURA(?:\s+ELECTR[OÓ]NICA)?(?:\s+DE\s+VENTA)?|INVOICE|BILL|RECEIPT|FOLIO|N[°ºO\.]*)[\s:#]*([A-Z0-9\-_]{3,30})\b", btxt, re.IGNORECASE)
-                        if m:
-                            candidate = m.group(1).strip()
-                            if candidate.upper() not in ["ELECTRONICA", "VENTA", "NUMBER", "DATE", "CLIENTE", "CUSTOMER", "TECHNOLOGIES", "ICA", "DE"]:
-                                result["invoice_number"] = candidate
+                    # Check for "Invoice number VMPKFDAE-0001" or typical prefixes
+                    m_inv = re.search(r"(?:INVOICE\s+NUMBER|FACTURA(?:\s+N[°ºO\.]*)?|FOLIO)[:\s]*([A-Z0-9\-_]{3,30})\b", btxt, re.IGNORECASE)
+                    if m_inv:
+                        cand = m_inv.group(1).strip()
+                        if cand.upper() not in ["NUMBER", "DATE", "OF"]:
+                            result["invoice_number"] = cand
+
+                    if not result["invoice_number"]:
+                        m_pref = re.search(r"\b((?:FAC|INV|FE|FEV|NC|ND|SETP|SETT|BILL)(?:[-_][0-9A-Z]+)+)\b", btxt, re.IGNORECASE)
+                        if m_pref:
+                            result["invoice_number"] = m_pref.group(1).upper()
+                        else:
+                            m = re.search(r"(?:FACTURA(?:\s+ELECTR[OÓ]NICA)?(?:\s+DE\s+VENTA)?|INVOICE|BILL|RECEIPT|FOLIO|N[°ºO\.]*)[\s:#]*([A-Z0-9\-_]{3,30})\b", btxt, re.IGNORECASE)
+                            if m:
+                                candidate = m.group(1).strip()
+                                if candidate.upper() not in ["ELECTRONICA", "VENTA", "NUMBER", "DATE", "CLIENTE", "CUSTOMER", "TECHNOLOGIES", "ICA", "DE", "OF", "ISSUE", "DUE"]:
+                                    result["invoice_number"] = candidate
 
             # 3. Line by line scanner for Totals and Dates
             table_header_y = None
@@ -231,6 +242,13 @@ class PDFExtractorService:
 
                 # Invoice Folio fallback
                 if not result["invoice_number"]:
+                    m_inv = re.search(r"(?:INVOICE\s+NUMBER|FACTURA(?:\s+N[°ºO\.]*)?|FOLIO)[:\s]*([A-Z0-9\-_]{3,30})\b", t, re.IGNORECASE)
+                    if m_inv:
+                        cand = m_inv.group(1).strip()
+                        if cand.upper() not in ["NUMBER", "DATE", "OF"]:
+                            result["invoice_number"] = cand
+
+                if not result["invoice_number"]:
                     m_pref = re.search(r"\b((?:FAC|INV|FE|FEV|NC|ND|SETP|SETT|BILL)(?:[-_][0-9A-Z]+)+)\b", t, re.IGNORECASE)
                     if m_pref:
                         result["invoice_number"] = m_pref.group(1).upper()
@@ -238,18 +256,18 @@ class PDFExtractorService:
                         m = re.search(r"(?:FACTURA(?:\s+ELECTR[OÓ]NICA)?(?:\s+DE\s+VENTA)?|INVOICE|BILL|RECEIPT|FOLIO|N[°ºO\.]*)[\s:#]*([A-Z0-9\-_]{3,30})\b", t, re.IGNORECASE)
                         if m:
                             candidate = m.group(1).strip()
-                            if candidate.upper() not in ["ELECTRONICA", "VENTA", "NUMBER", "DATE", "CLIENTE", "CUSTOMER", "TECHNOLOGIES", "ICA", "DE"]:
+                            if candidate.upper() not in ["ELECTRONICA", "VENTA", "NUMBER", "DATE", "CLIENTE", "CUSTOMER", "TECHNOLOGIES", "ICA", "DE", "OF", "ISSUE", "DUE"]:
                                 result["invoice_number"] = candidate
 
-                # Issue Date (Spanish / English / ISO / Slash)
-                if any(k in t.upper() for k in ["FECHA", "EMISIÓN", "EMISION", "ISSUE DATE", "INVOICE DATE", "BILLING DATE", "DATE:"]) and not result["issue_date"]:
-                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}-[0-9]{2}-[0-9]{4})", t)
+                # Issue Date (Spanish / English / ISO / Slash / Month text like 'July 17, 2026')
+                if any(k in t.upper() for k in ["FECHA", "EMISIÓN", "EMISION", "ISSUE DATE", "DATE OF ISSUE", "INVOICE DATE", "BILLING DATE", "DATE:"]) and not result["issue_date"]:
+                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}-[0-9]{2}-[0-9]{4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+[0-9]{1,2},?\s+[0-9]{4})", t, re.IGNORECASE)
                     if m:
                         result["issue_date"] = m.group(1)
 
-                # Due Date (Spanish / English)
-                if any(k in t.upper() for k in ["VENCIMIENTO", "VENCE", "DUE DATE", "PAYMENT DUE"]) and not result["due_date"]:
-                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}-[0-9]{2}-[0-9]{4})", t)
+                # Due Date (Spanish / English / Month text like 'July 17, 2026')
+                if any(k in t.upper() for k in ["VENCIMIENTO", "VENCE", "DUE DATE", "DATE DUE", "PAYMENT DUE"]) and not result["due_date"]:
+                    m = re.search(r"([0-9]{2}/[0-9]{2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}-[0-9]{2}-[0-9]{4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+[0-9]{1,2},?\s+[0-9]{4})", t, re.IGNORECASE)
                     if m:
                         result["due_date"] = m.group(1)
 
@@ -381,17 +399,29 @@ class PDFExtractorService:
                 result["classifier_score"] = 0.5
                 is_other_pdf = False
 
-            # 6. Mathematical Consistency Check
+            # 6. Mathematical Consistency Check (including Discounts and Withholdings)
+            discount_total = 0.0
+            for l in visual_lines:
+                t_disc = l["text"]
+                if any(k in t_disc.upper() for k in ["DISCOUNT", "OFF", "DESCUENTO", "REBAJA"]):
+                    m_d = re.search(r"[-–]\s*[\$\€\£]?\s*([0-9.,]+)", t_disc)
+                    if m_d:
+                        try:
+                            d_val = float(m_d.group(1).replace(",", "."))
+                            discount_total += d_val
+                        except ValueError:
+                            pass
+
             if result["grand_total"] == 0.0 and result["subtotal"] > 0:
-                result["grand_total"] = round(result["subtotal"] + result["tax_total"], 2)
+                result["grand_total"] = round(result["subtotal"] + result["tax_total"] - discount_total, 2)
             elif result["subtotal"] == 0.0 and result["items"]:
                 result["subtotal"] = round(sum(it["total_price"] for it in result["items"]), 2)
                 if result["grand_total"] == 0.0:
-                    result["grand_total"] = round(result["subtotal"] + result["tax_total"], 2)
+                    result["grand_total"] = round(result["subtotal"] + result["tax_total"] - discount_total, 2)
 
             # Check math consistency
             expected_total = round(
-                result["subtotal"] + result["tax_total"] - result["withholding_total"], 2
+                result["subtotal"] + result["tax_total"] - result["withholding_total"] - discount_total, 2
             )
             delta = abs(expected_total - result["grand_total"])
 
