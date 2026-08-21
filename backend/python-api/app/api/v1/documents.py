@@ -115,6 +115,7 @@ async def upload_document(
 
     # Handle document_type from classifier (US-REQ-001)
     doc_type = extracted.get("document_type", "INVOICE")
+    is_other = doc_type == "OTHER"
     # Handle currency conversion (USD -> COP)
     doc_currency = extracted.get("currency", "COP")
     db_grand_total = extracted.get("grand_total_cop") if doc_currency == "USD" and extracted.get("grand_total_cop") else extracted.get("grand_total")

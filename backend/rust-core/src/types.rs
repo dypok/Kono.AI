@@ -13,6 +13,13 @@ pub struct Word {
     pub confidence: f64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum DocumentType {
+    Invoice,
+    Receipt,
+    Other,
+}
+
 /// Normalized payload contract shared between the Rust ingestion core and
 /// the Python spatial/validation engine through the Redis Stream.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -22,6 +29,9 @@ pub struct DocumentPayload {
     pub file_path: String,
     pub is_digital: bool,
     pub pages_count: u32,
+    pub document_type: DocumentType,
+    pub classifier_score: f64,
+    pub matched_anchors: Vec<String>,
     pub words: Vec<Word>,
 }
 
@@ -40,7 +50,22 @@ impl DocumentPayload {
             file_path,
             is_digital,
             pages_count,
+            document_type: DocumentType::Invoice,
+            classifier_score: 1.0,
+            matched_anchors: Vec::new(),
             words,
         }
+    }
+
+    pub fn with_classification(
+        mut self,
+        document_type: DocumentType,
+        classifier_score: f64,
+        matched_anchors: Vec<String>,
+    ) -> Self {
+        self.document_type = document_type;
+        self.classifier_score = classifier_score;
+        self.matched_anchors = matched_anchors;
+        self
     }
 }

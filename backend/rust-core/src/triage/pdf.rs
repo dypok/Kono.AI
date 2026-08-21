@@ -43,6 +43,9 @@ pub fn inspect_and_extract_pdf(path: &Path) -> Result<DocumentPayload, KonoError
         pages_count, total_chars, is_digital, path.display()
     );
 
+    let classifier = crate::triage::classifier::DocumentClassifier::new();
+    let (doc_type, score, matched_anchors) = classifier.classify(&words);
+
     let document_id = Uuid::new_v4().to_string();
     Ok(DocumentPayload::new(
         document_id,
@@ -51,7 +54,7 @@ pub fn inspect_and_extract_pdf(path: &Path) -> Result<DocumentPayload, KonoError
         is_digital,
         pages_count,
         words,
-    ))
+    ).with_classification(doc_type, score, matched_anchors))
 }
 
 fn extract_page_words(

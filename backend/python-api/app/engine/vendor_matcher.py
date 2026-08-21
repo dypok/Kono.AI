@@ -60,7 +60,7 @@ class VendorTemplateMatcher:
                 extracted = self.spatial_engine.extract_field(field_name.upper(), value_type=val_type)
 
             if extracted:
-                payload.bounding_boxes[field_name] = extracted.bbox.dict() if extracted.bbox else None
+                payload.bounding_boxes[field_name] = extracted.bbox.model_dump() if extracted.bbox else None
                 if field_name == "grand_total":
                     payload.grand_total = parse_financial_number(extracted.raw_value)
                 elif field_name == "subtotal":
