@@ -96,6 +96,8 @@ storage/
 skills-lock.json
 .claude/
 .cursor/
+CLAUDE.md
+AGENTS.md
 
 # ------------------------------------------
 # Sample & Generated Invoices / PDFs
