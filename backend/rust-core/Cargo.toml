@@ -1,0 +1,26 @@
+[package]
+name = "kono-rust-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "=1.38.1", features = ["full", "signal"] }
+notify = "=6.1.1"
+sha2 = "=0.10.8"
+cpufeatures = "=0.2.12"
+uuid = { version = "=1.8.0", features = ["v4", "serde"] }
+serde = { version = "=1.0.203", features = ["derive"] }
+serde_json = "=1.0.117"
+redis = { version = "=0.25.3", features = ["tokio-comp", "connection-manager"] }
+chrono = { version = "=0.4.38", features = ["serde"] }
+tracing = "=0.1.40"
+tracing-subscriber = "=0.3.18"
+thiserror = "1.0"
+lopdf = "0.33"
+image = "0.25"
+imageproc = "0.25"
+num_cpus = "1.16"
+
+[dev-dependencies]
+tempfile = "3.10.1"
+font8x8 = "0.3.1"

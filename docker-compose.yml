@@ -1,0 +1,31 @@
+services:
+  kono-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.allinone
+    container_name: kono-app
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      # Live Hot-Reload Mounts for Python Backend & Frontend Vite
+      - ./backend/python-api/app:/app/app
+      - ./frontend/src:/app/frontend/src
+      - ./frontend/public:/app/frontend/public
+      - ./frontend/index.html:/app/frontend/index.html
+      - ./frontend/vite.config.ts:/app/frontend/vite.config.ts
+      # Persistent Data Storage
+      - kono_storage:/data/storage
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres
+      - DATABASE_SYNC_URL=postgresql+psycopg2://kono_app.avkxhplapmibhyleywzd:KonoAiSupabaseSecure2026!@aws-0-us-west-2.pooler.supabase.com:6543/postgres
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - KONO_WEBHOOK_SECRET=${KONO_WEBHOOK_SECRET:-kono_secret_key_2026}
+      - SUPABASE_URL=${SUPABASE_URL:-https://avkxhplapmibhyleywzd.supabase.co}
+      - SUPABASE_KEY=${SUPABASE_KEY:-}
+
+volumes:
+  kono_storage:
+    driver: local
+
