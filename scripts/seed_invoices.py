@@ -16,8 +16,8 @@ def create_invoice_pdf(filename: str, invoice_num: str, vendor: str, nit: str, t
     page.insert_text((50, 130), "Fecha de Emisión: 2026-08-20", fontsize=10, fontname="helv")
     page.insert_text((50, 150), "Fecha de Vencimiento: 2026-09-20", fontsize=10, fontname="helv")
     
-    page.insert_text((50, 180), "Adquiriente: Dylan Gamero", fontsize=10, fontname="helv")
-    page.insert_text((50, 200), "NIT Cliente: 1042456789-1", fontsize=10, fontname="helv")
+    page.insert_text((50, 180), "Adquiriente: InnovaTech Solutions S.A.S.", fontsize=10, fontname="helv")
+    page.insert_text((50, 200), "NIT Cliente: 901.456.789-0", fontsize=10, fontname="helv")
     
     # Table headers
     page.insert_text((50, 240), "Descripción", fontsize=10, fontname="helv", fonttype=1)

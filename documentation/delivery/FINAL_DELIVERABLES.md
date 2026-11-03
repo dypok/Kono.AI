@@ -2,7 +2,7 @@
 
 **Proyecto:** Kono.ai — Extractor, Validador y Reconciliador Inteligente de Facturas y Comprobantes  
 **Fecha:** 21 de Agosto de 2026  
-**Repositorio:** [https://github.com/dypok/Kono.IA.git](https://github.com/dypok/Kono.IA.git)  
+**Repositorio:** [https://github.com/dypok/Kono.AI.git](https://github.com/dypok/Kono.AI.git)  
 **Equipo:**
 - **Dylan Gamero:** Backend Core & Pipeline Lead (Rust Watcher/Hasher, Ray-Casting Python, CRUD, Webhooks REST)
 - **Daniel Echeverría:** Backend AI & Systems Lead (Rust Triage/Clasificador, Validador Aritmético, Email OAuth2/IMAP, Docker)
